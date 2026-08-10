@@ -1,34 +1,32 @@
-import { Blocks, FileStack, Home, LayoutPanelTop, Settings2 } from "lucide-react";
+import { ClipboardCheck, FileText, Home, Settings2, TriangleAlert } from "lucide-react";
 
-import { FoundationShowcase } from "@/components/common/foundation-showcase";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import { siteConfig } from "@/lib/site-config";
 
 const navigation = [
   {
-    title: "Foundation overview",
+    title: "Dashboard",
     href: "/",
     icon: <Home className="size-4" />,
   },
   {
-    title: "UI primitives",
+    title: "Avvikelser",
     href: "/",
-    icon: <Blocks className="size-4" />,
-    badge: "Core",
+    icon: <TriangleAlert className="size-4" />,
+    badge: "12",
   },
   {
-    title: "Layout shells",
+    title: "Dokument",
     href: "/",
-    icon: <LayoutPanelTop className="size-4" />,
+    icon: <FileText className="size-4" />,
   },
   {
-    title: "Document patterns",
+    title: "Aktiviteter",
     href: "/",
-    icon: <FileStack className="size-4" />,
+    icon: <ClipboardCheck className="size-4" />,
   },
   {
-    title: "Settings patterns",
+    title: "Inställningar",
     href: "/",
     icon: <Settings2 className="size-4" />,
   },
@@ -37,17 +35,11 @@ const navigation = [
 export default function HomePage() {
   return (
     <DashboardLayout
-      actions={
-        <>
-          <Button variant="secondary">Review docs</Button>
-          <Button>Extend foundation</Button>
-        </>
-      }
-      description={siteConfig.description}
+      description="Överblick över kvalitet, aktiviteter och kundupplevelse."
       navigation={navigation}
-      title="Official Quality WorX starter foundation"
+      title="Dashboard"
     >
-      <FoundationShowcase />
+      <DashboardOverview />
     </DashboardLayout>
   );
 }

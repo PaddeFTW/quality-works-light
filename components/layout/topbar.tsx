@@ -17,8 +17,8 @@ interface TopbarProps {
 }
 
 export function Topbar({
-  title = "Platform shell",
-  description = "A reusable top navigation region for future applications.",
+  title = "Min arbetsyta",
+  description = "Din samlade vy för kvalitet och verksamhet.",
   actions,
   className,
 }: TopbarProps) {

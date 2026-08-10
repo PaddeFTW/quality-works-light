@@ -25,7 +25,7 @@ export function DashboardLayout({
         <PageHeader
           actions={actions}
           description={description}
-          eyebrow="Dashboard layout"
+          eyebrow="Översikt"
           title={title}
         />
         {children}

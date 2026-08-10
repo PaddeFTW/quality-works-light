@@ -17,8 +17,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  title = "Quality WorX",
-  subtitle = "Foundation navigation",
+  title = "Kvalitetsportal",
+  subtitle = "Verksamhetsöversikt",
   items = [],
   footer,
   className,
