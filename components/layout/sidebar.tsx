@@ -17,8 +17,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  title = "Quality WorX",
-  subtitle = "Foundation navigation",
+  title = "Kvalitetsportal",
+  subtitle = "Verksamhetsöversikt",
   items = [],
   footer,
   className,
@@ -41,10 +41,10 @@ export function Sidebar({
       </div>
       <Separator />
       <ScrollArea className="flex-1">
-        <div className="space-y-2 px-4 py-5">
+        <div className="flex flex-col gap-1 px-3 py-5">
           {items.map((item) => (
             <Link
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-token hover:bg-background/70 hover:text-foreground"
+              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
               href={item.href}
               key={item.title}
             >
