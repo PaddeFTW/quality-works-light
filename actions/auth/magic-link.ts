@@ -1,0 +1,39 @@
+"use server";
+
+import { redirect } from "next/navigation";
+
+import { getRedirectUrl } from "@/lib/app-url";
+import { createClient } from "@/lib/supabase/server";
+
+export interface MagicLinkState {
+  error?: string;
+  success?: boolean;
+}
+
+export async function requestMagicLink(
+  _prev: MagicLinkState,
+  formData: FormData,
+): Promise<MagicLinkState> {
+  const supabase = await createClient();
+
+  const email = formData.get("email") as string;
+
+  if (!email) {
+    return { error: "Email is required." };
+  }
+
+  const redirectUrl = getRedirectUrl();
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${redirectUrl}/auth/confirm?next=/app/dashboard`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  redirect(`/auth/verify-email?type=magic-link&email=${encodeURIComponent(email)}`);
+}
