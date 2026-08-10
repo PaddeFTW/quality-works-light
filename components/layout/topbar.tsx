@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 import { BellDot, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 interface TopbarProps {
   title?: string;
@@ -37,14 +39,19 @@ export function Topbar({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search placeholder" />
+            <Input className="pl-9" placeholder="Sök..." />
           </div>
           <div className="flex items-center gap-2">
-            {actions}
-            <Button size="icon" variant="outline">
+            {actions ? (
+              <div className="flex items-center gap-2">{actions}</div>
+            ) : null}
+            <Button size="icon" variant="ghost">
               <BellDot className="size-4" />
+              <span className="sr-only">Notiser</span>
             </Button>
             <ThemeToggle />
+            <Separator className="mx-1 hidden h-8 sm:block" orientation="vertical" />
+            <AccountMenu />
           </div>
         </div>
       </div>
