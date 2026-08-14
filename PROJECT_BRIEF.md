@@ -2,9 +2,11 @@
 
 ## Purpose
 
-Create the official reusable starter template for all Quality WorX applications.
+Build Quality WorX Light, a product application for guided quality work experiences.
 
-This repository exists to give every future product a shared baseline for:
+This repository uses shared Quality WorX foundations while allowing product pages, Swedish UI, and domain-specific workflows and features.
+
+This repository exists to provide the product with a strong baseline for:
 
 - architecture
 - user interface standards
@@ -15,17 +17,18 @@ This repository exists to give every future product a shared baseline for:
 
 ## What This Repository Is
 
-- a platform foundation
-- a reusable UI and layout starter
-- a design-system-aligned frontend base
-- a documented reference implementation for future teams
+- the Quality WorX Light product application
+- a Swedish-language quality work experience
+- a product with real pages, navigation, workflows, and domain features
+- a design-system-aligned frontend using reusable shared foundations
+- a documented reference for future Quality WorX product evolution
 
 ## What This Repository Is Not
 
-- a complete application
-- a module for a specific Quality WorX workflow
-- a business-domain implementation
-- a place for product-specific data models or process logic
+- only a reusable starter template
+- a neutral shell with product behavior intentionally removed
+- a prohibition against product-specific pages, domain models, or process logic
+- a collection of mock workflows presented as completed functionality
 
 ## Product Families That Will Build on Top
 
@@ -62,13 +65,15 @@ The template is successful when a future team can clone it and immediately inher
 - a semantic theme and token system
 - clear extension guidance
 
-## Constraints
+## Product Direction
 
-- no business logic
-- no product-specific pages
-- no domain-specific forms
-- no mock workflows presented as real features
+- product pages and workflows are allowed and expected
+- the primary UI is Swedish unless a feature explicitly requires another language
+- domain-specific forms, models, and process logic are allowed when they support Quality WorX Light
+- current product surfaces include `/login`, `/skapa-konto`, `/`, and `/manual`
+- the Swedish sidebar and manual structure are part of the product experience
+- avoid mock workflows presented as completed functionality
 
 ## Long-Term Role
 
-This repository should become the canonical frontend baseline for the Quality WorX platform and evolve carefully as shared standards mature.
+This repository is the canonical Quality WorX Light product application and may continue to evolve with its domain. Shared foundations should remain reusable where practical, but product clarity and working Quality WorX experiences take precedence over template neutrality.

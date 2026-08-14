@@ -1,38 +1,38 @@
 # AGENTS
 
-This repository is the shared foundation for future Quality WorX applications. AI agents and contributors should preserve that intent.
+This repository is the Quality WorX Light product application, built on shared Quality WorX foundations. AI agents and contributors should preserve the product intent while keeping reusable patterns maintainable.
 
 ## Core Rules
 
-1. Do not turn this repository into a product-specific application.
-2. Do not add business workflows, domain models, or feature logic that only belongs to one product.
-3. Prefer reusable architecture, neutral naming, and composable UI.
-4. Update documentation whenever shared structure or conventions change.
-5. Keep additions aligned with the design token system and layout strategy.
+1. Treat this repository as the Quality WorX Light product application, not only as a template.
+2. Product pages, Swedish UI, domain models, business workflows, and product-specific feature logic are allowed when they support Quality WorX Light.
+3. Prefer reusable architecture and composable UI where it does not conflict with clear product requirements.
+4. Update documentation whenever product structure, shared conventions, or workflows change.
+5. Keep additions aligned with the design token system, accessibility standards, and layout strategy.
 
 ## Preferred Contribution Shape
 
-- improve shared primitives
-- improve shared layouts
-- refine design tokens
-- improve accessibility
-- improve documentation
-- improve developer experience for future app teams
+- build and improve Quality WorX Light product pages and workflows
+- support the Swedish product UI and navigation
+- improve shared primitives and layouts
+- refine design tokens and accessibility
+- document product structure and reusable conventions
+- keep the codebase ready for future Quality WorX product evolution
 
 ## Avoid
 
-- feature-specific pages
-- business-specific tables or forms
-- mock domain entities presented as real platform concepts
-- hardcoded brand decisions that cannot be themed later
+- unrelated product concepts that do not support Quality WorX Light
+- placeholder domain entities presented as completed functionality
+- hardcoded decisions that make legitimate product evolution unnecessarily difficult
+- removing product behavior merely to preserve template neutrality
 
-## When Adding New Shared Code
+## When Adding New Code
 
 Ask:
 
-- will more than one future Quality WorX product benefit from this?
-- is the naming neutral?
-- does this belong in `ui`, `common`, `layout`, or product code?
+- does this support a current or planned Quality WorX Light experience?
+- can the implementation be reusable without obscuring the product domain?
+- does the naming fit the Swedish UI and Quality WorX terminology?
 - does the documentation still match the implementation?
 
-If the answer is not clearly shared platform value, it likely does not belong in this template.
+Product-specific code belongs here when it is part of the Quality WorX Light application.
