@@ -2,34 +2,32 @@
 
 ## Purpose
 
-Create the official reusable starter template for all Quality WorX applications.
+This repository is the **Quality Works Light** product application — a real, shipping product built on the shared Quality WorX platform foundation (architecture, design tokens, layout composition, and UI standards).
 
-This repository exists to give every future product a shared baseline for:
+It is no longer only a reusable starter template. It now carries real product surface area:
 
-- architecture
-- user interface standards
-- design tokens
-- layout composition
-- documentation practices
-- developer onboarding
+- product pages and flows
+- Swedish-language UI
+- domain models and business workflows specific to Quality Works Light
 
 ## What This Repository Is
 
-- a platform foundation
-- a reusable UI and layout starter
-- a design-system-aligned frontend base
-- a documented reference implementation for future teams
+- the Quality Works Light product application
+- built on a design-system-aligned frontend base
+- a place for real domain features, not just platform primitives
+- a Swedish-first user experience by default
 
-## What This Repository Is Not
+## What This Repository Still Values
 
-- a complete application
-- a module for a specific Quality WorX workflow
-- a business-domain implementation
-- a place for product-specific data models or process logic
+- a premium SaaS-grade visual baseline
+- a clean folder structure
+- reusable layout shells and UI primitives where they make sense
+- a semantic theme and token system
+- clear documentation as product features grow
 
-## Product Families That Will Build on Top
+## Product Areas
 
-Examples include:
+Quality Works Light includes (or will include) real, working features across:
 
 - Onboarding
 - Quality Plan
@@ -41,34 +39,31 @@ Examples include:
 - Document Management
 - ISO Manual
 
-## Platform Goals
+These are implemented here as actual product functionality, not mock or placeholder workflows.
 
-1. Give every team the same high-quality starting point.
-2. Reduce repeated setup work across future repositories.
-3. Encourage visual consistency across the Quality WorX platform.
-4. Keep foundational code clean, neutral, and scalable.
-5. Separate platform concerns from product concerns early.
+## Product Goals
 
-Future product decisions should follow `docs/QUALITY_WORX_PRODUCT_PRINCIPLES.md`, which defines Quality WorX Product Principles v2.0 and the platform direction toward guided work experiences.
+1. Deliver real Quality Works Light product functionality with a premium SaaS-grade experience.
+2. Provide a Swedish-first UI for end users.
+3. Reuse and extend the shared design tokens, layouts, and UI primitives from the Quality WorX platform foundation.
+4. Keep product code well-documented and maintainable as it grows.
+5. Follow `docs/QUALITY_WORX_PRODUCT_PRINCIPLES.md`, which defines Quality WorX Product Principles v2.0 and the platform direction toward guided work experiences.
 
 ## Success Criteria
 
-The template is successful when a future team can clone it and immediately inherit:
+The product is successful when it delivers:
 
-- a premium SaaS-grade visual baseline
-- a clean folder structure
-- reusable layout shells
-- reusable UI primitives
-- a semantic theme and token system
-- clear extension guidance
+- real, usable domain features across the product areas above
+- a Swedish-language UI that fits end users' workflows
+- a premium SaaS-grade visual experience consistent with the Quality WorX platform
+- clean, maintainable code and up-to-date documentation
 
 ## Constraints
 
-- no business logic
-- no product-specific pages
-- no domain-specific forms
-- no mock workflows presented as real features
+- domain features and product-specific pages are allowed and expected
+- keep implementations honest — no mock workflows presented as finished features
+- stay aligned with the shared design token and layout strategy unless a product need justifies a deliberate deviation
 
 ## Long-Term Role
 
-This repository should become the canonical frontend baseline for the Quality WorX platform and evolve carefully as shared standards mature.
+This repository is the Quality Works Light product application on the Quality WorX platform, and should continue to evolve as a real product while staying aligned with shared platform standards where practical.
