@@ -16,6 +16,7 @@ import {
   Upload,
 } from "lucide-react";
 
+import { DocumentToolbar } from "@/components/manual/document-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,6 +129,13 @@ export function ManualWorkspace() {
           <div className="flex flex-col gap-4 border-b p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div><div className="flex items-center gap-2 text-sm text-muted-foreground"><span>Manual</span><ChevronRight className="size-4" /><span>{selectedPage}</span></div><h2 className="mt-2 text-2xl font-semibold">{selectedPage}</h2></div>
             <Button variant="outline" size="sm"><Pencil data-icon="inline-start" /> Redigera</Button>
+          </div>
+          <div className="border-b p-5 pb-5 sm:p-6 sm:pb-6">
+            <DocumentToolbar
+              documentTitle={selectedPage}
+              onPublish={() => setPublished(true)}
+              published={published}
+            />
           </div>
           <Tabs className="p-5 sm:p-6" onValueChange={setActiveTab} value={activeTab}>
             <TabsList><TabsTrigger value="original">Original</TabsTrigger><TabsTrigger value="work">Vår version</TabsTrigger><TabsTrigger value="settings"><Settings2 data-icon="inline-start" /> Inställningar</TabsTrigger></TabsList>
