@@ -192,4 +192,62 @@ a {
     transition-duration: var(--duration-base);
     transition-timing-function: var(--ease-standard);
   }
+
+  .manual-tiptap-editor .ProseMirror {
+    min-height: 36rem;
+    outline: none;
+  }
+
+  .manual-tiptap-editor .ProseMirror h1 {
+    margin-block: 1.5rem 0.75rem;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .manual-tiptap-editor .ProseMirror h2 {
+    margin-block: 1.25rem 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .manual-tiptap-editor .ProseMirror h3 {
+    margin-block: 1rem 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .manual-tiptap-editor .ProseMirror p {
+    margin-block: 0.65rem;
+  }
+
+  .manual-tiptap-editor .ProseMirror ul,
+  .manual-tiptap-editor .ProseMirror ol {
+    margin-block: 0.75rem;
+    padding-inline-start: 1.5rem;
+  }
+
+  .manual-tiptap-editor .ProseMirror a {
+    color: var(--primary);
+    text-decoration: underline;
+  }
+
+  .manual-tiptap-editor .ProseMirror table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-block: 1rem;
+    table-layout: fixed;
+  }
+
+  .manual-tiptap-editor .ProseMirror th,
+  .manual-tiptap-editor .ProseMirror td {
+    min-width: 6rem;
+    border: 1px solid var(--border);
+    padding: 0.6rem;
+    vertical-align: top;
+  }
+
+  .manual-tiptap-editor .ProseMirror th {
+    background: color-mix(in oklab, var(--primary) 8%, transparent);
+    font-weight: 700;
+  }
 }
