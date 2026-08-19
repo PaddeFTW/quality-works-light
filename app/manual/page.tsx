@@ -1,7 +1,7 @@
 import { BookOpen, ClipboardCheck, FileText, Home, Settings2, TriangleAlert } from "lucide-react";
 
+import { AppLayout } from "@/components/layout/app-layout";
 import { ManualWorkspace } from "@/components/manual/manual-workspace";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
 
 const navigation = [
   { title: "Dashboard", href: "/", icon: <Home className="size-4" /> },
@@ -14,12 +14,11 @@ const navigation = [
 
 export default function ManualPage() {
   return (
-    <DashboardLayout
-      description="Arbetssätt, roller och kvalitetsmål samlade på ett ställe."
+    <AppLayout
+      contentClassName="p-0 sm:p-0 lg:p-0"
       navigation={navigation}
-      title="Manual"
     >
       <ManualWorkspace />
-    </DashboardLayout>
+    </AppLayout>
   );
 }
