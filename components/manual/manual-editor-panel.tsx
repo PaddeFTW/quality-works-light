@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
+import type { ManualAttachment } from "@/components/manual/manual-workspace";
+
 import {
   Bold,
   Check,
@@ -42,8 +44,9 @@ interface ManualEditorPanelProps {
   onSave: () => void;
   onPublish: () => void;
   saved: boolean;
-  attachments: number;
+  attachments: ManualAttachment[];
   onAddAttachment: () => void;
+  onRemoveAttachment: (attachmentId: string) => void;
 }
 
 export function ManualEditorPanel({
@@ -55,6 +58,7 @@ export function ManualEditorPanel({
   saved,
   attachments,
   onAddAttachment,
+  onRemoveAttachment,
 }: ManualEditorPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<string[]>([value]);
@@ -182,6 +186,7 @@ export function ManualEditorPanel({
   };
 
   const toolbarButtonClass = "size-8 p-0";
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const modules = [
     { title: "Årshjul", path: "/arshjul" },
     { title: "Avvikelsehantering", path: "/avvikelse" },
@@ -208,11 +213,57 @@ export function ManualEditorPanel({
           <Upload data-icon="inline-start" />
           Publicera
         </Button>
-        <Button onClick={onAddAttachment} size="sm" variant="ghost">
-          <Paperclip data-icon="inline-start" />
-          Bilagor
-          {attachments > 0 ? <Badge variant="secondary">{attachments}</Badge> : null}
-        </Button>
+        <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost">
+              <Paperclip data-icon="inline-start" />
+              Bilagor
+              {attachments.length > 0 ? <Badge variant="secondary">{attachments.length}</Badge> : null}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Bilagor för {documentTitle}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3">
+                <div>
+                  <p className="font-medium">Dokumentbilagor</p>
+                  <p className="text-sm text-muted-foreground">Filerna hör till det valda dokumentet.</p>
+                </div>
+                <Button onClick={onAddAttachment} size="sm" variant="outline">
+                  <Upload data-icon="inline-start" />
+                  Ladda upp
+                </Button>
+              </div>
+              {attachments.length === 0 ? (
+                <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 text-center">
+                  <Paperclip className="size-5 text-muted-foreground" />
+                  <p className="font-medium">Inga bilagor ännu</p>
+                  <p className="text-sm text-muted-foreground">Ladda upp en fil för att lägga till en bilaga.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {attachments.map((attachment) => (
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3" key={attachment.id}>
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="rounded-md bg-primary/10 p-2 text-primary"><Paperclip className="size-4" /></div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{attachment.name}</p>
+                          <p className="text-xs text-muted-foreground">{attachment.size} · {attachment.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button onClick={() => window.alert("Nedladdning är en platshållare.")} size="sm" variant="outline">Ladda ner</Button>
+                        <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">Ta bort</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
         <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
           {saved ? "Utkast sparat" : "Osparat"}
           <span className="mx-2" aria-hidden="true">·</span>

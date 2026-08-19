@@ -43,6 +43,23 @@ interface PublishedDocument {
   publishedAt: string;
 }
 
+export interface ManualAttachment {
+  id: string;
+  name: string;
+  size: string;
+  type: string;
+}
+
+const initialAttachments: Record<string, ManualAttachment[]> = {
+  kvalitetspolicy: [
+    { id: "policy-1", name: "Kvalitetspolicy.pdf", size: "248 KB", type: "PDF" },
+    { id: "policy-2", name: "Ansvarsfördelning.docx", size: "84 KB", type: "Word" },
+  ],
+  avvikelsehantering: [
+    { id: "deviation-1", name: "Avvikelseblankett.xlsx", size: "36 KB", type: "Excel" },
+  ],
+};
+
 const initialSettings: ManualSettings = {
   name: "Kvalitetsmanual",
   issuer: "Anna Lind",
@@ -61,7 +78,7 @@ export function ManualWorkspace() {
   const [publishedDocuments, setPublishedDocuments] = useState<
     Record<string, PublishedDocument>
   >({});
-  const [attachments, setAttachments] = useState<Record<string, number>>({});
+  const [attachments, setAttachments] = useState<Record<string, ManualAttachment[]>>(initialAttachments);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
   const [edition, setEdition] = useState(1);
@@ -109,7 +126,24 @@ export function ManualWorkspace() {
   function handleAddAttachment() {
     setAttachments((current) => ({
       ...current,
-      [selectedId]: (current[selectedId] ?? 0) + 1,
+      [selectedId]: [
+        ...(current[selectedId] ?? []),
+        {
+          id: `${selectedId}-${Date.now()}`,
+          name: "Ny bilaga.pdf",
+          size: "0 KB",
+          type: "PDF",
+        },
+      ],
+    }));
+  }
+
+  function handleRemoveAttachment(attachmentId: string) {
+    setAttachments((current) => ({
+      ...current,
+      [selectedId]: (current[selectedId] ?? []).filter(
+        (attachment) => attachment.id !== attachmentId,
+      ),
     }));
   }
 
@@ -239,9 +273,10 @@ export function ManualWorkspace() {
 
           <TabsContent className="flex min-h-0 flex-col" value="work">
             <ManualEditorPanel
-              attachments={attachments[selectedId] ?? 0}
+              attachments={attachments[selectedId] ?? []}
               documentTitle={documentTitle}
               onAddAttachment={handleAddAttachment}
+              onRemoveAttachment={handleRemoveAttachment}
               onChange={handleDraftChange}
               onPublish={handlePublish}
               onSave={handleSave}
