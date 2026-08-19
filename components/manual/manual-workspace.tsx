@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Check, ChevronRight, ListTree } from "lucide-react";
+import {
+  BadgeCheck,
+  Check,
+  ChevronRight,
+  FileDown,
+  ListTree,
+  Printer,
+  Send,
+  Share2,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -55,6 +66,8 @@ export function ManualWorkspace() {
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
   const [edition, setEdition] = useState(1);
   const [treeOpen, setTreeOpen] = useState(false);
+  const [reviewerName, setReviewerName] = useState("");
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
 
   const selectedNode = findNodeById(manualTree, selectedId);
   const documentTitle = selectedNode?.title ?? "Dokument";
@@ -162,6 +175,59 @@ export function ManualWorkspace() {
               <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
               <TabsTrigger value="original">Original</TabsTrigger>
             </TabsList>
+            <div className="flex flex-wrap items-center gap-2 border-t py-3">
+              <Button
+                onClick={() => void navigator.clipboard?.writeText(window.location.href)}
+                size="sm"
+                variant="outline"
+              >
+                <Share2 data-icon="inline-start" />
+                Dela
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Send data-icon="inline-start" />
+                    Skicka för granskning
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Skicka för granskning</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium" htmlFor="reviewer-name">
+                      Namn
+                    </label>
+                    <Input
+                      id="reviewer-name"
+                      onChange={(event) => setReviewerName(event.target.value)}
+                      placeholder="Ange granskarens namn"
+                      value={reviewerName}
+                    />
+                    {reviewStatus ? (
+                      <p className="text-sm text-muted-foreground">{reviewStatus}</p>
+                    ) : null}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      disabled={!reviewerName.trim()}
+                      onClick={() => setReviewStatus(`Skickat till ${reviewerName.trim()} (mock)`)}
+                    >
+                      Skicka
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button size="sm" variant="outline">
+                <FileDown data-icon="inline-start" />
+                Exportera PDF
+              </Button>
+              <Button size="sm" variant="outline">
+                <Printer data-icon="inline-start" />
+                Skriv ut
+              </Button>
+            </div>
           </div>
 
           <TabsContent
