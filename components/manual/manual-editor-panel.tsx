@@ -24,6 +24,14 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -162,7 +170,32 @@ export function ManualEditorPanel({
     commit(nextValue, start + table.length, start + table.length);
   };
 
+  const insertModuleLink = (moduleTitle: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const modulePath = modules.find((module) => module.title === moduleTitle)?.path ?? `/${moduleTitle.toLocaleLowerCase("sv-SE")}`;
+    const link = `[${moduleTitle}](${modulePath})`;
+    const nextValue = `${value.slice(0, start)}${link}${value.slice(end)}`;
+    commit(nextValue, start + link.length, start + link.length);
+  };
+
   const toolbarButtonClass = "size-8 p-0";
+  const modules = [
+    { title: "Årshjul", path: "/arshjul" },
+    { title: "Avvikelsehantering", path: "/avvikelse" },
+    { title: "Förbättringsförslag", path: "/forbattringsforslag" },
+    { title: "Riskbedömning", path: "/riskbedomning" },
+    { title: "Intern Revision", path: "/intern-revision" },
+    { title: "Protokoll", path: "/protokoll" },
+    { title: "Kundtillfredsställelse", path: "/kundtillfredsstallelse" },
+    { title: "Leverantörsbedömning", path: "/leverantorsbedomning" },
+    { title: "Lagar & Bindande krav", path: "/lagar-bindande-krav" },
+    { title: "Personalenkät", path: "/personalenkat" },
+    { title: "Personal & Kompetens", path: "/personal-kompetens" },
+    { title: "Miljöaspekter", path: "/miljoaspekter" },
+  ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted/10">
@@ -201,6 +234,32 @@ export function ManualEditorPanel({
         <Separator className="mx-1 h-6" orientation="vertical" />
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={insertTable} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button aria-label="Länka modul" className="h-8 px-2 text-xs" size="sm" title="Länka modul" type="button" variant="outline">
+              Länka modul
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Länka modul</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {modules.map((module) => (
+                <DialogClose asChild key={module.title}>
+                  <Button
+                    className="justify-start"
+                    onClick={() => insertModuleLink(module.title)}
+                    type="button"
+                    variant="outline"
+                  >
+                    {module.title}
+                  </Button>
+                </DialogClose>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
         <Separator className="mx-1 h-6" orientation="vertical" />
         <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!canUndo} onClick={handleUndo} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
         <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!canRedo} onClick={handleRedo} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>

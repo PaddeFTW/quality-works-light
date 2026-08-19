@@ -254,6 +254,7 @@ export function ManualWorkspace() {
             <ManualOriginalPanel
               content={published?.content ?? null}
               documentTitle={documentTitle}
+              edition={edition}
               footerText={settings.footerText}
               headerText={settings.headerText}
               publishedAt={published?.publishedAt ?? null}

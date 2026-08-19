@@ -1,6 +1,6 @@
 "use client";
 
-import { FileLock2 } from "lucide-react";
+import { FileLock2, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +9,7 @@ interface ManualOriginalPanelProps {
   documentTitle: string;
   content: string | null;
   publishedAt: string | null;
+  edition: number;
   headerText: string;
   footerText: string;
 }
@@ -17,6 +18,7 @@ export function ManualOriginalPanel({
   documentTitle,
   content,
   publishedAt,
+  edition,
   headerText,
   footerText,
 }: ManualOriginalPanelProps) {
@@ -38,15 +40,22 @@ export function ManualOriginalPanel({
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">Read-only</Badge>
-          {publishedAt ? (
-            <span className="text-xs text-muted-foreground">
-              Publicerad {publishedAt}
-            </span>
-          ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+              <ShieldCheck className="size-5" />
+            </div>
+            <div>
+              <p className="font-semibold">Publicerad utgåva</p>
+              <p className="text-xs text-muted-foreground">Skyddad och skrivskyddad originalversion</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">Utgåva {edition}</Badge>
+            {publishedAt ? <span className="text-xs text-muted-foreground">Publicerad {publishedAt}</span> : null}
+          </div>
         </div>
-        <div className="rounded-xl border bg-card shadow-token-xs">
+        <div className="rounded-xl border border-primary/15 bg-card shadow-token-xs">
           <div className="border-b px-6 py-3 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {headerText}
           </div>
