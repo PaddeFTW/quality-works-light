@@ -11,7 +11,7 @@ const navigation = [
   },
   {
     title: "Avvikelser",
-    href: "/",
+    href: "/avvikelse",
     icon: <TriangleAlert className="size-4" />,
     badge: "12",
   },
