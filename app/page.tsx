@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, Home, Settings2, TriangleAlert } from "lucide-react";
+import { BookOpen, CalendarDays, FileText, Home, Settings2, TriangleAlert } from "lucide-react";
 
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -10,10 +10,15 @@ const navigation = [
     icon: <Home className="size-4" />,
   },
   {
-    title: "Avvikelser",
-    href: "/",
+    title: "Avvikelsehantering",
+    href: "/avvikelse",
     icon: <TriangleAlert className="size-4" />,
     badge: "12",
+  },
+  {
+    title: "Manual",
+    href: "/manual",
+    icon: <BookOpen className="size-4" />,
   },
   {
     title: "Dokument",
@@ -21,9 +26,9 @@ const navigation = [
     icon: <FileText className="size-4" />,
   },
   {
-    title: "Aktiviteter",
-    href: "/",
-    icon: <ClipboardCheck className="size-4" />,
+    title: "Årshjul",
+    href: "/arshjul",
+    icon: <CalendarDays className="size-4" />,
   },
   {
     title: "Inställningar",
