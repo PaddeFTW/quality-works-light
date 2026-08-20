@@ -1,19 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  AlertCircle,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  FileText,
-  Home,
-  Plus,
-  Settings2,
-  TriangleAlert,
-} from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { navigation } from "@/components/layout/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,14 +34,6 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-
-const navigation = [
-  { title: "Dashboard", href: "/", icon: <Home className="size-4" /> },
-  { title: "Avvikelser", href: "/avvikelse", icon: <TriangleAlert className="size-4" />, badge: "12" },
-  { title: "Dokument", href: "/", icon: <FileText className="size-4" /> },
-  { title: "Aktiviteter", href: "/", icon: <ClipboardCheck className="size-4" /> },
-  { title: "Inställningar", href: "/", icon: <Settings2 className="size-4" /> },
-];
 
 const deviations = [
   { title: "Bristande dokumentation vid överlämning", status: "Öppen", date: "19 aug 2026", severity: "Hög" },
