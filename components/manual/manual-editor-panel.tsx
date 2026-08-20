@@ -4,12 +4,16 @@ import { useRef } from "react";
 import type { ChangeEvent } from "react";
 
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   Check,
   Heading2,
   Italic,
   List,
   ListOrdered,
+  Minus,
   Paperclip,
   Save,
   Undo2,
@@ -108,6 +112,18 @@ export function ManualEditorPanel({
     commit(nextValue, start + (numbered ? 3 : linePrefix.length), end + delta);
   };
 
+  const insertBlock = (block: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = value.slice(0, start).endsWith("\n") || start === 0 ? "" : "\n";
+    const after = value.slice(end).startsWith("\n") || end === value.length ? "" : "\n";
+    const nextValue = `${value.slice(0, start)}${before}${block}${after}${value.slice(end)}`;
+    const cursor = start + before.length + block.length;
+    commit(nextValue, cursor, cursor);
+  };
+
   const handleUndo = () => {
     const history = historyRef.current;
     if (history.length <= 1) return;
@@ -201,6 +217,51 @@ export function ManualEditorPanel({
           variant="ghost"
         >
           <ListOrdered />
+        </Button>
+        <Separator className="mx-1 h-6" orientation="vertical" />
+        <Button
+          aria-label="Vänsterjustera"
+          className={cn(toolbarButtonClass)}
+          onClick={() => insertBlock('<div style="text-align: left">Text</div>')}
+          size="sm"
+          title="Vänsterjustera"
+          type="button"
+          variant="ghost"
+        >
+          <AlignLeft />
+        </Button>
+        <Button
+          aria-label="Centrera"
+          className={cn(toolbarButtonClass)}
+          onClick={() => insertBlock('<div style="text-align: center">Text</div>')}
+          size="sm"
+          title="Centrera"
+          type="button"
+          variant="ghost"
+        >
+          <AlignCenter />
+        </Button>
+        <Button
+          aria-label="Högerjustera"
+          className={cn(toolbarButtonClass)}
+          onClick={() => insertBlock('<div style="text-align: right">Text</div>')}
+          size="sm"
+          title="Högerjustera"
+          type="button"
+          variant="ghost"
+        >
+          <AlignRight />
+        </Button>
+        <Button
+          aria-label="Vågrät linje"
+          className={cn(toolbarButtonClass)}
+          onClick={() => insertBlock("---")}
+          size="sm"
+          title="Vågrät linje"
+          type="button"
+          variant="ghost"
+        >
+          <Minus />
         </Button>
         <Separator className="mx-1 h-6" orientation="vertical" />
         <Button
