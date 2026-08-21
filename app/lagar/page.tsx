@@ -157,9 +157,9 @@ export default function LagarPage() {
 
   return (
     <DashboardLayout
-      description="Laglista och lagefterlevnadskontroll för kvalitet, miljö och arbetsmiljö."
+      description="Laglista och lagefterlevnadskontroll för kvalitet, miljö, arbetsmiljö och andra krav."
       navigation={navigation}
-      title="Lagar & bindande krav"
+      title="Lagar och bindande krav"
       actions={
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

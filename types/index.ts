@@ -9,6 +9,11 @@ export interface NavItem {
   badge?: string;
 }
 
+export interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
 export interface BreadcrumbItem {
   title: string;
   href?: string;

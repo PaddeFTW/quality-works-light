@@ -1,10 +1,10 @@
 export const siteConfig = {
-  name: "Quality WorX Platform Foundation",
-  shortName: "Quality WorX",
+  name: "Quality Works Light",
+  shortName: "Quality Works Light",
   description:
-    "Official starter template for future Quality WorX applications, focused on reusable architecture, design tokens, layouts, and UI primitives.",
+    "Praktiskt ledningssystem för småföretag – kvalitet, miljö, arbetsmiljö och andra ISO-standarder.",
   links: {
-    repository: "https://github.com/PaddeFTW/quality-worx-app-template",
+    repository: "https://github.com/PaddeFTW/quality-works-light",
   },
   docs: [
     {

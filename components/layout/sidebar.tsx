@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { navigationGroups } from "@/components/layout/navigation";
 import type { NavItem } from "@/types";
 
 interface SidebarProps {
@@ -17,12 +18,14 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  title = "Kvalitetsportal",
-  subtitle = "Verksamhetsöversikt",
-  items = [],
+  title = "Quality Works Light",
+  subtitle = "Ledningssystem",
+  items,
   footer,
   className,
 }: SidebarProps) {
+  const useGroups = !items || items.length === 0;
+
   return (
     <aside
       className={cn(
@@ -41,24 +44,49 @@ export function Sidebar({
       </div>
       <Separator />
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-1 px-3 py-5">
-          {items.map((item) => (
-            <Link
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
-              href={item.href}
-              key={item.title}
-            >
-              <span className="flex items-center gap-3">
-                {item.icon}
-                <span>{item.title}</span>
-              </span>
-              {item.badge ? (
-                <Badge className="border-transparent" variant="secondary">
-                  {item.badge}
-                </Badge>
-              ) : null}
-            </Link>
-          ))}
+        <div className="flex flex-col gap-4 px-3 py-5">
+          {useGroups
+            ? navigationGroups.map((group) => (
+                <div key={group.label} className="space-y-1">
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <Link
+                      className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
+                      href={item.href}
+                      key={item.href}
+                    >
+                      <span className="flex items-center gap-3">
+                        {item.icon}
+                        <span>{item.title}</span>
+                      </span>
+                      {item.badge ? (
+                        <Badge className="border-transparent" variant="secondary">
+                          {item.badge}
+                        </Badge>
+                      ) : null}
+                    </Link>
+                  ))}
+                </div>
+              ))
+            : items.map((item) => (
+                <Link
+                  className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
+                  href={item.href}
+                  key={item.href}
+                >
+                  <span className="flex items-center gap-3">
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </span>
+                  {item.badge ? (
+                    <Badge className="border-transparent" variant="secondary">
+                      {item.badge}
+                    </Badge>
+                  ) : null}
+                </Link>
+              ))}
         </div>
       </ScrollArea>
       {footer ? (
