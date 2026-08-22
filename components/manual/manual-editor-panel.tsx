@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { ManualAttachment } from "@/components/manual/manual-workspace";
+import type { ManualAttachment } from "@/types/domain";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import UnderlineExtension from "@tiptap/extension-underline";
@@ -53,6 +53,7 @@ interface ManualEditorPanelProps {
   attachments: ManualAttachment[];
   onAddAttachment: () => void;
   onRemoveAttachment: (attachmentId: string) => void;
+  onDownloadAttachment: (attachment: ManualAttachment) => void;
 }
 
 export function ManualEditorPanel({
@@ -65,6 +66,7 @@ export function ManualEditorPanel({
   attachments,
   onAddAttachment,
   onRemoveAttachment,
+  onDownloadAttachment,
 }: ManualEditorPanelProps) {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const editor = useEditor({
@@ -104,15 +106,12 @@ export function ManualEditorPanel({
   const modules = [
     { title: "Årshjul", path: "/arshjul" },
     { title: "Avvikelsehantering", path: "/avvikelse" },
-    { title: "Förbättringsförslag", path: "/forbattringsforslag" },
-    { title: "Riskbedömning", path: "/riskbedomning" },
+    { title: "Förbättringsförslag", path: "/forslag" },
     { title: "Intern Revision", path: "/intern-revision" },
-    { title: "Protokoll", path: "/protokoll" },
-    { title: "Kundtillfredsställelse", path: "/kundtillfredsstallelse" },
-    { title: "Leverantörsbedömning", path: "/leverantorsbedomning" },
-    { title: "Lagar & Bindande krav", path: "/lagar-bindande-krav" },
-    { title: "Personalenkät", path: "/personalenkat" },
-    { title: "Personal & Kompetens", path: "/personal-kompetens" },
+    { title: "Kundtillfredsställelse", path: "/kund" },
+    { title: "Leverantörsbedömning", path: "/leverantor" },
+    { title: "Lagar & Bindande krav", path: "/lagar" },
+    { title: "Personal & Kompetens", path: "/kompetens" },
     { title: "Miljöaspekter", path: "/miljoaspekter" },
   ];
 
@@ -143,7 +142,9 @@ export function ManualEditorPanel({
               <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3">
                 <div>
                   <p className="font-medium">Dokumentbilagor</p>
-                  <p className="text-sm text-muted-foreground">Filerna hör till det valda dokumentet.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Välj filer från datorn. Lagring i molnet kopplas när Supabase Storage är aktivt.
+                  </p>
                 </div>
                 <Button onClick={onAddAttachment} size="sm" variant="outline">
                   <Upload data-icon="inline-start" />
@@ -161,15 +162,31 @@ export function ManualEditorPanel({
                   {attachments.map((attachment) => (
                     <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3" key={attachment.id}>
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="rounded-md bg-primary/10 p-2 text-primary"><Paperclip className="size-4" /></div>
+                        <div className="rounded-md bg-primary/10 p-2 text-primary">
+                          <Paperclip className="size-4" />
+                        </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium">{attachment.name}</p>
-                          <p className="text-xs text-muted-foreground">{attachment.size} · {attachment.type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {attachment.size} · {attachment.type}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button onClick={() => window.alert("Nedladdning är en platshållare.")} size="sm" variant="outline">Ladda ner</Button>
-                        <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">Ta bort</Button>
+                        <Button
+                          onClick={() => onDownloadAttachment(attachment)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Ladda ner
+                        </Button>
+                        <Button
+                          onClick={() => onRemoveAttachment(attachment.id)}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Ta bort
+                        </Button>
                       </div>
                     </div>
                   ))}
