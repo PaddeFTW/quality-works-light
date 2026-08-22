@@ -2,20 +2,44 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (signInError) {
+      setError(signInError.message);
+      return;
+    }
+
     router.push("/");
+    router.refresh();
   }
 
   return (
@@ -52,8 +76,13 @@ export default function LoginPage() {
                 type="password"
               />
             </div>
-            <Button className="w-full" size="lg" type="submit">
-              Logga in
+            {error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button className="w-full" disabled={loading} size="lg" type="submit">
+              {loading ? "Loggar in…" : "Logga in"}
             </Button>
           </form>
         </CardContent>
