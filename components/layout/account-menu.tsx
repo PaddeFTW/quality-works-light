@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -18,21 +21,50 @@ interface AccountMenuProps {
   name?: string;
   email?: string;
   avatarUrl?: string;
+  roleLabel?: string;
   className?: string;
 }
 
 export function AccountMenu({
-  name = "Anna Lindberg",
-  email = "anna.lindberg@qualityworx.se",
+  name: nameProp,
+  email: emailProp,
   avatarUrl,
+  roleLabel = "Användare",
   className,
 }: AccountMenuProps) {
-  const initials = name
+  const router = useRouter();
+  const [name, setName] = useState(nameProp ?? "");
+  const [email, setEmail] = useState(emailProp ?? "");
+
+  useEffect(() => {
+    if (nameProp && emailProp) return;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) return;
+      setEmail(user.email ?? "");
+      setName(
+        (user.user_metadata?.full_name as string | undefined) ||
+          user.email?.split("@")[0] ||
+          "Användare",
+      );
+    });
+  }, [nameProp, emailProp]);
+
+  const displayName = name || "Användare";
+  const initials = displayName
     .split(" ")
     .map((part) => part.charAt(0))
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <DropdownMenu>
@@ -43,20 +75,20 @@ export function AccountMenu({
         )}
       >
         <Avatar className="size-8">
-          {avatarUrl ? <AvatarImage alt={name} src={avatarUrl} /> : null}
+          {avatarUrl ? <AvatarImage alt={displayName} src={avatarUrl} /> : null}
           <AvatarFallback className="bg-primary/12 text-xs font-semibold text-primary">
-            {initials}
+            {initials || "?"}
           </AvatarFallback>
         </Avatar>
         <span className="hidden min-w-0 flex-col leading-tight sm:flex">
-          <span className="truncate text-sm font-medium">{name}</span>
-          <span className="truncate text-xs text-muted-foreground">Kontoansvarig</span>
+          <span className="truncate text-sm font-medium">{displayName}</span>
+          <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
         </span>
         <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="truncate text-sm font-medium">{name}</span>
+          <span className="truncate text-sm font-medium">{displayName}</span>
           <span className="truncate text-xs font-normal text-muted-foreground">
             {email}
           </span>
@@ -73,7 +105,7 @@ export function AccountMenu({
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
+        <DropdownMenuItem onClick={handleLogout} variant="destructive">
           <LogOut />
           Logga ut
         </DropdownMenuItem>

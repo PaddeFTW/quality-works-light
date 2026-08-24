@@ -1,8 +1,12 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isModuleVisible, type AppRole } from "@/lib/features";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +19,8 @@ interface SidebarProps {
   items?: NavItem[];
   footer?: ReactNode;
   className?: string;
+  /** Default admin until org role is loaded from DB */
+  role?: AppRole;
 }
 
 export function Sidebar({
@@ -23,7 +29,9 @@ export function Sidebar({
   items,
   footer,
   className,
+  role = "admin",
 }: SidebarProps) {
+  const pathname = usePathname();
   const useGroups = !items || items.length === 0;
 
   return (
@@ -46,47 +54,66 @@ export function Sidebar({
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-4 px-3 py-5">
           {useGroups
-            ? navigationGroups.map((group) => (
-                <div key={group.label} className="space-y-1">
-                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.label}
-                  </p>
-                  {group.items.map((item) => (
-                    <Link
-                      className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
-                      href={item.href}
-                      key={item.href}
-                    >
-                      <span className="flex items-center gap-3">
-                        {item.icon}
-                        <span>{item.title}</span>
-                      </span>
-                      {item.badge ? (
-                        <Badge className="border-transparent" variant="secondary">
-                          {item.badge}
-                        </Badge>
-                      ) : null}
-                    </Link>
-                  ))}
-                </div>
-              ))
-            : items.map((item) => (
-                <Link
-                  className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
-                  href={item.href}
-                  key={item.href}
-                >
-                  <span className="flex items-center gap-3">
-                    {item.icon}
-                    <span>{item.title}</span>
-                  </span>
-                  {item.badge ? (
-                    <Badge className="border-transparent" variant="secondary">
-                      {item.badge}
-                    </Badge>
-                  ) : null}
-                </Link>
-              ))}
+            ? navigationGroups.map((group) => {
+                const visibleItems = group.items.filter((item) =>
+                  isModuleVisible(item.href, role),
+                );
+                if (visibleItems.length === 0) return null;
+                return (
+                  <div key={group.label} className="space-y-1">
+                    <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.label}
+                    </p>
+                    {visibleItems.map((item) => {
+                      const active =
+                        item.href === "/"
+                          ? pathname === "/"
+                          : pathname.startsWith(item.href);
+                      return (
+                        <Link
+                          className={cn(
+                            "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-token",
+                            active
+                              ? "bg-accent text-accent-foreground"
+                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          )}
+                          href={item.href}
+                          key={item.href}
+                        >
+                          <span className="flex items-center gap-3">
+                            {item.icon}
+                            <span>{item.title}</span>
+                          </span>
+                          {item.badge ? (
+                            <Badge className="border-transparent" variant="secondary">
+                              {item.badge}
+                            </Badge>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            : items
+                .filter((item) => isModuleVisible(item.href, role))
+                .map((item) => (
+                  <Link
+                    className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
+                    href={item.href}
+                    key={item.href}
+                  >
+                    <span className="flex items-center gap-3">
+                      {item.icon}
+                      <span>{item.title}</span>
+                    </span>
+                    {item.badge ? (
+                      <Badge className="border-transparent" variant="secondary">
+                        {item.badge}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                ))}
         </div>
       </ScrollArea>
       {footer ? (
