@@ -6,10 +6,8 @@ import {
   BadgeCheck,
   Check,
   ChevronRight,
-  Expand,
   FilePlus,
   FolderPlus,
-  History,
   ListTree,
   Maximize2,
   Minimize2,
@@ -18,7 +16,6 @@ import {
   PanelLeftOpen,
   Plus,
   Printer,
-  Send,
   Share2,
   Upload,
 } from "lucide-react";
@@ -61,7 +58,20 @@ import {
   type ManualSettings,
 } from "@/components/manual/manual-settings-panel";
 import { ManualTree } from "@/components/manual/manual-tree";
+import { useOrgSession } from "@/components/providers/org-provider";
 import { downloadHtmlAsFile, printDocument } from "@/lib/export-document";
+import { bootManualFromCloud } from "@/components/manual/manual-boot";
+import {
+  persistAck,
+  persistCreate,
+  persistDelete,
+  persistDraft,
+  persistFiles,
+  persistMove,
+  persistPublish,
+  persistRename,
+  persistSettings,
+} from "@/lib/manual/persist";
 import {
   firstDocumentId,
   getParentId,
@@ -70,7 +80,6 @@ import {
   moveNode,
   removeNode,
   renameNode,
-  slugifyTitle,
 } from "@/lib/manual/tree-ops";
 import {
   loadDrafts,
@@ -96,14 +105,11 @@ const initialSettings: ManualSettings = {
 type ViewMode = "normal" | "focus" | "full";
 type DialogMode = "create-doc" | "create-folder" | "rename" | "move" | "delete" | null;
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export function ManualWorkspace({ initialView = "normal" }: { initialView?: ViewMode }) {
+  const { session, loading: orgLoading } = useOrgSession();
   const [ready, setReady] = useState(false);
+  const [cloud, setCloud] = useState(false);
+  const [manualId, setManualId] = useState<string | null>(null);
   const [tree, setTree] = useState<ManualNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("work");
@@ -120,47 +126,54 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const [dialogTarget, setDialogTarget] = useState<ManualNode | null>(null);
   const [dialogName, setDialogName] = useState("");
   const [dialogParent, setDialogParent] = useState<string>("root");
-  const [reviewerName, setReviewerName] = useState("");
-  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadDocRef = useRef<HTMLInputElement>(null);
+  const canEdit = session?.role !== "viewer";
 
   useEffect(() => {
-    const nextTree = loadTree();
-    const nextDrafts = loadDrafts();
-    const nextSettings = loadJson(SETTINGS_KEY, initialSettings);
-    setTree(nextTree);
-    setDrafts(nextDrafts);
-    setSettings(nextSettings);
-    setSelectedId(firstDocumentId(nextTree));
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    saveTree(tree);
-  }, [tree, ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-    saveDrafts(drafts);
-  }, [drafts, ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-    saveJson(SETTINGS_KEY, settings);
-  }, [settings, ready]);
-
-  useEffect(() => {
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      if (dirtyIds.length === 0) return;
-      event.preventDefault();
-      event.returnValue = "";
+    if (orgLoading) return;
+    let cancelled = false;
+    async function boot() {
+      if (session?.organizationId) {
+        try {
+          const result = await bootManualFromCloud(session.organizationId, session.manualId);
+          if (cancelled) return;
+          setCloud(true);
+          setManualId(result.manualId);
+          setTree(result.tree);
+          setDrafts(result.drafts);
+          setSettings(result.settings);
+          setVersionsByDoc(result.versions);
+          setSelectedId(result.selectedId);
+          setReady(true);
+          return;
+        } catch (error) {
+          console.error(error);
+          setStatus("Kunde inte läsa molnet – använder lokal kopia.");
+        }
+      }
+      const nextTree = loadTree();
+      setTree(nextTree);
+      setDrafts(loadDrafts());
+      setSettings(loadJson(SETTINGS_KEY, initialSettings));
+      setSelectedId(firstDocumentId(nextTree));
+      setCloud(false);
+      setReady(true);
     }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirtyIds]);
+    void boot();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgLoading, session?.organizationId, session?.manualId]);
+
+  useEffect(() => {
+    if (!ready || cloud) return;
+    saveTree(tree);
+    saveDrafts(drafts);
+    saveJson(SETTINGS_KEY, settings);
+  }, [tree, drafts, settings, ready, cloud]);
 
   const selectedNode = selectedId ? findNodeById(tree, selectedId) : undefined;
   const selectedIsDocument = selectedNode?.kind === "document";
@@ -178,199 +191,177 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     setSavedId(null);
   }
 
-  function clearDirty(id: string) {
-    setDirtyIds((current) => current.filter((item) => item !== id));
-  }
-
-  function handleSelect(node: ManualNode) {
-    if (selectedId && dirtyIds.includes(selectedId) && node.id !== selectedId) {
-      const ok = window.confirm("Du har osparade ändringar. Byt dokument ändå?");
-      if (!ok) return;
+  async function handleSave() {
+    if (!selectedId) return;
+    if (cloud) {
+      try {
+        await persistDraft(selectedId, drafts[selectedId] ?? draft);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte spara");
+        return;
+      }
     }
-    setSelectedId(node.id);
-    setTreeOpen(false);
-    setShareStatus(null);
-    if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
+    setSavedId(selectedId);
+    setDirtyIds((current) => current.filter((item) => item !== selectedId));
   }
 
-  function openCreate(kind: "create-doc" | "create-folder", parentId: string | null) {
-    setDialog(kind);
-    setDialogName(kind === "create-doc" ? "Nytt dokument" : "Ny mapp");
-    setDialogParent(parentId ?? "root");
-    setDialogTarget(null);
+  async function handlePublish() {
+    if (!selectedId || !selectedIsDocument) return;
+    const nextEdition = (versions[0]?.edition ?? 0) + 1;
+    if (cloud && session) {
+      try {
+        const row = await persistPublish(selectedId, draft, nextEdition, session.userId);
+        setVersionsByDoc((current) => ({
+          ...current,
+          [selectedId]: [
+            {
+              id: row.id,
+              edition: row.edition,
+              content: row.content_html,
+              publishedAt: new Date(row.published_at).toLocaleString("sv-SE"),
+            },
+            ...(current[selectedId] ?? []),
+          ],
+        }));
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Publicering misslyckades");
+        return;
+      }
+    } else {
+      setVersionsByDoc((current) => ({
+        ...current,
+        [selectedId]: [
+          {
+            id: `${selectedId}-v${nextEdition}`,
+            edition: nextEdition,
+            content: draft,
+            publishedAt: new Date().toLocaleString("sv-SE"),
+            publishedByName: settings.issuer || "Administratör",
+          },
+          ...(current[selectedId] ?? []),
+        ],
+      }));
+    }
+    setDirtyIds((current) => current.filter((item) => item !== selectedId));
+    setSavedId(selectedId);
+    setActiveTab("original");
   }
 
-  function confirmCreate() {
+  async function confirmCreate() {
     const title = dialogName.trim() || (dialog === "create-folder" ? "Ny mapp" : "Nytt dokument");
     const parentId = dialogParent === "root" ? null : dialogParent;
-    const node: ManualNode =
-      dialog === "create-folder"
-        ? { id: slugifyTitle(title), title, kind: "folder", children: [] }
-        : { id: slugifyTitle(title), title, kind: "document" };
+    const kind = dialog === "create-folder" ? "folder" : "document";
+    let id = `${kind}-${Date.now()}`;
+    if (cloud && manualId) {
+      try {
+        id = await persistCreate({ manualId, parentId, title, kind });
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte skapa");
+        return;
+      }
+    }
+    const node: ManualNode = kind === "folder" ? { id, title, kind, children: [] } : { id, title, kind };
     setTree((current) => insertNode(current, parentId, node));
-    if (node.kind === "document") {
-      setDrafts((current) => ({ ...current, [node.id]: defaultDocumentContent }));
-      setSelectedId(node.id);
+    if (kind === "document") {
+      setDrafts((current) => ({ ...current, [id]: defaultDocumentContent }));
+      setSelectedId(id);
       setActiveTab("work");
     }
     setDialog(null);
   }
 
-  function confirmRename() {
+  async function confirmRename() {
     if (!dialogTarget) return;
     const title = dialogName.trim();
     if (!title) return;
+    if (cloud) {
+      try {
+        await persistRename(dialogTarget.id, title);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte byta namn");
+        return;
+      }
+    }
     setTree((current) => renameNode(current, dialogTarget.id, title));
     setDialog(null);
   }
 
-  function confirmMove() {
+  async function confirmMove() {
     if (!dialogTarget) return;
     const parentId = dialogParent === "root" ? null : dialogParent;
+    if (cloud) {
+      try {
+        await persistMove(dialogTarget.id, parentId);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte flytta");
+        return;
+      }
+    }
     setTree((current) => moveNode(current, dialogTarget.id, parentId));
     setDialog(null);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!dialogTarget) return;
     const removedId = dialogTarget.id;
+    if (cloud) {
+      try {
+        await persistDelete(removedId);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte ta bort");
+        return;
+      }
+    }
     setTree((current) => {
       const next = removeNode(current, removedId);
-      if (selectedId === removedId) {
-        setSelectedId(firstDocumentId(next));
-      }
+      if (selectedId === removedId) setSelectedId(firstDocumentId(next));
       return next;
-    });
-    setDrafts((current) => {
-      const copy = { ...current };
-      delete copy[removedId];
-      return copy;
     });
     setDialog(null);
   }
 
-  async function handleUploadDocuments(fileList: FileList | null) {
-    if (!fileList?.length) return;
-    const parentId =
-      selectedNode?.kind === "folder"
-        ? selectedNode.id
-        : selectedId
-          ? getParentId(tree, selectedId)
-          : null;
-    let lastId: string | null = null;
-    let nextTree = tree;
-    const nextDrafts = { ...drafts };
-    for (const file of Array.from(fileList)) {
-      const title = file.name.replace(/\.[^.]+$/, "");
-      const id = slugifyTitle(title);
-      const node: ManualNode = { id, title, kind: "document" };
-      nextTree = insertNode(nextTree, parentId, node);
-      lastId = id;
-      if (file.type.startsWith("text/") || /\.(md|html|txt)$/i.test(file.name)) {
-        nextDrafts[id] = await file.text();
-      } else {
-        nextDrafts[id] = `<h2>${title}</h2><p>Uppladdad fil: ${file.name} (${formatFileSize(file.size)}). Innehållet kan redigeras här. Originalfilen finns som bilaga.</p>`;
+  async function handleAddAttachmentFiles(fileList: FileList | null) {
+    if (!fileList?.length || !selectedId) return;
+    if (cloud && session?.organizationId) {
+      try {
+        const uploaded = await persistFiles(session.organizationId, selectedId, session.userId, fileList);
         setAttachments((current) => ({
           ...current,
-          [id]: [
-            {
-              id: `${id}-src`,
-              name: file.name,
-              size: formatFileSize(file.size),
-              type: file.type || "Fil",
-              url: URL.createObjectURL(file),
-              file,
-            },
-          ],
+          [selectedId]: [...(current[selectedId] ?? []), ...uploaded],
         }));
+        return;
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Uppladdning misslyckades");
       }
     }
-    setTree(nextTree);
-    setDrafts(nextDrafts);
-    if (lastId) {
-      setSelectedId(lastId);
-      setActiveTab("work");
+  }
+
+  async function handleSettingsChange(next: ManualSettings) {
+    setSettings(next);
+    if (cloud && manualId) {
+      try {
+        await persistSettings(manualId, next);
+      } catch {
+        /* keep local */
+      }
     }
   }
 
-  function handleDraftChange(value: string) {
-    if (!selectedId || !selectedIsDocument) return;
-    setDrafts((current) => ({ ...current, [selectedId]: value }));
-    markDirty(selectedId);
-  }
-
-  function handleSave() {
-    if (!selectedId) return;
-    setSavedId(selectedId);
-    clearDirty(selectedId);
-  }
-
-  function handlePublish() {
-    if (!selectedId || !selectedIsDocument) return;
-    const nextEdition = (versions[0]?.edition ?? 0) + 1;
-    const version: DocumentVersion = {
-      id: `${selectedId}-v${nextEdition}-${Date.now()}`,
-      edition: nextEdition,
-      content: draft,
-      publishedAt: new Date().toLocaleString("sv-SE"),
-      publishedByName: settings.issuer || "Administratör",
-    };
-    setVersionsByDoc((current) => ({
-      ...current,
-      [selectedId]: [version, ...(current[selectedId] ?? [])],
-    }));
-    clearDirty(selectedId);
-    setSavedId(selectedId);
-    setAcknowledgedIds((current) => current.filter((id) => id !== selectedId));
-    setActiveTab("original");
-  }
-
-  function handleAddAttachmentFiles(fileList: FileList | null) {
-    if (!fileList?.length || !selectedId) return;
-    const next: ManualAttachment[] = Array.from(fileList).map((file) => ({
-      id: `${selectedId}-${file.name}-${Date.now()}`,
-      name: file.name,
-      size: formatFileSize(file.size),
-      type: file.type || "Fil",
-      url: URL.createObjectURL(file),
-      file,
-    }));
-    setAttachments((current) => ({
-      ...current,
-      [selectedId]: [...(current[selectedId] ?? []), ...next],
-    }));
-  }
-
-  function handleExport() {
-    if (!published) {
-      window.alert("Publicera dokumentet först för att exportera Original.");
-      setActiveTab("work");
-      return;
+  function handleSelect(node: ManualNode) {
+    if (selectedId && dirtyIds.includes(selectedId) && node.id !== selectedId) {
+      if (!window.confirm("Du har osparade ändringar. Byt dokument ändå?")) return;
     }
-    printDocument(
-      documentTitle,
-      settings.headerText,
-      published.content,
-      `${settings.footerText} · Utgåva ${published.edition}`,
-    );
-  }
-
-  function handleExportWord() {
-    if (!published) {
-      window.alert("Publicera dokumentet först för att exportera Original.");
-      return;
-    }
-    downloadHtmlAsFile(
-      `${documentTitle.replaceAll(" ", "-")}-utgava-${published.edition}.doc`,
-      documentTitle,
-      settings.headerText,
-      published.content,
-      `${settings.footerText} · Utgåva ${published.edition}`,
-    );
+    setSelectedId(node.id);
+    setTreeOpen(false);
+    if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
   }
 
   if (!ready) {
-    return <div className="flex h-[calc(100vh-5.5rem)] items-center justify-center text-sm text-muted-foreground">Laddar manual…</div>;
+    return (
+      <div className="flex h-[calc(100vh-5.5rem)] items-center justify-center text-sm text-muted-foreground">
+        Laddar manual…
+      </div>
+    );
   }
 
   return (
@@ -379,30 +370,18 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
         <aside className="hidden w-[300px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
           <ManualTree
             nodes={tree}
-            onDelete={(node) => {
-              setDialogTarget(node);
-              setDialog("delete");
-            }}
-            onMove={(node) => {
-              setDialogTarget(node);
-              setDialogParent(getParentId(tree, node.id) ?? "root");
-              setDialog("move");
-            }}
-            onNewDocument={(parentId) => openCreate("create-doc", parentId)}
-            onNewFolder={(parentId) => openCreate("create-folder", parentId)}
-            onRename={(node) => {
-              setDialogTarget(node);
-              setDialogName(node.title);
-              setDialog("rename");
-            }}
+            onDelete={(node) => { setDialogTarget(node); setDialog("delete"); }}
+            onMove={(node) => { setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(parentId ?? "root"); }}
+            onNewFolder={(parentId) => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(parentId ?? "root"); }}
+            onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
             onSelect={handleSelect}
             selectedId={selectedId}
           />
         </aside>
       )}
-
-      <input accept=".txt,.md,.html,.htm,.pdf,.doc,.docx,.odt" className="hidden" multiple onChange={(e) => { void handleUploadDocuments(e.target.files); e.target.value = ""; }} ref={uploadDocRef} type="file" />
-      <input className="hidden" multiple onChange={(e) => { handleAddAttachmentFiles(e.target.files); e.target.value = ""; }} ref={fileInputRef} type="file" />
+      <input className="hidden" multiple onChange={(e) => { void handleAddAttachmentFiles(e.target.files); e.target.value = ""; }} ref={fileInputRef} type="file" />
+      <input accept=".txt,.md,.html,.htm,.pdf,.doc,.docx" className="hidden" multiple ref={uploadDocRef} type="file" />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
@@ -410,97 +389,73 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             <div className="flex flex-wrap items-center gap-2">
               <Button className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
                 <ListTree className="size-4" />
-                <span className="sr-only">Visa träd</span>
               </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link href="/">Dashboard</Link>
-              </Button>
+              <Button asChild size="sm" variant="ghost"><Link href="/">Dashboard</Link></Button>
               <ChevronRight className="size-3.5 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{settings.name}</span>
               <ChevronRight className="size-3.5 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">{documentTitle}</span>
-              {selectedIsDocument ? (
-                isDirty ? <Badge variant="secondary">Osparat</Badge> : published ? <Badge variant="success">Publicerad</Badge> : <Badge variant="secondary">Utkast</Badge>
-              ) : null}
+              <span className="text-sm font-medium">{documentTitle}</span>
+              {cloud ? <Badge variant="secondary">Moln</Badge> : <Badge variant="outline">Lokalt</Badge>}
+              {selectedIsDocument ? (isDirty ? <Badge variant="secondary">Osparat</Badge> : published ? <Badge variant="success">Publicerad</Badge> : <Badge variant="secondary">Utkast</Badge>) : null}
               <div className="ml-auto flex items-center gap-1">
-                <Button onClick={() => setViewMode((m) => (m === "focus" ? "normal" : "focus"))} size="icon" title={hideTree ? "Visa träd" : "Fokusläge"} variant="ghost">
+                <Button onClick={() => setViewMode((m) => (m === "focus" ? "normal" : "focus"))} size="icon" variant="ghost">
                   {hideTree ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
                 </Button>
-                <Button asChild size="icon" title="Öppna helsida" variant="ghost">
-                  <Link href="/manual/full" target="_blank">
-                    <Maximize2 className="size-4" />
-                  </Link>
-                </Button>
-                {viewMode === "full" ? (
-                  <Button asChild size="icon" title="Tillbaka" variant="ghost">
-                    <Link href="/manual"><Minimize2 className="size-4" /></Link>
-                  </Button>
-                ) : null}
+                <Button asChild size="icon" variant="ghost"><Link href="/manual/full" target="_blank"><Maximize2 className="size-4" /></Link></Button>
+                {viewMode === "full" ? <Button asChild size="icon" variant="ghost"><Link href="/manual"><Minimize2 className="size-4" /></Link></Button> : null}
               </div>
             </div>
-
             <div className="flex flex-wrap items-center gap-2 pb-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm"><Plus data-icon="inline-start" />Nytt</Button>
+                  <Button disabled={!canEdit} size="sm"><Plus data-icon="inline-start" />Nytt</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => openCreate("create-doc", selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? ""))}>
+                  <DropdownMenuItem onClick={() => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? "") ?? "root"); }}>
                     <FilePlus className="size-4" /> Dokument
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => openCreate("create-folder", selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? ""))}>
+                  <DropdownMenuItem onClick={() => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? "") ?? "root"); }}>
                     <FolderPlus className="size-4" /> Mapp
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => uploadDocRef.current?.click()}>
-                    <Upload className="size-4" /> Ladda upp fil
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline"><MoreHorizontal data-icon="inline-start" />Åtgärder</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogName(selectedNode.title), setDialog("rename"))}>
-                    Byt namn
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogParent(getParentId(tree, selectedNode.id) ?? "root"), setDialog("move"))}>
-                    Flytta
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => { await navigator.clipboard?.writeText(window.location.href); setShareStatus("Länk kopierad"); }}>
-                    <Share2 className="size-4" /> Dela länk
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExport}><Printer className="size-4" /> Exportera PDF / skriv ut</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportWord}>Exportera Word</DropdownMenuItem>
+                <DropdownMenuContent>
+                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogName(selectedNode.title), setDialog("rename"))}>Byt namn</DropdownMenuItem>
+                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogParent(getParentId(tree, selectedNode.id) ?? "root"), setDialog("move"))}>Flytta</DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => { await navigator.clipboard.writeText(window.location.href); setShareStatus("Länk kopierad"); }}><Share2 className="size-4" /> Dela</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => published && printDocument(documentTitle, settings.headerText, published.content, settings.footerText)}><Printer className="size-4" /> Skriv ut</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => published && downloadHtmlAsFile(`${documentTitle}.doc`, documentTitle, settings.headerText, published.content, settings.footerText)}>Exportera Word</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialog("delete"))} variant="destructive">
-                    Ta bort
-                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialog("delete"))} variant="destructive">Ta bort</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <TabsList variant="line" className="ml-2">
+              <TabsList className="ml-2" variant="line">
                 <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
                 <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
                 <TabsTrigger value="original">Original</TabsTrigger>
               </TabsList>
+              {status ? <span className="text-xs text-destructive">{status}</span> : null}
               {shareStatus ? <span className="text-xs text-muted-foreground">{shareStatus}</span> : null}
             </div>
           </div>
-
           <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
-            <ManualSettingsPanel onChange={setSettings} settings={settings} />
+            <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
           </TabsContent>
-
           <TabsContent className="flex min-h-0 flex-col" value="work">
             {selectedIsDocument ? (
               <ManualEditorPanel
                 attachments={attachments[selectedId ?? ""] ?? []}
                 documentTitle={documentTitle}
                 onAddAttachment={() => fileInputRef.current?.click()}
-                onChange={handleDraftChange}
+                onChange={(value) => {
+                  if (!selectedId || !canEdit) return;
+                  setDrafts((current) => ({ ...current, [selectedId]: value }));
+                  markDirty(selectedId);
+                }}
                 onDownloadAttachment={(attachment) => {
                   if (!attachment.url) return;
                   const a = document.createElement("a");
@@ -508,114 +463,63 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                   a.download = attachment.name;
                   a.click();
                 }}
-                onPublish={handlePublish}
-                onRemoveAttachment={(id) =>
-                  setAttachments((current) => ({
-                    ...current,
-                    [selectedId ?? ""]:
-                      (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id),
-                  }))
-                }
-                onSave={handleSave}
+                onPublish={() => void handlePublish()}
+                onRemoveAttachment={(id) => setAttachments((current) => ({ ...current, [selectedId ?? ""]: (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id) }))}
+                onSave={() => void handleSave()}
                 saved={savedId === selectedId && !isDirty}
                 value={draft}
               />
             ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-                <p className="text-sm text-muted-foreground">Välj ett dokument i trädet eller skapa ett nytt.</p>
-                <Button onClick={() => openCreate("create-doc", selectedNode?.kind === "folder" ? selectedNode.id : null)}>
-                  Nytt dokument
-                </Button>
-              </div>
+              <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Välj ett dokument i trädet.</div>
             )}
           </TabsContent>
-
           <TabsContent className="flex min-h-0 flex-col" value="original">
-            <ManualOriginalPanel
-              content={published?.content ?? null}
-              documentTitle={documentTitle}
-              edition={edition || 1}
-              footerText={settings.footerText}
-              headerText={settings.headerText}
-              publishedAt={published?.publishedAt ?? null}
-            />
+            <ManualOriginalPanel content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} />
           </TabsContent>
         </Tabs>
-
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t bg-background px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="font-medium">{edition > 0 ? `Utgåva ${edition}` : "Ingen publicerad utgåva"}</span>
-            {selectedId && acknowledgedIds.includes(selectedId) ? (
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <BadgeCheck className="size-4 text-success" /> Kvitterad
-              </span>
-            ) : null}
-          </div>
+        <footer className="flex items-center justify-between border-t bg-background px-4 py-3">
+          <span className="text-sm font-medium">{edition > 0 ? `Utgåva ${edition}` : "Ingen publicerad utgåva"}</span>
           <Button
             disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
-            onClick={() => selectedId && setAcknowledgedIds((current) => [...current, selectedId])}
+            onClick={() => {
+              if (!selectedId) return;
+              setAcknowledgedIds((current) => [...current, selectedId]);
+              if (cloud && session) void persistAck(selectedId, session.userId, edition);
+            }}
             size="sm"
-            variant={selectedId && acknowledgedIds.includes(selectedId) ? "outline" : "default"}
           >
-            {selectedId && acknowledgedIds.includes(selectedId) ? <Check /> : null}
-            {selectedId && acknowledgedIds.includes(selectedId) ? "Kvitterad" : "Kvittera"}
+            {selectedId && acknowledgedIds.includes(selectedId) ? <><Check /> Kvitterad</> : "Kvittera"}
           </Button>
         </footer>
       </div>
 
-      <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
-        <DialogContent className="max-h-[80vh] overflow-hidden p-0">
-          <DialogHeader className="sr-only"><DialogTitle>Dokumentträd</DialogTitle></DialogHeader>
-          <div className="max-h-[80vh] overflow-hidden">
-            <ManualTree
-              nodes={tree}
-              onDelete={(node) => { setTreeOpen(false); setDialogTarget(node); setDialog("delete"); }}
-              onMove={(node) => { setTreeOpen(false); setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
-              onNewDocument={(parentId) => { setTreeOpen(false); openCreate("create-doc", parentId); }}
-              onNewFolder={(parentId) => { setTreeOpen(false); openCreate("create-folder", parentId); }}
-              onRename={(node) => { setTreeOpen(false); setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
-              onSelect={handleSelect}
-              selectedId={selectedId}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog onOpenChange={(open) => !open && setDialog(null)} open={dialog === "create-doc" || dialog === "create-folder" || dialog === "rename" || dialog === "move" || dialog === "delete"}>
+      <Dialog onOpenChange={(open) => !open && setDialog(null)} open={Boolean(dialog)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialog === "create-doc" && "Nytt dokument"}
-              {dialog === "create-folder" && "Ny mapp"}
-              {dialog === "rename" && "Byt namn"}
-              {dialog === "move" && "Flytta"}
-              {dialog === "delete" && "Ta bort"}
+              {dialog === "delete" ? "Ta bort" : dialog === "rename" ? "Byt namn" : dialog === "move" ? "Flytta" : dialog === "create-folder" ? "Ny mapp" : "Nytt dokument"}
             </DialogTitle>
           </DialogHeader>
           {dialog === "delete" ? (
-            <p className="text-sm text-muted-foreground">
-              Ta bort “{dialogTarget?.title}”? Detta kan inte ångras i webbläsaren.
-            </p>
+            <p className="text-sm text-muted-foreground">Ta bort “{dialogTarget?.title}”?</p>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="space-y-4">
               {dialog !== "move" ? (
                 <div className="space-y-2">
                   <Label htmlFor="doc-name">Namn</Label>
-                  <Input autoFocus id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
+                  <Input id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
                 </div>
               ) : null}
               {dialog === "create-doc" || dialog === "create-folder" || dialog === "move" ? (
                 <div className="space-y-2">
                   <Label>Placering</Label>
                   <Select onValueChange={setDialogParent} value={dialogParent}>
-                    <SelectTrigger><SelectValue placeholder="Rot" /></SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="root">Roten av manualen</SelectItem>
-                      {folders
-                        .filter((folder) => folder.id !== dialogTarget?.id)
-                        .map((folder) => (
-                          <SelectItem key={folder.id} value={folder.id}>{folder.label}</SelectItem>
-                        ))}
+                      {folders.filter((folder) => folder.id !== dialogTarget?.id).map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>{folder.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -624,15 +528,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           )}
           <DialogFooter>
             <Button onClick={() => setDialog(null)} variant="outline">Avbryt</Button>
-            {dialog === "delete" ? (
-              <Button onClick={confirmDelete} variant="destructive">Ta bort</Button>
-            ) : dialog === "rename" ? (
-              <Button onClick={confirmRename}>Spara</Button>
-            ) : dialog === "move" ? (
-              <Button onClick={confirmMove}>Flytta</Button>
-            ) : (
-              <Button onClick={confirmCreate}>Skapa</Button>
-            )}
+            {dialog === "delete" ? <Button onClick={() => void confirmDelete()} variant="destructive">Ta bort</Button> : null}
+            {dialog === "rename" ? <Button onClick={() => void confirmRename()}>Spara</Button> : null}
+            {dialog === "move" ? <Button onClick={() => void confirmMove()}>Flytta</Button> : null}
+            {dialog === "create-doc" || dialog === "create-folder" ? <Button onClick={() => void confirmCreate()}>Skapa</Button> : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
