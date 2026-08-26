@@ -1,22 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, FileText, Folder, FolderOpen, Search } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ManualNode } from "@/components/manual/manual-data";
 
 interface ManualTreeProps {
   nodes: ManualNode[];
-  selectedId: string;
+  selectedId: string | null;
   onSelect: (node: ManualNode) => void;
-}
-
-function matchesQuery(node: ManualNode, query: string): boolean {
-  if (node.title.toLowerCase().includes(query)) return true;
-  return (node.children ?? []).some((child) => matchesQuery(child, query));
+  onRename: (node: ManualNode) => void;
+  onDelete: (node: ManualNode) => void;
+  onMove: (node: ManualNode) => void;
+  onNewDocument: (parentId: string | null) => void;
+  onNewFolder: (parentId: string | null) => void;
 }
 
 function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
@@ -34,7 +49,16 @@ function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
   }, []);
 }
 
-export function ManualTree({ nodes, selectedId, onSelect }: ManualTreeProps) {
+export function ManualTree({
+  nodes,
+  selectedId,
+  onSelect,
+  onRename,
+  onDelete,
+  onMove,
+  onNewDocument,
+  onNewFolder,
+}: ManualTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
@@ -46,73 +70,100 @@ export function ManualTree({ nodes, selectedId, onSelect }: ManualTreeProps) {
 
   function toggleFolder(id: string) {
     setCollapsed((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
   }
 
   function renderNode(node: ManualNode, depth: number) {
-    const hasChildren = (node.children ?? []).length > 0;
-    // While searching, keep every matching branch open.
+    const isFolder = node.kind === "folder";
     const isOpen = normalizedQuery ? true : !collapsed.includes(node.id);
     const isSelected = node.id === selectedId;
 
-    if (hasChildren) {
-      return (
-        <li key={node.id}>
-          <button
-            aria-expanded={isOpen}
-            className="flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm font-medium text-foreground transition-token hover:bg-accent hover:text-accent-foreground"
-            onClick={() => toggleFolder(node.id)}
-            style={{ paddingLeft: `${depth * 0.75 + 0.375}rem` }}
-            type="button"
-          >
-            <ChevronRight
-              className={cn(
-                "size-3.5 shrink-0 text-muted-foreground transition-transform",
-                isOpen && "rotate-90",
-              )}
-            />
-            {isOpen ? (
-              <FolderOpen className="size-4 shrink-0 text-primary" />
-            ) : (
-              <Folder className="size-4 shrink-0 text-muted-foreground" />
-            )}
-            <span className="truncate">{node.title}</span>
-          </button>
-          {isOpen ? (
-            <ul>
-              {(node.children ?? []).map((child) => renderNode(child, depth + 1))}
-            </ul>
-          ) : null}
-        </li>
-      );
-    }
-
     return (
       <li key={node.id}>
-        <button
-          aria-current={isSelected ? "page" : undefined}
+        <div
           className={cn(
-            "flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm transition-token",
+            "group flex w-full items-center rounded-md pr-1 text-sm transition-token",
             isSelected
               ? "bg-primary/10 font-medium text-primary"
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
           )}
-          onClick={() => onSelect(node)}
-          style={{ paddingLeft: `${depth * 0.75 + 0.375}rem` }}
-          type="button"
+          style={{ paddingLeft: `${depth * 0.75 + 0.25}rem` }}
         >
-          <span className="size-3.5 shrink-0" aria-hidden="true" />
-          <FileText
-            className={cn(
-              "size-4 shrink-0",
-              isSelected ? "text-primary" : "text-muted-foreground",
+          {isFolder ? (
+            <button
+              aria-expanded={isOpen}
+              className="shrink-0 p-1"
+              onClick={() => toggleFolder(node.id)}
+              type="button"
+            >
+              <ChevronRight
+                className={cn(
+                  "size-3.5 text-muted-foreground transition-transform",
+                  isOpen && "rotate-90",
+                )}
+              />
+            </button>
+          ) : (
+            <span className="size-5 shrink-0" aria-hidden="true" />
+          )}
+          <button
+            aria-current={isSelected ? "page" : undefined}
+            className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+            onClick={() => onSelect(node)}
+            type="button"
+          >
+            {isFolder ? (
+              isOpen ? (
+                <FolderOpen className="size-4 shrink-0 text-primary" />
+              ) : (
+                <Folder className="size-4 shrink-0 text-muted-foreground" />
+              )
+            ) : (
+              <FileText
+                className={cn(
+                  "size-4 shrink-0",
+                  isSelected ? "text-primary" : "text-muted-foreground",
+                )}
+              />
             )}
-          />
-          <span className="truncate">{node.title}</span>
-        </button>
+            <span className="truncate">{node.title}</span>
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                size="icon"
+                variant="ghost"
+              >
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Åtgärder för {node.title}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isFolder ? (
+                <>
+                  <DropdownMenuItem onClick={() => onNewDocument(node.id)}>
+                    Nytt dokument här
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onNewFolder(node.id)}>
+                    Ny mapp här
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              <DropdownMenuItem onClick={() => onRename(node)}>Byt namn</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMove(node)}>Flytta</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onDelete(node)} variant="destructive">
+                Ta bort
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {isFolder && isOpen ? (
+          <ul>{(node.children ?? []).map((child) => renderNode(child, depth + 1))}</ul>
+        ) : null}
       </li>
     );
   }

@@ -11,6 +11,7 @@ interface AppLayoutProps {
   sidebarFooter?: ReactNode;
   topbarActions?: ReactNode;
   contentClassName?: string;
+  hideSidebar?: boolean;
 }
 
 export function AppLayout({
@@ -19,10 +20,11 @@ export function AppLayout({
   sidebarFooter,
   topbarActions,
   contentClassName,
+  hideSidebar = false,
 }: AppLayoutProps) {
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar footer={sidebarFooter} items={navigation} />
+      {hideSidebar ? null : <Sidebar footer={sidebarFooter} items={navigation} />}
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar actions={topbarActions} />
         <main className={cn("flex-1 px-4 py-6 sm:px-6 lg:px-8", contentClassName)}>
