@@ -1,34 +1,57 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   BadgeCheck,
   Check,
   ChevronRight,
-  FileDown,
+  Expand,
+  FilePlus,
+  FolderPlus,
   History,
   ListTree,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
   Printer,
   Send,
   Share2,
+  Upload,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   defaultDocumentContent,
   findNodeById,
-  manualTree,
   type ManualNode,
 } from "@/components/manual/manual-data";
 import { ManualEditorPanel } from "@/components/manual/manual-editor-panel";
@@ -39,27 +62,39 @@ import {
 } from "@/components/manual/manual-settings-panel";
 import { ManualTree } from "@/components/manual/manual-tree";
 import { downloadHtmlAsFile, printDocument } from "@/lib/export-document";
+import {
+  firstDocumentId,
+  getParentId,
+  insertNode,
+  listFolders,
+  moveNode,
+  removeNode,
+  renameNode,
+  slugifyTitle,
+} from "@/lib/manual/tree-ops";
+import {
+  loadDrafts,
+  loadJson,
+  loadTree,
+  saveDrafts,
+  saveJson,
+  saveTree,
+  SETTINGS_KEY,
+} from "@/lib/manual/storage";
 import type { DocumentVersion, ManualAttachment } from "@/types/domain";
-
-const initialAttachments: Record<string, ManualAttachment[]> = {
-  kvalitetspolicy: [
-    { id: "policy-1", name: "Kvalitetspolicy.pdf", size: "248 KB", type: "PDF" },
-    { id: "policy-2", name: "Ansvarsfördelning.docx", size: "84 KB", type: "Word" },
-  ],
-  avvikelsehantering: [
-    { id: "deviation-1", name: "Avvikelseblankett.xlsx", size: "36 KB", type: "Excel" },
-  ],
-};
 
 const initialSettings: ManualSettings = {
   name: "Kvalitetsmanual",
-  issuer: "Anna Lind",
-  reviewer: "Johan Berg",
-  approver: "Maria Ek",
+  issuer: "",
+  reviewer: "",
+  approver: "",
   logo: "",
   headerText: "Kvalitetsmanual – Quality Works Light",
   footerText: "Internt dokument. Utskrift gäller endast utskriftsdagen.",
 };
+
+type ViewMode = "normal" | "focus" | "full";
+type DialogMode = "create-doc" | "create-folder" | "rename" | "move" | "delete" | null;
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -67,60 +102,211 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function fileTypeLabel(file: File) {
-  if (file.type.includes("pdf")) return "PDF";
-  if (file.type.includes("word") || file.name.endsWith(".docx")) return "Word";
-  if (file.type.includes("sheet") || file.name.endsWith(".xlsx")) return "Excel";
-  if (file.type.startsWith("image/")) return "Bild";
-  return file.type || "Fil";
-}
-
-export function ManualWorkspace() {
-  const [selectedId, setSelectedId] = useState("kvalitetspolicy");
+export function ManualWorkspace({ initialView = "normal" }: { initialView?: ViewMode }) {
+  const [ready, setReady] = useState(false);
+  const [tree, setTree] = useState<ManualNode[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("work");
   const [settings, setSettings] = useState<ManualSettings>(initialSettings);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [versionsByDoc, setVersionsByDoc] = useState<
-    Record<string, DocumentVersion[]>
-  >({});
-  const [attachments, setAttachments] =
-    useState<Record<string, ManualAttachment[]>>(initialAttachments);
+  const [dirtyIds, setDirtyIds] = useState<string[]>([]);
+  const [versionsByDoc, setVersionsByDoc] = useState<Record<string, DocumentVersion[]>>({});
+  const [attachments, setAttachments] = useState<Record<string, ManualAttachment[]>>({});
   const [savedId, setSavedId] = useState<string | null>(null);
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
   const [treeOpen, setTreeOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
+  const [dialog, setDialog] = useState<DialogMode>(null);
+  const [dialogTarget, setDialogTarget] = useState<ManualNode | null>(null);
+  const [dialogName, setDialogName] = useState("");
+  const [dialogParent, setDialogParent] = useState<string>("root");
   const [reviewerName, setReviewerName] = useState("");
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadDocRef = useRef<HTMLInputElement>(null);
 
-  const selectedNode = findNodeById(manualTree, selectedId);
-  const documentTitle = selectedNode?.title ?? "Dokument";
-  const draft = drafts[selectedId] ?? defaultDocumentContent;
-  const versions = versionsByDoc[selectedId] ?? [];
+  useEffect(() => {
+    const nextTree = loadTree();
+    const nextDrafts = loadDrafts();
+    const nextSettings = loadJson(SETTINGS_KEY, initialSettings);
+    setTree(nextTree);
+    setDrafts(nextDrafts);
+    setSettings(nextSettings);
+    setSelectedId(firstDocumentId(nextTree));
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    saveTree(tree);
+  }, [tree, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    saveDrafts(drafts);
+  }, [drafts, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    saveJson(SETTINGS_KEY, settings);
+  }, [settings, ready]);
+
+  useEffect(() => {
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      if (dirtyIds.length === 0) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirtyIds]);
+
+  const selectedNode = selectedId ? findNodeById(tree, selectedId) : undefined;
+  const selectedIsDocument = selectedNode?.kind === "document";
+  const documentTitle = selectedIsDocument ? selectedNode.title : "Välj dokument";
+  const draft = selectedId && selectedIsDocument ? (drafts[selectedId] ?? defaultDocumentContent) : "";
+  const versions = selectedId ? (versionsByDoc[selectedId] ?? []) : [];
   const published = versions[0] ?? null;
   const edition = published?.edition ?? 0;
-  const isAcknowledged = acknowledgedIds.includes(selectedId);
+  const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
+  const folders = useMemo(() => listFolders(tree), [tree]);
+  const hideTree = viewMode === "focus";
+
+  function markDirty(id: string) {
+    setDirtyIds((current) => (current.includes(id) ? current : [...current, id]));
+    setSavedId(null);
+  }
+
+  function clearDirty(id: string) {
+    setDirtyIds((current) => current.filter((item) => item !== id));
+  }
 
   function handleSelect(node: ManualNode) {
+    if (selectedId && dirtyIds.includes(selectedId) && node.id !== selectedId) {
+      const ok = window.confirm("Du har osparade ändringar. Byt dokument ändå?");
+      if (!ok) return;
+    }
     setSelectedId(node.id);
-    setSavedId(null);
     setTreeOpen(false);
     setShareStatus(null);
-    if (activeTab === "settings") {
+    if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
+  }
+
+  function openCreate(kind: "create-doc" | "create-folder", parentId: string | null) {
+    setDialog(kind);
+    setDialogName(kind === "create-doc" ? "Nytt dokument" : "Ny mapp");
+    setDialogParent(parentId ?? "root");
+    setDialogTarget(null);
+  }
+
+  function confirmCreate() {
+    const title = dialogName.trim() || (dialog === "create-folder" ? "Ny mapp" : "Nytt dokument");
+    const parentId = dialogParent === "root" ? null : dialogParent;
+    const node: ManualNode =
+      dialog === "create-folder"
+        ? { id: slugifyTitle(title), title, kind: "folder", children: [] }
+        : { id: slugifyTitle(title), title, kind: "document" };
+    setTree((current) => insertNode(current, parentId, node));
+    if (node.kind === "document") {
+      setDrafts((current) => ({ ...current, [node.id]: defaultDocumentContent }));
+      setSelectedId(node.id);
+      setActiveTab("work");
+    }
+    setDialog(null);
+  }
+
+  function confirmRename() {
+    if (!dialogTarget) return;
+    const title = dialogName.trim();
+    if (!title) return;
+    setTree((current) => renameNode(current, dialogTarget.id, title));
+    setDialog(null);
+  }
+
+  function confirmMove() {
+    if (!dialogTarget) return;
+    const parentId = dialogParent === "root" ? null : dialogParent;
+    setTree((current) => moveNode(current, dialogTarget.id, parentId));
+    setDialog(null);
+  }
+
+  function confirmDelete() {
+    if (!dialogTarget) return;
+    const removedId = dialogTarget.id;
+    setTree((current) => {
+      const next = removeNode(current, removedId);
+      if (selectedId === removedId) {
+        setSelectedId(firstDocumentId(next));
+      }
+      return next;
+    });
+    setDrafts((current) => {
+      const copy = { ...current };
+      delete copy[removedId];
+      return copy;
+    });
+    setDialog(null);
+  }
+
+  async function handleUploadDocuments(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    const parentId =
+      selectedNode?.kind === "folder"
+        ? selectedNode.id
+        : selectedId
+          ? getParentId(tree, selectedId)
+          : null;
+    let lastId: string | null = null;
+    let nextTree = tree;
+    const nextDrafts = { ...drafts };
+    for (const file of Array.from(fileList)) {
+      const title = file.name.replace(/\.[^.]+$/, "");
+      const id = slugifyTitle(title);
+      const node: ManualNode = { id, title, kind: "document" };
+      nextTree = insertNode(nextTree, parentId, node);
+      lastId = id;
+      if (file.type.startsWith("text/") || /\.(md|html|txt)$/i.test(file.name)) {
+        nextDrafts[id] = await file.text();
+      } else {
+        nextDrafts[id] = `<h2>${title}</h2><p>Uppladdad fil: ${file.name} (${formatFileSize(file.size)}). Innehållet kan redigeras här. Originalfilen finns som bilaga.</p>`;
+        setAttachments((current) => ({
+          ...current,
+          [id]: [
+            {
+              id: `${id}-src`,
+              name: file.name,
+              size: formatFileSize(file.size),
+              type: file.type || "Fil",
+              url: URL.createObjectURL(file),
+              file,
+            },
+          ],
+        }));
+      }
+    }
+    setTree(nextTree);
+    setDrafts(nextDrafts);
+    if (lastId) {
+      setSelectedId(lastId);
       setActiveTab("work");
     }
   }
 
   function handleDraftChange(value: string) {
+    if (!selectedId || !selectedIsDocument) return;
     setDrafts((current) => ({ ...current, [selectedId]: value }));
-    setSavedId(null);
+    markDirty(selectedId);
   }
 
   function handleSave() {
+    if (!selectedId) return;
     setSavedId(selectedId);
+    clearDirty(selectedId);
   }
 
   function handlePublish() {
+    if (!selectedId || !selectedIsDocument) return;
     const nextEdition = (versions[0]?.edition ?? 0) + 1;
     const version: DocumentVersion = {
       id: `${selectedId}-v${nextEdition}-${Date.now()}`,
@@ -133,17 +319,19 @@ export function ManualWorkspace() {
       ...current,
       [selectedId]: [version, ...(current[selectedId] ?? [])],
     }));
+    clearDirty(selectedId);
+    setSavedId(selectedId);
     setAcknowledgedIds((current) => current.filter((id) => id !== selectedId));
     setActiveTab("original");
   }
 
   function handleAddAttachmentFiles(fileList: FileList | null) {
-    if (!fileList?.length) return;
+    if (!fileList?.length || !selectedId) return;
     const next: ManualAttachment[] = Array.from(fileList).map((file) => ({
-      id: `${selectedId}-${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `${selectedId}-${file.name}-${Date.now()}`,
       name: file.name,
       size: formatFileSize(file.size),
-      type: fileTypeLabel(file),
+      type: file.type || "Fil",
       url: URL.createObjectURL(file),
       file,
     }));
@@ -153,43 +341,7 @@ export function ManualWorkspace() {
     }));
   }
 
-  function handleRemoveAttachment(attachmentId: string) {
-    setAttachments((current) => {
-      const list = current[selectedId] ?? [];
-      const target = list.find((item) => item.id === attachmentId);
-      if (target?.url?.startsWith("blob:")) {
-        URL.revokeObjectURL(target.url);
-      }
-      return {
-        ...current,
-        [selectedId]: list.filter((attachment) => attachment.id !== attachmentId),
-      };
-    });
-  }
-
-  function handleDownloadAttachment(attachment: ManualAttachment) {
-    if (attachment.url) {
-      const a = document.createElement("a");
-      a.href = attachment.url;
-      a.download = attachment.name;
-      a.click();
-      return;
-    }
-    window.alert("Nedladdning kräver uppladdad fil eller lagring (Supabase Storage)."
-    );
-  }
-
-  async function handleShare() {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard?.writeText(url);
-      setShareStatus("Länk kopierad");
-    } catch {
-      setShareStatus(url);
-    }
-  }
-
-  function handleExportPdf() {
+  function handleExport() {
     if (!published) {
       window.alert("Publicera dokumentet först för att exportera Original.");
       setActiveTab("work");
@@ -199,14 +351,13 @@ export function ManualWorkspace() {
       documentTitle,
       settings.headerText,
       published.content,
-      `${settings.footerText} · Utgåva ${published.edition} · ${published.publishedAt}`,
+      `${settings.footerText} · Utgåva ${published.edition}`,
     );
   }
 
   function handleExportWord() {
     if (!published) {
       window.alert("Publicera dokumentet först för att exportera Original.");
-      setActiveTab("work");
       return;
     }
     downloadHtmlAsFile(
@@ -218,221 +369,165 @@ export function ManualWorkspace() {
     );
   }
 
-  function restoreVersion(version: DocumentVersion) {
-    setDrafts((current) => ({ ...current, [selectedId]: version.content }));
-    setSavedId(null);
-    setActiveTab("work");
+  if (!ready) {
+    return <div className="flex h-[calc(100vh-5.5rem)] items-center justify-center text-sm text-muted-foreground">Laddar manual…</div>;
   }
 
   return (
-    <div className="flex h-[calc(100vh-5.5rem)] min-h-0 overflow-hidden bg-background">
-      <aside className="hidden w-[300px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
-        <ManualTree
-          nodes={manualTree}
-          onSelect={handleSelect}
-          selectedId={selectedId}
-        />
-      </aside>
+    <div className={viewMode === "full" ? "flex h-[calc(100vh-3rem)] min-h-0 overflow-hidden bg-muted/30" : "flex h-[calc(100vh-5.5rem)] min-h-0 overflow-hidden bg-muted/30"}>
+      {hideTree ? null : (
+        <aside className="hidden w-[300px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
+          <ManualTree
+            nodes={tree}
+            onDelete={(node) => {
+              setDialogTarget(node);
+              setDialog("delete");
+            }}
+            onMove={(node) => {
+              setDialogTarget(node);
+              setDialogParent(getParentId(tree, node.id) ?? "root");
+              setDialog("move");
+            }}
+            onNewDocument={(parentId) => openCreate("create-doc", parentId)}
+            onNewFolder={(parentId) => openCreate("create-folder", parentId)}
+            onRename={(node) => {
+              setDialogTarget(node);
+              setDialogName(node.title);
+              setDialog("rename");
+            }}
+            onSelect={handleSelect}
+            selectedId={selectedId}
+          />
+        </aside>
+      )}
 
-      <input
-        accept="*/*"
-        className="hidden"
-        multiple
-        onChange={(event) => {
-          handleAddAttachmentFiles(event.target.files);
-          event.target.value = "";
-        }}
-        ref={fileInputRef}
-        type="file"
-      />
+      <input accept=".txt,.md,.html,.htm,.pdf,.doc,.docx,.odt" className="hidden" multiple onChange={(e) => { void handleUploadDocuments(e.target.files); e.target.value = ""; }} ref={uploadDocRef} type="file" />
+      <input className="hidden" multiple onChange={(e) => { handleAddAttachmentFiles(e.target.files); e.target.value = ""; }} ref={fileInputRef} type="file" />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Tabs
-          className="flex min-h-0 flex-1 flex-col gap-0"
-          onValueChange={setActiveTab}
-          value={activeTab}
-        >
-          <div className="flex flex-col gap-3 border-b px-4 pt-4 sm:px-6">
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    className="-ml-2 mr-1 md:hidden"
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <ListTree className="size-4" />
-                    <span className="sr-only">Visa dokumentträd</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[80vh] overflow-hidden p-0">
-                  <DialogHeader className="sr-only">
-                    <DialogTitle>Manualens dokumentträd</DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[80vh] overflow-hidden">
-                    <ManualTree
-                      nodes={manualTree}
-                      onSelect={handleSelect}
-                      selectedId={selectedId}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <span className="hidden sm:inline">{settings.name}</span>
-              <ChevronRight className="hidden size-3.5 sm:inline" />
-              <span className="font-medium text-foreground">{documentTitle}</span>
-              {published ? (
-                <Badge className="ml-1" variant="success">
-                  Publicerad
-                </Badge>
-              ) : (
-                <Badge className="ml-1" variant="secondary">
-                  Utkast
-                </Badge>
-              )}
-            </div>
-            <TabsList variant="line">
-              <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
-              <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
-              <TabsTrigger value="original">Original</TabsTrigger>
-            </TabsList>
-            <div className="flex flex-wrap items-center gap-2 border-t py-3">
-              <Button onClick={handleShare} size="sm" variant="outline">
-                <Share2 data-icon="inline-start" />
-                Dela
+        <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
+          <div className="flex flex-col gap-3 border-b bg-background px-4 pt-3 sm:px-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
+                <ListTree className="size-4" />
+                <span className="sr-only">Visa träd</span>
               </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <Send data-icon="inline-start" />
-                    Skicka för granskning
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Skicka för granskning</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium" htmlFor="reviewer-name">
-                      Namn
-                    </label>
-                    <Input
-                      id="reviewer-name"
-                      onChange={(event) => setReviewerName(event.target.value)}
-                      placeholder="Ange granskarens namn"
-                      value={reviewerName}
-                    />
-                    {reviewStatus ? (
-                      <p className="text-sm text-muted-foreground">{reviewStatus}</p>
-                    ) : null}
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      disabled={!reviewerName.trim()}
-                      onClick={() =>
-                        setReviewStatus(
-                          `Skickat till ${reviewerName.trim()} (sparas i databasen när auth är inkopplad)`,
-                        )
-                      }
-                    >
-                      Skicka
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <History data-icon="inline-start" />
-                    Versioner{versions.length ? ` (${versions.length})` : ""}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Versionshistorik – {documentTitle}</DialogTitle>
-                  </DialogHeader>
-                  {versions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Inga publicerade utgåvor ännu. Publicera från Arbetsmanual.
-                    </p>
-                  ) : (
-                    <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
-                      {versions.map((version) => (
-                        <div
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-                          key={version.id}
-                        >
-                          <div>
-                            <p className="font-medium">Utgåva {version.edition}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {version.publishedAt}
-                              {version.publishedByName
-                                ? ` · ${version.publishedByName}`
-                                : ""}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                setActiveTab("original");
-                              }}
-                              size="sm"
-                              variant="outline"
-                            >
-                              Visa
-                            </Button>
-                            <Button
-                              onClick={() => restoreVersion(version)}
-                              size="sm"
-                              variant="secondary"
-                            >
-                              Återställ till utkast
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
-              <Button onClick={handleExportPdf} size="sm" variant="outline">
-                <FileDown data-icon="inline-start" />
-                Exportera PDF
+              <Button asChild size="sm" variant="ghost">
+                <Link href="/">Dashboard</Link>
               </Button>
-              <Button onClick={handleExportWord} size="sm" variant="outline">
-                <FileDown data-icon="inline-start" />
-                Exportera Word
-              </Button>
-              <Button onClick={handleExportPdf} size="sm" variant="outline">
-                <Printer data-icon="inline-start" />
-                Skriv ut
-              </Button>
-              {shareStatus ? (
-                <span className="text-xs text-muted-foreground">{shareStatus}</span>
+              <ChevronRight className="size-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">{settings.name}</span>
+              <ChevronRight className="size-3.5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">{documentTitle}</span>
+              {selectedIsDocument ? (
+                isDirty ? <Badge variant="secondary">Osparat</Badge> : published ? <Badge variant="success">Publicerad</Badge> : <Badge variant="secondary">Utkast</Badge>
               ) : null}
+              <div className="ml-auto flex items-center gap-1">
+                <Button onClick={() => setViewMode((m) => (m === "focus" ? "normal" : "focus"))} size="icon" title={hideTree ? "Visa träd" : "Fokusläge"} variant="ghost">
+                  {hideTree ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+                </Button>
+                <Button asChild size="icon" title="Öppna helsida" variant="ghost">
+                  <Link href="/manual/full" target="_blank">
+                    <Maximize2 className="size-4" />
+                  </Link>
+                </Button>
+                {viewMode === "full" ? (
+                  <Button asChild size="icon" title="Tillbaka" variant="ghost">
+                    <Link href="/manual"><Minimize2 className="size-4" /></Link>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pb-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm"><Plus data-icon="inline-start" />Nytt</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => openCreate("create-doc", selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? ""))}>
+                    <FilePlus className="size-4" /> Dokument
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openCreate("create-folder", selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? ""))}>
+                    <FolderPlus className="size-4" /> Mapp
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => uploadDocRef.current?.click()}>
+                    <Upload className="size-4" /> Ladda upp fil
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline"><MoreHorizontal data-icon="inline-start" />Åtgärder</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogName(selectedNode.title), setDialog("rename"))}>
+                    Byt namn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogParent(getParentId(tree, selectedNode.id) ?? "root"), setDialog("move"))}>
+                    Flytta
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => { await navigator.clipboard?.writeText(window.location.href); setShareStatus("Länk kopierad"); }}>
+                    <Share2 className="size-4" /> Dela länk
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExport}><Printer className="size-4" /> Exportera PDF / skriv ut</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportWord}>Exportera Word</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled={!selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialog("delete"))} variant="destructive">
+                    Ta bort
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <TabsList variant="line" className="ml-2">
+                <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
+                <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
+                <TabsTrigger value="original">Original</TabsTrigger>
+              </TabsList>
+              {shareStatus ? <span className="text-xs text-muted-foreground">{shareStatus}</span> : null}
             </div>
           </div>
 
-          <TabsContent
-            className="flex min-h-0 flex-col overflow-auto"
-            value="settings"
-          >
+          <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
             <ManualSettingsPanel onChange={setSettings} settings={settings} />
           </TabsContent>
 
           <TabsContent className="flex min-h-0 flex-col" value="work">
-            <ManualEditorPanel
-              attachments={attachments[selectedId] ?? []}
-              documentTitle={documentTitle}
-              onAddAttachment={() => fileInputRef.current?.click()}
-              onDownloadAttachment={handleDownloadAttachment}
-              onRemoveAttachment={handleRemoveAttachment}
-              onChange={handleDraftChange}
-              onPublish={handlePublish}
-              onSave={handleSave}
-              saved={savedId === selectedId}
-              value={draft}
-            />
+            {selectedIsDocument ? (
+              <ManualEditorPanel
+                attachments={attachments[selectedId ?? ""] ?? []}
+                documentTitle={documentTitle}
+                onAddAttachment={() => fileInputRef.current?.click()}
+                onChange={handleDraftChange}
+                onDownloadAttachment={(attachment) => {
+                  if (!attachment.url) return;
+                  const a = document.createElement("a");
+                  a.href = attachment.url;
+                  a.download = attachment.name;
+                  a.click();
+                }}
+                onPublish={handlePublish}
+                onRemoveAttachment={(id) =>
+                  setAttachments((current) => ({
+                    ...current,
+                    [selectedId ?? ""]:
+                      (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id),
+                  }))
+                }
+                onSave={handleSave}
+                saved={savedId === selectedId && !isDirty}
+                value={draft}
+              />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                <p className="text-sm text-muted-foreground">Välj ett dokument i trädet eller skapa ett nytt.</p>
+                <Button onClick={() => openCreate("create-doc", selectedNode?.kind === "folder" ? selectedNode.id : null)}>
+                  Nytt dokument
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent className="flex min-h-0 flex-col" value="original">
@@ -447,31 +542,100 @@ export function ManualWorkspace() {
           </TabsContent>
         </Tabs>
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-3 sm:px-6">
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t bg-background px-4 py-3 sm:px-5">
           <div className="flex items-center gap-3 text-sm">
-            <span className="font-medium">
-              {edition > 0 ? `Utgåva ${edition}` : "Ingen publicerad utgåva"}
-            </span>
-            {isAcknowledged ? (
+            <span className="font-medium">{edition > 0 ? `Utgåva ${edition}` : "Ingen publicerad utgåva"}</span>
+            {selectedId && acknowledgedIds.includes(selectedId) ? (
               <span className="flex items-center gap-1.5 text-muted-foreground">
-                <BadgeCheck className="size-4 text-success" />
-                Kvitterad
+                <BadgeCheck className="size-4 text-success" /> Kvitterad
               </span>
             ) : null}
           </div>
           <Button
-            disabled={isAcknowledged || !published}
-            onClick={() =>
-              setAcknowledgedIds((current) => [...current, selectedId])
-            }
+            disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
+            onClick={() => selectedId && setAcknowledgedIds((current) => [...current, selectedId])}
             size="sm"
-            variant={isAcknowledged ? "outline" : "default"}
+            variant={selectedId && acknowledgedIds.includes(selectedId) ? "outline" : "default"}
           >
-            {isAcknowledged ? <Check /> : null}
-            {isAcknowledged ? "Kvitterad" : "Kvittera"}
+            {selectedId && acknowledgedIds.includes(selectedId) ? <Check /> : null}
+            {selectedId && acknowledgedIds.includes(selectedId) ? "Kvitterad" : "Kvittera"}
           </Button>
         </footer>
       </div>
+
+      <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
+        <DialogContent className="max-h-[80vh] overflow-hidden p-0">
+          <DialogHeader className="sr-only"><DialogTitle>Dokumentträd</DialogTitle></DialogHeader>
+          <div className="max-h-[80vh] overflow-hidden">
+            <ManualTree
+              nodes={tree}
+              onDelete={(node) => { setTreeOpen(false); setDialogTarget(node); setDialog("delete"); }}
+              onMove={(node) => { setTreeOpen(false); setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
+              onNewDocument={(parentId) => { setTreeOpen(false); openCreate("create-doc", parentId); }}
+              onNewFolder={(parentId) => { setTreeOpen(false); openCreate("create-folder", parentId); }}
+              onRename={(node) => { setTreeOpen(false); setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
+              onSelect={handleSelect}
+              selectedId={selectedId}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={(open) => !open && setDialog(null)} open={dialog === "create-doc" || dialog === "create-folder" || dialog === "rename" || dialog === "move" || dialog === "delete"}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialog === "create-doc" && "Nytt dokument"}
+              {dialog === "create-folder" && "Ny mapp"}
+              {dialog === "rename" && "Byt namn"}
+              {dialog === "move" && "Flytta"}
+              {dialog === "delete" && "Ta bort"}
+            </DialogTitle>
+          </DialogHeader>
+          {dialog === "delete" ? (
+            <p className="text-sm text-muted-foreground">
+              Ta bort “{dialogTarget?.title}”? Detta kan inte ångras i webbläsaren.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {dialog !== "move" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="doc-name">Namn</Label>
+                  <Input autoFocus id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
+                </div>
+              ) : null}
+              {dialog === "create-doc" || dialog === "create-folder" || dialog === "move" ? (
+                <div className="space-y-2">
+                  <Label>Placering</Label>
+                  <Select onValueChange={setDialogParent} value={dialogParent}>
+                    <SelectTrigger><SelectValue placeholder="Rot" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="root">Roten av manualen</SelectItem>
+                      {folders
+                        .filter((folder) => folder.id !== dialogTarget?.id)
+                        .map((folder) => (
+                          <SelectItem key={folder.id} value={folder.id}>{folder.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setDialog(null)} variant="outline">Avbryt</Button>
+            {dialog === "delete" ? (
+              <Button onClick={confirmDelete} variant="destructive">Ta bort</Button>
+            ) : dialog === "rename" ? (
+              <Button onClick={confirmRename}>Spara</Button>
+            ) : dialog === "move" ? (
+              <Button onClick={confirmMove}>Flytta</Button>
+            ) : (
+              <Button onClick={confirmCreate}>Skapa</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
