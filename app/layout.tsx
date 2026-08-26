@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/common/theme-provider";
+import { OrgProvider } from "@/components/providers/org-provider";
 import { siteConfig } from "@/lib/site-config";
 
 import "./globals.css";
@@ -23,9 +24,11 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning lang="en">
+    <html suppressHydrationWarning lang="sv">
       <body className={inter.className}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <OrgProvider>{children}</OrgProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

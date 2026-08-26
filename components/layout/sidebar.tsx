@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { isModuleVisible, type AppRole } from "@/lib/features";
+import { isModuleVisible } from "@/lib/features";
+import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -19,8 +20,6 @@ interface SidebarProps {
   items?: NavItem[];
   footer?: ReactNode;
   className?: string;
-  /** Default admin until org role is loaded from DB */
-  role?: AppRole;
 }
 
 export function Sidebar({
@@ -29,10 +28,12 @@ export function Sidebar({
   items,
   footer,
   className,
-  role = "admin",
 }: SidebarProps) {
   const pathname = usePathname();
+  const { session } = useOrgSession();
+  const role = session?.role ?? "admin";
   const useGroups = !items || items.length === 0;
+  const heading = session?.organizationName || title;
 
   return (
     <aside
@@ -46,8 +47,16 @@ export function Sidebar({
           <PanelLeft className="size-5" />
         </div>
         <div className="space-y-1">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <h2 className="text-sm font-semibold">{heading}</h2>
+          <p className="text-xs text-muted-foreground">
+            {session?.role === "admin"
+              ? "Administratör"
+              : session?.role === "editor"
+                ? "Redigerare"
+                : session?.role === "viewer"
+                  ? "Läsare"
+                  : subtitle}
+          </p>
         </div>
       </div>
       <Separator />
