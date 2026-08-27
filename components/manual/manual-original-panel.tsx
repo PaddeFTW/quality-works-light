@@ -30,47 +30,45 @@ export function ManualOriginalPanel({
         </div>
         <h3 className="text-lg font-semibold">Inget publicerat dokument ännu</h3>
         <p className="max-w-md text-sm leading-6 text-muted-foreground">
-          Publicera innehållet från fliken Arbetsmanual för att skapa en
-          låst originalversion.
+          Publicera från Arbetsmanual för att låsa en originalutgåva.
         </p>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+    <ScrollArea className="min-h-0 flex-1 bg-muted/40">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-primary/10 p-2 text-primary">
               <ShieldCheck className="size-5" />
             </div>
             <div>
-              <p className="font-semibold">Publicerad utgåva</p>
-              <p className="text-xs text-muted-foreground">Skyddad och skrivskyddad originalversion</p>
+              <p className="font-semibold">Du är i originalmanualen</p>
+              <p className="text-xs text-muted-foreground">Skrivskyddad senaste utgåva</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">Utgåva {edition}</Badge>
-            {publishedAt ? <span className="text-xs text-muted-foreground">Publicerad {publishedAt}</span> : null}
+            {publishedAt ? <span className="text-xs text-muted-foreground">{publishedAt}</span> : null}
           </div>
         </div>
-        <div className="rounded-xl border border-primary/15 bg-card shadow-token-xs">
-          <div className="border-b px-6 py-3 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            {headerText}
+        <article className="document-paper overflow-hidden rounded-sm">
+          <div className="grid grid-cols-3 border-b px-6 py-3 text-xs text-muted-foreground">
+            <span>Granskad / utfärdare</span>
+            <span className="text-center font-medium text-foreground">{headerText || documentTitle}</span>
+            <span className="text-right">Utgåva {edition}</span>
           </div>
-          <div className="px-6 py-6">
-            <h3 className="mb-4 text-xl font-semibold tracking-tight">
-              {documentTitle}
-            </h3>
-            <div className="whitespace-pre-line text-sm leading-7 text-foreground">
-              {content}
-            </div>
+          <div className="px-10 py-10">
+            <h3 className="mb-4 text-xl font-semibold tracking-tight">{documentTitle}</h3>
+            <div
+              className="manual-tiptap-editor text-sm leading-7"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
           </div>
-          <div className="border-t px-6 py-3 text-xs leading-5 text-muted-foreground">
-            {footerText}
-          </div>
-        </div>
+          <div className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</div>
+        </article>
       </div>
     </ScrollArea>
   );
