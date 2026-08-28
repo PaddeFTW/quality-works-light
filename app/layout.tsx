@@ -1,12 +1,17 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { OrgProvider } from "@/components/providers/org-provider";
 import { siteConfig } from "@/lib/site-config";
 
 import "./globals.css";
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,8 +29,8 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning lang="sv">
-      <body className={inter.className}>
+    <html className={`${geist.variable} ${inter.variable}`} lang="sv" suppressHydrationWarning>
+      <body className={geist.className}>
         <ThemeProvider>
           <OrgProvider>{children}</OrgProvider>
         </ThemeProvider>
