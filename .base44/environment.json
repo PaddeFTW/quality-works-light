@@ -1,0 +1,22 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "description": "Supabase project URL (e.g. https://xxxx.supabase.co) from the Supabase dashboard → Project Settings → API → Project URL",
+      "requiredAtBoot": true
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "description": "Supabase anon/publishable API key from the Supabase dashboard → Project Settings → API → Project API keys (anon public)",
+      "requiredAtBoot": true
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "description": "Supabase service role key (server-side only, used by /api/auth/delete-account) from the Supabase dashboard → Project Settings → API → Project API keys (service_role)",
+      "requiredAtBoot": false
+    }
+  ]
+}

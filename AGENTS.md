@@ -2,6 +2,14 @@
 
 This repository is the shared foundation for future applications built on this template. AI agents and contributors should preserve that intent.
 
+## Base44 Dev Environment
+
+- **Run:** `docker compose -f docker-compose.base44.yml up -d` (Next.js 16 dev server with Turbopack on port 3000, source bind-mounted from the repo root).
+- The app uses Supabase Auth. The root page `/` is public; everything under `/app/*` is auth-gated by `proxy.ts` (Next.js middleware). Unauthenticated visitors are redirected to `/auth/login`.
+- `proxy.ts` constructs a Supabase client on every request, so `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must be present or the middleware errors. Placeholder defaults in `.env.base44-defaults` let the app boot; real values come from `/run/base44/app.env` (platform secrets, last in the `env_file` list so they win).
+- `next.config.ts` sets `allowedDevOrigins` from `BASE44_PUBLIC_HOST_SUFFIX` so the preview origin can load dev assets/HMR.
+- `SUPABASE_SERVICE_ROLE_KEY` is only needed by the `/api/auth/delete-account` route.
+
 ## Core Rules
 
 1. Do not turn this repository into a product-specific application.
