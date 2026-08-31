@@ -21,7 +21,7 @@ interface MemberRow {
   id: string;
   role: AppRole;
   user_id: string;
-  profiles?: { full_name: string | null; email: string | null } | null;
+  profiles?: { full_name: string | null; email: string | null }[] | null;
 }
 
 export default function InstallningarPage() {
@@ -98,7 +98,7 @@ export default function InstallningarPage() {
             {members.map((member) => (
               <li className="flex items-center justify-between gap-3 text-sm" key={member.id}>
                 <span>
-                  {member.profiles?.full_name || member.profiles?.email || member.user_id}
+                  {member.profiles?.[0]?.full_name || member.profiles?.[0]?.email || member.user_id}
                 </span>
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
                   {member.role}
