@@ -50,6 +50,8 @@ export interface ManualAttachment {
   type: string;
   /** Local object URL or remote storage URL */
   url?: string;
+  /** Storage object path used for removal and refreshed downloads. */
+  storagePath?: string;
   /** Present when selected from disk before upload */
   file?: File;
 }

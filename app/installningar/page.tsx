@@ -79,7 +79,7 @@ export default function InstallningarPage() {
   }
 
   const mailHref = inviteUrl
-    ? `mailto:${encodeURIComponent(inviteEmail)}?subject=${encodeURIComponent(`Inbjudan till ${session?.organizationName ?? "Quality Works"}`)}&body=${encodeURIComponent(`Du är inbjuden till ledningssystemet.\n\nÖppna länken och skapa ditt konto:\n${inviteUrl}\n`)}
+    ? `mailto:${encodeURIComponent(inviteEmail)}?subject=${encodeURIComponent(`Inbjudan till ${session?.organizationName ?? "Quality Works"}`)}&body=${encodeURIComponent(`Du är inbjuden till ledningssystemet.\n\nÖppna länken och skapa ditt konto:\n${inviteUrl}\n`)}`
     : null;
 
   return (

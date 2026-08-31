@@ -18,6 +18,7 @@ import {
   Printer,
   Share2,
   Upload,
+  ClipboardCheck,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -66,9 +67,11 @@ import {
   persistCreate,
   persistDelete,
   persistDraft,
+  persistDeleteAttachment,
   persistFiles,
   persistMove,
   persistPublish,
+  persistReview,
   persistRename,
   persistSettings,
 } from "@/lib/manual/persist";
@@ -112,6 +115,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const [manualId, setManualId] = useState<string | null>(null);
   const [tree, setTree] = useState<ManualNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastOpenedId, setLastOpenedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("work");
   const [settings, setSettings] = useState<ManualSettings>(initialSettings);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -127,6 +131,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const [dialogName, setDialogName] = useState("");
   const [dialogParent, setDialogParent] = useState<string>("root");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<"draft" | "pending">("draft");
   const [status, setStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadDocRef = useRef<HTMLInputElement>(null);
@@ -146,12 +151,15 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           setDrafts(result.drafts);
           setSettings(result.settings);
           setVersionsByDoc(result.versions);
+          setAttachments(result.attachments);
           setSelectedId(result.selectedId);
           setReady(true);
           return;
         } catch (error) {
           console.error(error);
-          setStatus("Kunde inte läsa molnet – använder lokal kopia.");
+          setStatus("Kunde inte läsa manualen från molnet. Kontrollera anslutningen och försök igen.");
+          setReady(true);
+          return;
         }
       }
       const nextTree = loadTree();
@@ -203,6 +211,17 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     }
     setSavedId(selectedId);
     setDirtyIds((current) => current.filter((item) => item !== selectedId));
+  }
+
+  async function handleReview() {
+    if (!selectedId || !session || !canEdit) return;
+    try {
+      if (cloud) await persistReview(selectedId, session.userId);
+      setReviewStatus("pending");
+      setStatus("Dokumentet är skickat för granskning.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Kunde inte skicka för granskning");
+    }
   }
 
   async function handlePublish() {
@@ -352,6 +371,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       if (!window.confirm("Du har osparade ändringar. Byt dokument ändå?")) return;
     }
     setSelectedId(node.id);
+    if (node.kind === "document") setLastOpenedId(node.id);
     setTreeOpen(false);
     if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
   }
@@ -370,6 +390,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
         <aside className="hidden w-[300px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
           <ManualTree
             nodes={tree}
+            lastOpenedId={lastOpenedId}
             onDelete={(node) => { setDialogTarget(node); setDialog("delete"); }}
             onMove={(node) => { setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
             onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(parentId ?? "root"); }}
@@ -419,6 +440,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button disabled={!selectedIsDocument || !canEdit || reviewStatus === "pending"} onClick={() => void handleReview()} size="sm" variant="outline">
+                <ClipboardCheck data-icon="inline-start" />
+                {reviewStatus === "pending" ? "Skickad för granskning" : "Skicka för granskning"}
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline"><MoreHorizontal data-icon="inline-start" />Åtgärder</Button>
@@ -464,7 +489,11 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                   a.click();
                 }}
                 onPublish={() => void handlePublish()}
-                onRemoveAttachment={(id) => setAttachments((current) => ({ ...current, [selectedId ?? ""]: (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id) }))}
+                onRemoveAttachment={(id) => {
+                  const attachment = (attachments[selectedId ?? ""] ?? []).find((item) => item.id === id);
+                  if (cloud) void persistDeleteAttachment(id, attachment?.storagePath).catch((error) => setStatus(error instanceof Error ? error.message : "Kunde inte ta bort bilagan"));
+                  setAttachments((current) => ({ ...current, [selectedId ?? ""]: (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id) }));
+                }}
                 onSave={() => void handleSave()}
                 saved={savedId === selectedId && !isDirty}
                 value={draft}
@@ -474,7 +503,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             )}
           </TabsContent>
           <TabsContent className="flex min-h-0 flex-col" value="original">
-            <ManualOriginalPanel content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} />
+            <ManualOriginalPanel content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} versions={versions} />
           </TabsContent>
         </Tabs>
         <footer className="flex items-center justify-between border-t bg-background px-4 py-3">

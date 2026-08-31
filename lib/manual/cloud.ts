@@ -88,6 +88,30 @@ export async function loadManualBundle(supabase: SupabaseClient, manualId: strin
   };
 }
 
+export async function loadAttachments(supabase: SupabaseClient, documentIds: string[]) {
+  if (documentIds.length === 0) return {} as Record<string, ManualAttachment[]>;
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("id, document_id, file_name, file_size, mime_type, storage_path, created_at")
+    .in("document_id", documentIds)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const result: Record<string, ManualAttachment[]> = {};
+  for (const row of data ?? []) {
+    const signed = await supabase.storage.from("manuals").createSignedUrl(row.storage_path, 3600);
+    const item: ManualAttachment = {
+      id: row.id,
+      name: row.file_name,
+      size: row.file_size < 1024 ? `${row.file_size} B` : `${Math.round(row.file_size / 1024)} KB`,
+      type: row.mime_type || "Fil",
+      storagePath: row.storage_path,
+      url: signed.data?.signedUrl,
+    };
+    result[row.document_id] = [...(result[row.document_id] ?? []), item];
+  }
+  return result;
+}
+
 export async function seedDefaultDocuments(
   supabase: SupabaseClient,
   manualId: string,
@@ -169,7 +193,7 @@ export async function uploadAttachment(
 ): Promise<ManualAttachment> {
   const path = `${organizationId}/${documentId}/${Date.now()}-${file.name}`;
   const { error: uploadError } = await supabase.storage
-    .from("manual-attachments")
+    .from("manuals")
     .upload(path, file);
   if (uploadError) throw uploadError;
 
@@ -188,7 +212,7 @@ export async function uploadAttachment(
   if (error || !data) throw error ?? new Error("Kunde inte spara bilaga");
 
   const { data: signed } = await supabase.storage
-    .from("manual-attachments")
+    .from("manuals")
     .createSignedUrl(path, 60 * 60);
 
   return {

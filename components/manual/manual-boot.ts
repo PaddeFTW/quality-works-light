@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   draftsFromRows,
   ensureManual,
+  loadAttachments,
   loadManualBundle,
   rowsToTree,
   seedDefaultDocuments,
@@ -22,6 +23,7 @@ export interface BootResult {
   settings: ManualSettings;
   versions: Record<string, DocumentVersion[]>;
   selectedId: string | null;
+  attachments: Record<string, import("@/types/domain").ManualAttachment[]>;
 }
 
 export async function bootManualFromCloud(
@@ -36,6 +38,7 @@ export async function bootManualFromCloud(
     bundle = await loadManualBundle(supabase, manualId);
   }
   const tree = rowsToTree(bundle.docs);
+  const attachments = await loadAttachments(supabase, bundle.docs.filter((row) => row.kind === "document").map((row) => row.id));
   return {
     manualId,
     tree,
@@ -50,6 +53,7 @@ export async function bootManualFromCloud(
       footerText: "",
     },
     versions: versionsFromRows(bundle.versions ?? []),
+    attachments,
     selectedId: firstDocumentId(tree),
   };
 }

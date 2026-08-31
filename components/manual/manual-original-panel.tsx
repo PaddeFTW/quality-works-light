@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { FileLock2, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { DocumentVersion } from "@/types/domain";
 
 interface ManualOriginalPanelProps {
   documentTitle: string;
@@ -12,6 +14,7 @@ interface ManualOriginalPanelProps {
   edition: number;
   headerText: string;
   footerText: string;
+  versions?: DocumentVersion[];
 }
 
 export function ManualOriginalPanel({
@@ -21,7 +24,14 @@ export function ManualOriginalPanel({
   edition,
   headerText,
   footerText,
+  versions = [],
 }: ManualOriginalPanelProps) {
+  const [selectedEdition, setSelectedEdition] = useState<number | null>(null);
+  const selectedVersion = versions.find((version) => version.edition === selectedEdition);
+  const visibleContent = selectedVersion?.content ?? content;
+  const visibleEdition = selectedVersion?.edition ?? edition;
+  const visibleDate = selectedVersion?.publishedAt ?? publishedAt;
+
   if (!content) {
     return (
       <div className="flex min-h-[28rem] flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
@@ -51,20 +61,31 @@ export function ManualOriginalPanel({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">Utgåva {edition}</Badge>
-            {publishedAt ? <span className="text-xs text-muted-foreground">{publishedAt}</span> : null}
+            {visibleDate ? <span className="text-xs text-muted-foreground">{visibleDate}</span> : null}
           </div>
         </div>
+        {versions.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background p-3" aria-label="Versionshistorik">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Versioner</span>
+            {versions.map((version) => (
+              <button className="rounded-md" key={version.id} onClick={() => setSelectedEdition(version.edition)} type="button">
+                <Badge variant={version.edition === visibleEdition ? "default" : "outline"}>Utgåva {version.edition} · {version.publishedAt}</Badge>
+              </button>
+            ))}
+            {selectedVersion ? <button className="text-xs text-primary underline" onClick={() => setSelectedEdition(null)} type="button">Visa senaste</button> : null}
+          </div>
+        ) : null}
         <article className="document-paper overflow-hidden rounded-sm">
           <div className="grid grid-cols-3 border-b px-6 py-3 text-xs text-muted-foreground">
             <span>Granskad / utfärdare</span>
             <span className="text-center font-medium text-foreground">{headerText || documentTitle}</span>
-            <span className="text-right">Utgåva {edition}</span>
+            <span className="text-right">Utgåva {visibleEdition}</span>
           </div>
           <div className="px-10 py-10">
             <h3 className="mb-4 text-xl font-semibold tracking-tight">{documentTitle}</h3>
             <div
               className="manual-tiptap-editor text-sm leading-7"
-              dangerouslySetInnerHTML={{ __html: content }}
+              dangerouslySetInnerHTML={{ __html: visibleContent ?? "" }}
             />
           </div>
           <div className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</div>

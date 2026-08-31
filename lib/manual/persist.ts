@@ -109,6 +109,26 @@ export async function persistAck(documentId: string, userId: string, edition: nu
   if (error && !error.message.toLowerCase().includes("duplicate")) throw error;
 }
 
+export async function persistDeleteAttachment(attachmentId: string, storagePath?: string) {
+  const supabase = createClient();
+  if (storagePath) {
+    const { error } = await supabase.storage.from("manuals").remove([storagePath]);
+    if (error) throw error;
+  }
+  const { error } = await supabase.from("attachments").delete().eq("id", attachmentId);
+  if (error) throw error;
+}
+
+export async function persistReview(documentId: string, userId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("document_reviews").upsert({
+    document_id: documentId,
+    requested_by: userId,
+    status: "pending",
+  }, { onConflict: "document_id" });
+  if (error) throw error;
+}
+
 export async function persistFiles(
   organizationId: string,
   documentId: string,
