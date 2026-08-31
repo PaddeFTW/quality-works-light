@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FileLock2, ShieldCheck } from "lucide-react";
+import { FileLock2, Link2, Printer, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentVersion } from "@/types/domain";
 
@@ -60,7 +61,9 @@ export function ManualOriginalPanel({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">Utgåva {edition}</Badge>
+            <Button onClick={() => window.print()} size="sm" variant="outline"><Printer data-icon="inline-start" />Skriv ut</Button>
+            <Button onClick={() => void navigator.clipboard.writeText(window.location.href)} size="sm" variant="outline"><Link2 data-icon="inline-start" />Kopiera länk</Button>
+            <Badge variant="secondary">Utgåva {visibleEdition}</Badge>
             {visibleDate ? <span className="text-xs text-muted-foreground">{visibleDate}</span> : null}
           </div>
         </div>

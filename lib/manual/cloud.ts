@@ -55,7 +55,7 @@ export async function ensureManual(
 ): Promise<string> {
   if (existingManualId) return existingManualId;
   const { data, error } = await supabase
-    .from("manuals")
+    .from("manual-attachments")
     .insert({
       organization_id: organizationId,
       name: "Kvalitetsmanual",
@@ -70,7 +70,7 @@ export async function ensureManual(
 
 export async function loadManualBundle(supabase: SupabaseClient, manualId: string) {
   const [{ data: manual }, { data: docs }, { data: versions }] = await Promise.all([
-    supabase.from("manuals").select("*").eq("id", manualId).single(),
+    supabase.from("manual-attachments").select("*").eq("id", manualId).single(),
     supabase
       .from("manual_documents")
       .select("id, manual_id, parent_id, slug, title, kind, sort_order, draft_html")
@@ -98,7 +98,7 @@ export async function loadAttachments(supabase: SupabaseClient, documentIds: str
   if (error) throw error;
   const result: Record<string, ManualAttachment[]> = {};
   for (const row of data ?? []) {
-    const signed = await supabase.storage.from("manuals").createSignedUrl(row.storage_path, 3600);
+    const signed = await supabase.storage.from("manual-attachments").createSignedUrl(row.storage_path, 3600);
     const item: ManualAttachment = {
       id: row.id,
       name: row.file_name,
@@ -193,7 +193,7 @@ export async function uploadAttachment(
 ): Promise<ManualAttachment> {
   const path = `${organizationId}/${documentId}/${Date.now()}-${file.name}`;
   const { error: uploadError } = await supabase.storage
-    .from("manuals")
+    .from("manual-attachments")
     .upload(path, file);
   if (uploadError) throw uploadError;
 
@@ -212,7 +212,7 @@ export async function uploadAttachment(
   if (error || !data) throw error ?? new Error("Kunde inte spara bilaga");
 
   const { data: signed } = await supabase.storage
-    .from("manuals")
+    .from("manual-attachments")
     .createSignedUrl(path, 60 * 60);
 
   return {
@@ -220,6 +220,7 @@ export async function uploadAttachment(
     name: file.name,
     size: file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`,
     type: file.type || "Fil",
+    storagePath: path,
     url: signed?.signedUrl,
   };
 }

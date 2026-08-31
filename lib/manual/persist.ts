@@ -112,7 +112,7 @@ export async function persistAck(documentId: string, userId: string, edition: nu
 export async function persistDeleteAttachment(attachmentId: string, storagePath?: string) {
   const supabase = createClient();
   if (storagePath) {
-    const { error } = await supabase.storage.from("manuals").remove([storagePath]);
+    const { error } = await supabase.storage.from("manual-attachments").remove([storagePath]);
     if (error) throw error;
   }
   const { error } = await supabase.from("attachments").delete().eq("id", attachmentId);
