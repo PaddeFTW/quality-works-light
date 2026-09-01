@@ -26,6 +26,7 @@ import type { ManualNode } from "@/components/manual/manual-data";
 interface ManualTreeProps {
   nodes: ManualNode[];
   selectedId: string | null;
+  lastOpenedId?: string | null;
   onSelect: (node: ManualNode) => void;
   onRename: (node: ManualNode) => void;
   onDelete: (node: ManualNode) => void;
@@ -52,6 +53,7 @@ function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
 export function ManualTree({
   nodes,
   selectedId,
+  lastOpenedId,
   onSelect,
   onRename,
   onDelete,
@@ -86,7 +88,9 @@ export function ManualTree({
             "group flex w-full items-center rounded-md pr-1 text-sm transition-token",
             isSelected
               ? "bg-primary/10 font-medium text-primary"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              : lastOpenedId === node.id
+                ? "bg-accent/60 font-medium text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
           )}
           style={{ paddingLeft: `${depth * 0.75 + 0.25}rem` }}
         >

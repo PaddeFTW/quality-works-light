@@ -55,7 +55,7 @@ export async function ensureManual(
 ): Promise<string> {
   if (existingManualId) return existingManualId;
   const { data, error } = await supabase
-    .from("manuals")
+    .from("manual-attachments")
     .insert({
       organization_id: organizationId,
       name: "Kvalitetsmanual",
@@ -70,7 +70,7 @@ export async function ensureManual(
 
 export async function loadManualBundle(supabase: SupabaseClient, manualId: string) {
   const [{ data: manual }, { data: docs }, { data: versions }] = await Promise.all([
-    supabase.from("manuals").select("*").eq("id", manualId).single(),
+    supabase.from("manual-attachments").select("*").eq("id", manualId).single(),
     supabase
       .from("manual_documents")
       .select("id, manual_id, parent_id, slug, title, kind, sort_order, draft_html")
@@ -86,6 +86,30 @@ export async function loadManualBundle(supabase: SupabaseClient, manualId: strin
     docs: (docs ?? []) as DocRow[],
     versions: versions ?? [],
   };
+}
+
+export async function loadAttachments(supabase: SupabaseClient, documentIds: string[]) {
+  if (documentIds.length === 0) return {} as Record<string, ManualAttachment[]>;
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("id, document_id, file_name, file_size, mime_type, storage_path, created_at")
+    .in("document_id", documentIds)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const result: Record<string, ManualAttachment[]> = {};
+  for (const row of data ?? []) {
+    const signed = await supabase.storage.from("manual-attachments").createSignedUrl(row.storage_path, 3600);
+    const item: ManualAttachment = {
+      id: row.id,
+      name: row.file_name,
+      size: row.file_size < 1024 ? `${row.file_size} B` : `${Math.round(row.file_size / 1024)} KB`,
+      type: row.mime_type || "Fil",
+      storagePath: row.storage_path,
+      url: signed.data?.signedUrl,
+    };
+    result[row.document_id] = [...(result[row.document_id] ?? []), item];
+  }
+  return result;
 }
 
 export async function seedDefaultDocuments(
@@ -196,6 +220,7 @@ export async function uploadAttachment(
     name: file.name,
     size: file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`,
     type: file.type || "Fil",
+    storagePath: path,
     url: signed?.signedUrl,
   };
 }
