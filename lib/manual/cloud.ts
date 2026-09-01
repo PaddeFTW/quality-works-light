@@ -1,8 +1,10 @@
 import type { ManualNode, ManualNodeKind } from "@/components/manual/manual-data";
 import { defaultDocumentContent, defaultManualTree } from "@/components/manual/manual-data";
-import type { DocumentVersion, ManualAttachment } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment, ReviewStatus } from "@/types/domain";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+export const MANUAL_BUCKET = "manuals";
 
 interface DocRow {
   id: string;
@@ -13,6 +15,7 @@ interface DocRow {
   kind: ManualNodeKind;
   sort_order: number;
   draft_html: string;
+  review_status?: string;
 }
 
 function flattenSeed(
@@ -30,10 +33,9 @@ function flattenSeed(
 export function rowsToTree(rows: DocRow[]): ManualNode[] {
   const byParent = new Map<string | null, DocRow[]>();
   for (const row of rows) {
-    const key = row.parent_id;
-    const list = byParent.get(key) ?? [];
+    const list = byParent.get(row.parent_id) ?? [];
     list.push(row);
-    byParent.set(key, list);
+    byParent.set(row.parent_id, list);
   }
   for (const list of byParent.values()) {
     list.sort((a, b) => a.sort_order - b.sort_order);
@@ -54,8 +56,16 @@ export async function ensureManual(
   existingManualId: string | null,
 ): Promise<string> {
   if (existingManualId) return existingManualId;
+  const { data: existing } = await supabase
+    .from("manuals")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
   const { data, error } = await supabase
-    .from("manual-attachments")
+    .from("manuals")
     .insert({
       organization_id: organizationId,
       name: "Kvalitetsmanual",
@@ -69,23 +79,35 @@ export async function ensureManual(
 }
 
 export async function loadManualBundle(supabase: SupabaseClient, manualId: string) {
-  const [{ data: manual }, { data: docs }, { data: versions }] = await Promise.all([
-    supabase.from("manual-attachments").select("*").eq("id", manualId).single(),
-    supabase
-      .from("manual_documents")
-      .select("id, manual_id, parent_id, slug, title, kind, sort_order, draft_html")
-      .eq("manual_id", manualId),
-    supabase
-      .from("document_versions")
-      .select("id, document_id, edition, content_html, published_at, published_by")
-      .order("edition", { ascending: false }),
-  ]);
+  const [{ data: manual, error: manualError }, { data: docs, error: docsError }, { data: versions, error: versionsError }] =
+    await Promise.all([
+      supabase.from("manuals").select("*").eq("id", manualId).single(),
+      supabase
+        .from("manual_documents")
+        .select("id, manual_id, parent_id, slug, title, kind, sort_order, draft_html, review_status")
+        .eq("manual_id", manualId),
+      supabase
+        .from("document_versions")
+        .select("id, document_id, edition, content_html, published_at, published_by")
+        .order("edition", { ascending: false }),
+    ]);
+  if (manualError) throw manualError;
+  if (docsError) throw docsError;
+  if (versionsError) throw versionsError;
 
   return {
     manual,
     docs: (docs ?? []) as DocRow[],
     versions: versions ?? [],
   };
+}
+
+export function reviewsFromRows(rows: DocRow[]): Record<string, "draft" | "pending"> {
+  const map: Record<string, "draft" | "pending"> = {};
+  for (const row of rows) {
+    map[row.id] = row.review_status === "pending" ? "pending" : "draft";
+  }
+  return map;
 }
 
 export async function loadAttachments(supabase: SupabaseClient, documentIds: string[]) {
@@ -98,24 +120,26 @@ export async function loadAttachments(supabase: SupabaseClient, documentIds: str
   if (error) throw error;
   const result: Record<string, ManualAttachment[]> = {};
   for (const row of data ?? []) {
-    const signed = await supabase.storage.from("manual-attachments").createSignedUrl(row.storage_path, 3600);
+    const bucket = row.storage_path.startsWith("manual-attachments/") ? "manual-attachments" : MANUAL_BUCKET;
+    const path = row.storage_path.replace(/^manuals\//, "").replace(/^manual-attachments\//, "");
+    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    const fallback = signed.error
+      ? await supabase.storage.from("manual-attachments").createSignedUrl(row.storage_path, 3600)
+      : signed;
     const item: ManualAttachment = {
       id: row.id,
       name: row.file_name,
-      size: row.file_size < 1024 ? `${row.file_size} B` : `${Math.round(row.file_size / 1024)} KB`,
+      size: !row.file_size ? "–" : row.file_size < 1024 ? `${row.file_size} B` : `${Math.round(row.file_size / 1024)} KB`,
       type: row.mime_type || "Fil",
       storagePath: row.storage_path,
-      url: signed.data?.signedUrl,
+      url: fallback.data?.signedUrl,
     };
     result[row.document_id] = [...(result[row.document_id] ?? []), item];
   }
   return result;
 }
 
-export async function seedDefaultDocuments(
-  supabase: SupabaseClient,
-  manualId: string,
-) {
+export async function seedDefaultDocuments(supabase: SupabaseClient, manualId: string) {
   const flat = flattenSeed(defaultManualTree, null);
   const idMap = new Map<string, string>();
 
@@ -192,10 +216,13 @@ export async function uploadAttachment(
   file: File,
 ): Promise<ManualAttachment> {
   const path = `${organizationId}/${documentId}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
-    .from("manual-attachments")
-    .upload(path, file);
-  if (uploadError) throw uploadError;
+  let usedBucket = MANUAL_BUCKET;
+  const first = await supabase.storage.from(MANUAL_BUCKET).upload(path, file);
+  if (first.error) {
+    usedBucket = "manual-attachments";
+    const second = await supabase.storage.from(usedBucket).upload(path, file);
+    if (second.error) throw second.error;
+  }
 
   const { data, error } = await supabase
     .from("attachments")
@@ -211,9 +238,7 @@ export async function uploadAttachment(
     .single();
   if (error || !data) throw error ?? new Error("Kunde inte spara bilaga");
 
-  const { data: signed } = await supabase.storage
-    .from("manual-attachments")
-    .createSignedUrl(path, 60 * 60);
+  const { data: signed } = await supabase.storage.from(usedBucket).createSignedUrl(path, 60 * 60);
 
   return {
     id: data.id,
@@ -224,3 +249,5 @@ export async function uploadAttachment(
     url: signed?.signedUrl,
   };
 }
+
+export type { ReviewStatus };
