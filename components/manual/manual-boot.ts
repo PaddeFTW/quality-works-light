@@ -6,6 +6,7 @@ import {
   ensureManual,
   loadAttachments,
   loadManualBundle,
+  reviewsFromRows,
   rowsToTree,
   seedDefaultDocuments,
   settingsFromManual,
@@ -13,8 +14,10 @@ import {
 } from "@/lib/manual/cloud";
 import type { ManualNode } from "@/components/manual/manual-data";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
-import type { DocumentVersion } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment } from "@/types/domain";
 import { firstDocumentId } from "@/lib/manual/tree-ops";
+
+const LAST_OPENED_KEY = "qw.manual.lastOpened";
 
 export interface BootResult {
   manualId: string;
@@ -23,7 +26,9 @@ export interface BootResult {
   settings: ManualSettings;
   versions: Record<string, DocumentVersion[]>;
   selectedId: string | null;
-  attachments: Record<string, import("@/types/domain").ManualAttachment[]>;
+  lastOpenedId: string | null;
+  attachments: Record<string, ManualAttachment[]>;
+  reviews: Record<string, "draft" | "pending">;
 }
 
 export async function bootManualFromCloud(
@@ -38,22 +43,37 @@ export async function bootManualFromCloud(
     bundle = await loadManualBundle(supabase, manualId);
   }
   const tree = rowsToTree(bundle.docs);
-  const attachments = await loadAttachments(supabase, bundle.docs.filter((row) => row.kind === "document").map((row) => row.id));
+  const attachments = await loadAttachments(
+    supabase,
+    bundle.docs.filter((row) => row.kind === "document").map((row) => row.id),
+  );
+  const storedOpened = typeof window === "undefined" ? null : window.localStorage.getItem(LAST_OPENED_KEY);
+  const selectedId = storedOpened && bundle.docs.some((row) => row.id === storedOpened)
+    ? storedOpened
+    : firstDocumentId(tree);
   return {
     manualId,
     tree,
     drafts: draftsFromRows(bundle.docs),
-    settings: bundle.manual ? settingsFromManual(bundle.manual) : {
-      name: "Kvalitetsmanual",
-      issuer: "",
-      reviewer: "",
-      approver: "",
-      logo: "",
-      headerText: "",
-      footerText: "",
-    },
+    settings: bundle.manual
+      ? settingsFromManual(bundle.manual)
+      : {
+          name: "Kvalitetsmanual",
+          issuer: "",
+          reviewer: "",
+          approver: "",
+          logo: "",
+          headerText: "",
+          footerText: "",
+        },
     versions: versionsFromRows(bundle.versions ?? []),
     attachments,
-    selectedId: firstDocumentId(tree),
+    reviews: reviewsFromRows(bundle.docs),
+    selectedId,
+    lastOpenedId: selectedId,
   };
+}
+
+export function rememberLastOpened(id: string) {
+  window.localStorage.setItem(LAST_OPENED_KEY, id);
 }

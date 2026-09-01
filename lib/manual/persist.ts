@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import { slugifyTitle } from "@/lib/manual/tree-ops";
 import { defaultDocumentContent } from "@/components/manual/manual-data";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
-import { uploadAttachment } from "@/lib/manual/cloud";
+import { MANUAL_BUCKET, uploadAttachment } from "@/lib/manual/cloud";
 
 export async function persistDraft(documentId: string, html: string) {
   const supabase = createClient();
@@ -50,6 +50,10 @@ export async function persistPublish(
     .select("id, edition, content_html, published_at")
     .single();
   if (error || !data) throw error ?? new Error("Publicering misslyckades");
+  await supabase
+    .from("manual_documents")
+    .update({ review_status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", documentId);
   return data;
 }
 
@@ -112,8 +116,10 @@ export async function persistAck(documentId: string, userId: string, edition: nu
 export async function persistDeleteAttachment(attachmentId: string, storagePath?: string) {
   const supabase = createClient();
   if (storagePath) {
-    const { error } = await supabase.storage.from("manual-attachments").remove([storagePath]);
-    if (error) throw error;
+    const first = await supabase.storage.from(MANUAL_BUCKET).remove([storagePath]);
+    if (first.error) {
+      await supabase.storage.from("manual-attachments").remove([storagePath]);
+    }
   }
   const { error } = await supabase.from("attachments").delete().eq("id", attachmentId);
   if (error) throw error;
@@ -121,11 +127,16 @@ export async function persistDeleteAttachment(attachmentId: string, storagePath?
 
 export async function persistReview(documentId: string, userId: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("document_reviews").upsert({
+  const { error: statusError } = await supabase
+    .from("manual_documents")
+    .update({ review_status: "pending", updated_at: new Date().toISOString() })
+    .eq("id", documentId);
+  if (statusError) throw statusError;
+  const { error } = await supabase.from("review_requests").insert({
     document_id: documentId,
     requested_by: userId,
     status: "pending",
-  }, { onConflict: "document_id" });
+  });
   if (error) throw error;
 }
 
