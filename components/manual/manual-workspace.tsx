@@ -61,7 +61,7 @@ import {
 import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { downloadHtmlAsFile, printDocument } from "@/lib/export-document";
-import { bootManualFromCloud } from "@/components/manual/manual-boot";
+import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
 import {
   persistAck,
   persistCreate,
@@ -371,7 +371,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       if (!window.confirm("Du har osparade ändringar. Byt dokument ändå?")) return;
     }
     setSelectedId(node.id);
-    if (node.kind === "document") setLastOpenedId(node.id);
+    if (node.kind === "document") {
+      setLastOpenedId(node.id);
+      rememberLastOpened(node.id);
+    }
     setTreeOpen(false);
     if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
   }

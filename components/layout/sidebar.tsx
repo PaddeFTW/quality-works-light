@@ -18,12 +18,12 @@ interface SidebarProps {
   className?: string;
 }
 
-export function Sidebar({ title = "Quality Works Light", footer, className }: SidebarProps) {
+export function Sidebar({ title = "Quality Works Light", items, footer, className }: SidebarProps) {
   const pathname = usePathname();
   const { session } = useOrgSession();
   const role = session?.role ?? "admin";
   const heading = session?.organizationName || title;
-  const visibleItems = navigation.filter((item) => isModuleVisible(item.href, role));
+  const visibleItems = (items ?? navigation).filter((item) => isModuleVisible(item.href, role));
 
   return (
     <aside className={cn("hidden w-16 shrink-0 flex-col items-center border-r bg-sidebar py-4 lg:flex", className)}>
@@ -60,12 +60,19 @@ export function MobileNavigation() {
   const { session } = useOrgSession();
   const role = session?.role ?? "admin";
   const visibleItems = navigation.filter((item) => isModuleVisible(item.href, role));
+  const settingsItem = visibleItems.find((item) => item.href === "/installningar");
+  const primaryItems = visibleItems.filter((item) => item.href !== "/installningar").slice(0, 7);
   return (
     <nav aria-label="Huvudnavigation" className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t bg-background/95 px-2 py-2 backdrop-blur lg:hidden">
-      {visibleItems.slice(0, 8).map((item) => {
+      {primaryItems.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return <Link aria-label={item.title} aria-current={active ? "page" : undefined} className={cn("flex size-10 items-center justify-center rounded-xl text-muted-foreground", active && "bg-primary text-primary-foreground")} href={item.href} key={item.href} title={item.title}>{item.icon}</Link>;
       })}
+      {settingsItem ? (
+        <Link aria-label={settingsItem.title} href={settingsItem.href} title={settingsItem.title} className="flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground">
+          {settingsItem.icon}
+        </Link>
+      ) : null}
     </nav>
   );
 }

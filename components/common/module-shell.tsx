@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BackToManual } from "@/components/common/back-to-manual";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
 import {
@@ -24,7 +25,7 @@ export function ModuleShell({
   comingSoonPoints,
 }: ModuleShellProps) {
   return (
-    <DashboardLayout description={description} navigation={navigation} title={title}>
+    <DashboardLayout description={description} navigation={navigation} title={title} actions={<BackToManual />}>
       {children}
       {comingSoonPoints && comingSoonPoints.length > 0 ? (
         <Card>
