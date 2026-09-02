@@ -3,134 +3,69 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { isModuleVisible } from "@/lib/features";
 import { useOrgSession } from "@/components/providers/org-provider";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { navigationGroups } from "@/components/layout/navigation";
+import { navigation } from "@/components/layout/navigation";
+import { AccountMenu } from "@/components/layout/account-menu";
 import type { NavItem } from "@/types";
 
 interface SidebarProps {
   title?: string;
-  subtitle?: string;
   items?: NavItem[];
   footer?: ReactNode;
   className?: string;
 }
 
-export function Sidebar({
-  title = "Quality Works Light",
-  subtitle = "Ledningssystem",
-  items,
-  footer,
-  className,
-}: SidebarProps) {
+export function Sidebar({ title = "Quality Works Light", footer, className }: SidebarProps) {
   const pathname = usePathname();
   const { session } = useOrgSession();
   const role = session?.role ?? "admin";
-  const useGroups = !items || items.length === 0;
   const heading = session?.organizationName || title;
+  const visibleItems = navigation.filter((item) => isModuleVisible(item.href, role));
 
   return (
-    <aside
-      className={cn(
-        "hidden w-80 shrink-0 border-r bg-sidebar text-sidebar-foreground lg:flex lg:flex-col",
-        className,
-      )}
-    >
-      <div className="flex items-center gap-3 px-6 py-5">
-        <div className="rounded-xl bg-primary/12 p-2 text-primary">
-          <PanelLeft className="size-5" />
-        </div>
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold">{heading}</h2>
-          <p className="text-xs text-muted-foreground">
-            {session?.role === "admin"
-              ? "Administratör"
-              : session?.role === "editor"
-                ? "Redigerare"
-                : session?.role === "viewer"
-                  ? "Läsare"
-                  : subtitle}
-          </p>
-        </div>
+    <aside className={cn("hidden w-16 shrink-0 flex-col items-center border-r bg-sidebar py-4 lg:flex", className)}>
+      <Link href="/" aria-label={heading} title={heading} className="mb-6 flex size-10 items-center justify-center rounded-xl bg-primary/12 text-sm font-bold text-primary">
+        QW
+      </Link>
+      <nav aria-label="Huvudnavigation" className="flex flex-1 flex-col items-center gap-2">
+        {visibleItems.map((item: NavItem) => {
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          return (
+            <Link
+              aria-current={active ? "page" : undefined}
+              aria-label={item.title}
+              className={cn("flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground", active && "bg-primary text-primary-foreground shadow-sm")}
+              href={item.href}
+              key={item.href}
+              title={item.title}
+            >
+              {item.icon}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="flex flex-col items-center gap-3">
+        {footer}
+        <AccountMenu />
       </div>
-      <Separator />
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-4 px-3 py-5">
-          {useGroups
-            ? navigationGroups.map((group) => {
-                const visibleItems = group.items.filter((item) =>
-                  isModuleVisible(item.href, role),
-                );
-                if (visibleItems.length === 0) return null;
-                return (
-                  <div key={group.label} className="space-y-1">
-                    <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {group.label}
-                    </p>
-                    {visibleItems.map((item) => {
-                      const active =
-                        item.href === "/"
-                          ? pathname === "/"
-                          : pathname.startsWith(item.href);
-                      return (
-                        <Link
-                          className={cn(
-                            "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-token",
-                            active
-                              ? "bg-accent text-accent-foreground"
-                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                          )}
-                          href={item.href}
-                          key={item.href}
-                        >
-                          <span className="flex items-center gap-3">
-                            {item.icon}
-                            <span>{item.title}</span>
-                          </span>
-                          {item.badge ? (
-                            <Badge className="border-transparent" variant="secondary">
-                              {item.badge}
-                            </Badge>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                );
-              })
-            : items
-                .filter((item) => isModuleVisible(item.href, role))
-                .map((item) => (
-                  <Link
-                    className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-token hover:bg-accent hover:text-accent-foreground"
-                    href={item.href}
-                    key={item.href}
-                  >
-                    <span className="flex items-center gap-3">
-                      {item.icon}
-                      <span>{item.title}</span>
-                    </span>
-                    {item.badge ? (
-                      <Badge className="border-transparent" variant="secondary">
-                        {item.badge}
-                      </Badge>
-                    ) : null}
-                  </Link>
-                ))}
-        </div>
-      </ScrollArea>
-      {footer ? (
-        <>
-          <Separator />
-          <div className="p-4">{footer}</div>
-        </>
-      ) : null}
     </aside>
+  );
+}
+
+export function MobileNavigation() {
+  const pathname = usePathname();
+  const { session } = useOrgSession();
+  const role = session?.role ?? "admin";
+  const visibleItems = navigation.filter((item) => isModuleVisible(item.href, role));
+  return (
+    <nav aria-label="Huvudnavigation" className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t bg-background/95 px-2 py-2 backdrop-blur lg:hidden">
+      {visibleItems.slice(0, 8).map((item) => {
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return <Link aria-label={item.title} aria-current={active ? "page" : undefined} className={cn("flex size-10 items-center justify-center rounded-xl text-muted-foreground", active && "bg-primary text-primary-foreground")} href={item.href} key={item.href} title={item.title}>{item.icon}</Link>;
+      })}
+    </nav>
   );
 }
