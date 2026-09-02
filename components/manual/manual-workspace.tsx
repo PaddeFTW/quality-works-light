@@ -401,6 +401,24 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           />
         </aside>
       )}
+      <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
+        <DialogContent className="h-[80vh] p-0 md:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Dokumentträd</DialogTitle>
+          </DialogHeader>
+          <ManualTree
+            nodes={tree}
+            lastOpenedId={lastOpenedId}
+            onDelete={(node) => { setDialogTarget(node); setDialog("delete"); }}
+            onMove={(node) => { setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(parentId ?? "root"); }}
+            onNewFolder={(parentId) => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(parentId ?? "root"); }}
+            onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
+            onSelect={handleSelect}
+            selectedId={selectedId}
+          />
+        </DialogContent>
+      </Dialog>
       <input className="hidden" multiple onChange={(e) => { void handleAddAttachmentFiles(e.target.files); e.target.value = ""; }} ref={fileInputRef} type="file" />
       <input accept=".txt,.md,.html,.htm,.pdf,.doc,.docx" className="hidden" multiple ref={uploadDocRef} type="file" />
 
