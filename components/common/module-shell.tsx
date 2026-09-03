@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
@@ -25,6 +27,10 @@ export function ModuleShell({
 }: ModuleShellProps) {
   return (
     <DashboardLayout description={description} navigation={navigation} title={title}>
+      <Link className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-token hover:text-foreground" href="/manual">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Tillbaka till {title}
+      </Link>
       {children}
       {comingSoonPoints && comingSoonPoints.length > 0 ? (
         <Card>
