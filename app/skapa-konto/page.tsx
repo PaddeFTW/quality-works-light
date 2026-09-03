@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { ensureCompany, swedishAuthError } from "@/lib/auth/ensure-company";
 import { createClient } from "@/lib/supabase/client";
 
 const branschAlternativ = [
@@ -27,27 +28,15 @@ const branschAlternativ = [
   { value: "ovrigt", label: "Övrigt" },
 ];
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48);
-}
-
 export default function SkapaKontoPage() {
   const router = useRouter();
   const [industry, setIndustry] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setInfo(null);
     setLoading(true);
 
     const form = new FormData(event.currentTarget);
@@ -65,78 +54,62 @@ export default function SkapaKontoPage() {
     }
 
     const supabase = createClient();
+    let userId: string | undefined;
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
+      options: { data: { full_name: fullName } },
     });
 
     if (signUpError) {
-      setLoading(false);
-      setError(signUpError.message);
-      return;
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError || !signInData.user) {
+        setLoading(false);
+        setError(swedishAuthError(signUpError.message));
+        return;
+      }
+      userId = signInData.user.id;
+    } else {
+      userId = signUpData.user?.id;
+      if (!signUpData.session) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError || !signInData.user) {
+          setLoading(false);
+          setError(
+            "Kontot skapades men du är inte inloggad. Stäng av Confirm email i Supabase → Authentication → Providers → Email.",
+          );
+          return;
+        }
+        userId = signInData.user.id;
+      }
     }
 
-    const userId = signUpData.user?.id;
     if (!userId) {
       setLoading(false);
       setError("Kunde inte skapa användare.");
       return;
     }
 
-    // If email confirmation is required, there may be no session yet.
-    if (!signUpData.session) {
+    try {
+      await ensureCompany(supabase, {
+        userId,
+        fullName,
+        companyName,
+        orgNumber,
+        industry,
+      });
+    } catch (err) {
       setLoading(false);
-      setInfo(
-        "Kontot är skapat. Bekräfta e-posten (eller stäng av e-postbekräftelse i Supabase Auth för utveckling) och logga sedan in.",
-      );
+      setError(err instanceof Error ? swedishAuthError(err.message) : "Kunde inte skapa företag.");
       return;
     }
-
-    const baseSlug = slugify(companyName) || "foretag";
-    const slug = `${baseSlug}-${userId.slice(0, 6)}`;
-
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .insert({
-        name: companyName,
-        org_number: orgNumber || null,
-        industry: industry || null,
-        slug,
-      })
-      .select("id")
-      .single();
-
-    if (orgError || !org) {
-      setLoading(false);
-      setError(orgError?.message ?? "Kunde inte skapa företag.");
-      return;
-    }
-
-    const { error: memberError } = await supabase.from("organization_members").insert({
-      organization_id: org.id,
-      user_id: userId,
-      role: "admin",
-    });
-
-    if (memberError) {
-      setLoading(false);
-      setError(memberError.message);
-      return;
-    }
-
-    await supabase.from("manuals").insert({
-      organization_id: org.id,
-      name: "Kvalitetsmanual",
-      issuer: fullName,
-      header_text: `Kvalitetsmanual – ${companyName}`,
-      footer_text: "Internt dokument. Utskrift gäller endast utskriftsdagen.",
-    });
 
     setLoading(false);
     router.push("/");
@@ -146,7 +119,7 @@ export default function SkapaKontoPage() {
   return (
     <AuthShell
       contentClassName="max-w-lg"
-      description="Skapa ett konto för ditt företag och bjud in kollegor senare."
+      description="Skriv företagsnamn, din mejl och ett nytt lösen. Sen är du inne."
       title="Skapa företagskonto"
     >
       <Card>
@@ -161,18 +134,13 @@ export default function SkapaKontoPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="org-number">Organisationsnummer</Label>
-                  <Input
-                    id="org-number"
-                    name="org-number"
-                    placeholder="XXXXXX-XXXX"
-                    required
-                  />
+                  <Input id="org-number" name="org-number" placeholder="XXXXXX-XXXX" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="industry">Bransch</Label>
                   <Select onValueChange={setIndustry} value={industry}>
                     <SelectTrigger id="industry">
-                      <SelectValue placeholder="Välj bransch (valfritt)" />
+                      <SelectValue placeholder="Välj bransch" />
                     </SelectTrigger>
                     <SelectContent>
                       {branschAlternativ.map((option) => (
@@ -189,46 +157,23 @@ export default function SkapaKontoPage() {
             <Separator />
 
             <fieldset className="space-y-4">
-              <legend className="text-sm font-semibold text-foreground">
-                Din användare (blir administratör)
-              </legend>
+              <legend className="text-sm font-semibold text-foreground">Du</legend>
               <div className="space-y-2">
                 <Label htmlFor="full-name">Namn</Label>
-                <Input id="full-name" name="full-name" placeholder="Förnamn Efternamn" required />
+                <Input id="full-name" name="full-name" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">E-post</Label>
-                <Input
-                  autoComplete="email"
-                  id="email"
-                  name="email"
-                  placeholder="namn@foretag.se"
-                  required
-                  type="email"
-                />
+                <Input autoComplete="email" id="email" name="email" required type="email" />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Lösenord</Label>
-                  <Input
-                    autoComplete="new-password"
-                    id="password"
-                    name="password"
-                    required
-                    type="password"
-                    minLength={6}
-                  />
+                  <Label htmlFor="password">Nytt lösenord</Label>
+                  <Input autoComplete="new-password" id="password" minLength={6} name="password" required type="password" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Bekräfta lösenord</Label>
-                  <Input
-                    autoComplete="new-password"
-                    id="confirm-password"
-                    name="confirm-password"
-                    required
-                    type="password"
-                    minLength={6}
-                  />
+                  <Label htmlFor="confirm-password">Samma lösenord igen</Label>
+                  <Input autoComplete="new-password" id="confirm-password" minLength={6} name="confirm-password" required type="password" />
                 </div>
               </div>
             </fieldset>
@@ -238,25 +183,15 @@ export default function SkapaKontoPage() {
                 {error}
               </p>
             ) : null}
-            {info ? (
-              <p className="text-sm text-muted-foreground" role="status">
-                {info}
-              </p>
-            ) : null}
 
-            <div className="space-y-3">
-              <Button className="w-full" disabled={loading} size="lg" type="submit">
-                {loading ? "Skapar konto…" : "Skapa företagskonto"}
-              </Button>
-              <p className="text-center text-xs leading-5 text-muted-foreground">
-                Du blir automatiskt administratör för företaget.
-              </p>
-            </div>
+            <Button className="w-full" disabled={loading} size="lg" type="submit">
+              {loading ? "Skapar konto…" : "Skapa konto och logga in"}
+            </Button>
           </form>
         </CardContent>
       </Card>
       <p className="text-center text-sm text-muted-foreground">
-        Har du redan ett konto?{" "}
+        Har du redan konto?{" "}
         <Link className="font-medium text-primary hover:underline" href="/login">
           Logga in
         </Link>
