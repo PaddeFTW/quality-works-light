@@ -37,10 +37,6 @@ export function Sidebar({ items, className }: SidebarProps) {
   const primary = visibleItems.filter((item) =>
     (primaryNavHrefs as readonly string[]).includes(item.href),
   );
-  const rest = visibleItems.filter(
-    (item) =>
-      !(primaryNavHrefs as readonly string[]).includes(item.href) && item.href !== "/installningar",
-  );
   const settings = visibleItems.find((item) => item.href === "/installningar");
 
   const isActive = (item: NavItem) =>
@@ -54,20 +50,17 @@ export function Sidebar({ items, className }: SidebarProps) {
     );
 
   function NavLink({ item, labeled }: { item: NavItem; labeled: boolean }) {
-    const link = (
-      <Link
-        aria-current={isActive(item) ? "page" : undefined}
-        aria-label={item.title}
-        className={linkClass(item, labeled)}
-        href={item.href}
-      >
-        {item.icon}
-        {labeled ? <span className="truncate">{item.title}</span> : <span className="sr-only">{item.title}</span>}
-      </Link>
-    );
     return (
       <Tip label={item.title} side="right">
-        {link}
+        <Link
+          aria-current={isActive(item) ? "page" : undefined}
+          aria-label={item.title}
+          className={linkClass(item, labeled)}
+          href={item.href}
+        >
+          {item.icon}
+          {labeled ? <span className="truncate">{item.title}</span> : <span className="sr-only">{item.title}</span>}
+        </Link>
       </Tip>
     );
   }
@@ -105,9 +98,6 @@ export function Sidebar({ items, className }: SidebarProps) {
         )}
       >
         {primary.map((item) => (
-          <NavLink item={item} key={item.href} labeled={!compact} />
-        ))}
-        {rest.map((item) => (
           <NavLink item={item} key={item.href} labeled={!compact} />
         ))}
         <div className="hidden flex-1 lg:block" />
