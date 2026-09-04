@@ -26,8 +26,8 @@ export const navigationGroups: NavGroup[] = [
       { title: "Dashboard", href: "/", icon: <LayoutDashboard className="size-4" /> },
       { title: "Manual", href: "/manual", icon: <BookOpen className="size-4" /> },
       { title: "SWOT", href: "/swot", icon: <Grid2x2 className="size-4" /> },
-      { title: "Mål", href: "/mal", icon: <Target className="size-4" /> },
-      { title: "Årshjul", href: "/arshjul", icon: <CalendarRange className="size-4" /> },
+      { title: "M\u00e5l", href: "/mal", icon: <Target className="size-4" /> },
+      { title: "\u00c5rshjul", href: "/arshjul", icon: <CalendarRange className="size-4" /> },
     ],
   },
   {
@@ -39,12 +39,12 @@ export const navigationGroups: NavGroup[] = [
         icon: <Users className="size-4" />,
       },
       {
-        title: "Kundtillfredsställelse",
+        title: "Kundtillfredsst\u00e4llelse",
         href: "/kund",
         icon: <Smile className="size-4" />,
       },
       {
-        title: "Leverantörsbedömning",
+        title: "Leverant\u00f6rsbed\u00f6mning",
         href: "/leverantor",
         icon: <Truck className="size-4" />,
       },
@@ -59,7 +59,7 @@ export const navigationGroups: NavGroup[] = [
         icon: <Scale className="size-4" />,
       },
       {
-        title: "Miljöaspekter",
+        title: "Milj\u00f6aspekter",
         href: "/miljoaspekter",
         icon: <Leaf className="size-4" />,
       },
@@ -71,7 +71,7 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Förbättring",
+    label: "F\u00f6rb\u00e4ttring",
     items: [
       {
         title: "Avvikelsehantering",
@@ -79,7 +79,7 @@ export const navigationGroups: NavGroup[] = [
         icon: <AlertTriangle className="size-4" />,
       },
       {
-        title: "Förbättringsförslag",
+        title: "F\u00f6rb\u00e4ttringsf\u00f6rslag",
         href: "/forslag",
         icon: <Lightbulb className="size-4" />,
       },
@@ -89,7 +89,7 @@ export const navigationGroups: NavGroup[] = [
         icon: <SearchCheck className="size-4" />,
       },
       {
-        title: "Ledningsgenomgång",
+        title: "Ledningsgenomg\u00e5ng",
         href: "/ledningsgenomgang",
         icon: <Presentation className="size-4" />,
       },
@@ -99,7 +99,7 @@ export const navigationGroups: NavGroup[] = [
     label: "System",
     items: [
       {
-        title: "Inställningar",
+        title: "Inst\u00e4llningar",
         href: "/installningar",
         icon: <Settings className="size-4" />,
       },
@@ -107,7 +107,8 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-/** Flat list for layouts that still expect NavItem[] */
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/avvikelse", "/forslag"] as const;
+
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 
 export default navigation;
