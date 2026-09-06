@@ -166,7 +166,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       setTree(nextTree);
       setDrafts(loadDrafts());
       setSettings(loadJson(SETTINGS_KEY, initialSettings));
-      setSelectedId(firstDocumentId(nextTree));
+      setSelectedId(null);
       setCloud(false);
       setReady(true);
     }
@@ -267,9 +267,11 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   }
 
   async function confirmCreate() {
-    const title = dialogName.trim() || (dialog === "create-folder" ? "Ny mapp" : "Nytt dokument");
     const parentId = dialogParent === "root" ? null : dialogParent;
     const kind = dialog === "create-folder" ? "folder" : "document";
+    const siblings = parentId ? findNodeById(tree, parentId)?.children ?? [] : tree;
+    const documentNumber = siblings.filter((node) => node.kind === "document").length + 1;
+    const title = dialogName.trim() || (kind === "folder" ? "Ny mapp" : `${documentNumber}.0 Nytt dokument`);
     let id = `${kind}-${Date.now()}`;
     if (cloud && manualId) {
       try {
@@ -387,7 +389,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   return (
     <div className={viewMode === "full" ? "flex h-[calc(100vh-3rem)] min-h-0 overflow-hidden bg-muted/30" : "flex h-[calc(100vh-5.5rem)] min-h-0 overflow-hidden bg-muted/30"}>
       {hideTree ? null : (
-        <aside className="hidden w-[300px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
+        <aside className="hidden w-[288px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
           <ManualTree
             nodes={tree}
             lastOpenedId={lastOpenedId}
@@ -425,6 +427,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
           <div className="flex flex-col gap-3 border-b bg-background px-4 pt-3 sm:px-5">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="rounded-sm bg-primary px-1.5 py-0.5 text-primary-foreground">QWL</span>
+              <span>Dokumenthantering</span>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
                 <ListTree className="size-4" />

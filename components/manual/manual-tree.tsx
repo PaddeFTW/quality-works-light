@@ -173,9 +173,15 @@ export function ManualTree({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar">
       <div className="flex flex-col gap-3 border-b px-4 py-4">
-        <h2 className="text-base font-semibold tracking-tight">Manual</h2>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Dokument</p>
+            <h2 className="text-base font-semibold tracking-tight">Kvalitetsmanual</h2>
+          </div>
+          <span className="rounded-sm border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">A4</span>
+        </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -188,6 +194,9 @@ export function ManualTree({
         </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
+        <div className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Innehåll
+        </div>
         <nav aria-label="Manualens dokumentträd" className="px-2 py-3">
           {visibleNodes.length > 0 ? (
             <ul>{visibleNodes.map((node) => renderNode(node, 0))}</ul>
