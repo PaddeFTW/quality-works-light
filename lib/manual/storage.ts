@@ -1,18 +1,18 @@
-import { defaultManualTree, type ManualNode } from "@/components/manual/manual-data";
+import type { ManualNode } from "@/components/manual/manual-data";
 
 const TREE_KEY = "qwl-manual-tree";
 const DRAFTS_KEY = "qwl-manual-drafts";
 const SETTINGS_KEY = "qwl-manual-settings";
 
 export function loadTree(): ManualNode[] {
-  if (typeof window === "undefined") return defaultManualTree;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(TREE_KEY);
-    if (!raw) return defaultManualTree;
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as ManualNode[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultManualTree;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return defaultManualTree;
+    return [];
   }
 }
 
