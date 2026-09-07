@@ -8,14 +8,12 @@ import {
   loadManualBundle,
   reviewsFromRows,
   rowsToTree,
-  seedDefaultDocuments,
   settingsFromManual,
   versionsFromRows,
 } from "@/lib/manual/cloud";
 import type { ManualNode } from "@/components/manual/manual-data";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
 import type { DocumentVersion, ManualAttachment } from "@/types/domain";
-import { firstDocumentId } from "@/lib/manual/tree-ops";
 
 const LAST_OPENED_KEY = "qw.manual.lastOpened";
 
@@ -38,10 +36,6 @@ export async function bootManualFromCloud(
   const supabase = createClient();
   const manualId = await ensureManual(supabase, organizationId, existingManualId);
   let bundle = await loadManualBundle(supabase, manualId);
-  if ((bundle.docs ?? []).length === 0) {
-    await seedDefaultDocuments(supabase, manualId);
-    bundle = await loadManualBundle(supabase, manualId);
-  }
   const tree = rowsToTree(bundle.docs);
   const attachments = await loadAttachments(
     supabase,
@@ -50,7 +44,7 @@ export async function bootManualFromCloud(
   const storedOpened = typeof window === "undefined" ? null : window.localStorage.getItem(LAST_OPENED_KEY);
   const selectedId = storedOpened && bundle.docs.some((row) => row.id === storedOpened)
     ? storedOpened
-    : firstDocumentId(tree);
+    : null;
   return {
     manualId,
     tree,
