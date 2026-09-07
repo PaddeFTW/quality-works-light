@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Maximize, Minimize, MoreHorizontal, Plus, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,20 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   defaultDocumentContent,
@@ -42,30 +27,19 @@ import {
 } from "@/components/manual/manual-settings-panel";
 import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
-import { downloadHtmlAsFile, printDocument } from "@/lib/export-document";
-import { bootManualFromCloud } from "@/components/manual/manual-boot";
+import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
 import {
   persistAck,
   persistCreate,
   persistDelete,
-  persistDraft,
   persistDeleteAttachment,
+  persistDraft,
   persistFiles,
-  persistMove,
   persistPublish,
-  persistReview,
   persistRename,
   persistSettings,
 } from "@/lib/manual/persist";
-import {
-  firstDocumentId,
-  getParentId,
-  insertNode,
-  listFolders,
-  moveNode,
-  removeNode,
-  renameNode,
-} from "@/lib/manual/tree-ops";
+import { firstDocumentId, insertNode, removeNode, renameNode } from "@/lib/manual/tree-ops";
 import {
   loadDrafts,
   loadJson,
@@ -112,11 +86,8 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const [dialogTarget, setDialogTarget] = useState<ManualNode | null>(null);
   const [dialogName, setDialogName] = useState("");
   const [dialogParent, setDialogParent] = useState<string>("root");
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
-  const [reviewStatus, setReviewStatus] = useState<"draft" | "pending">("draft");
   const [status, setStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadDocRef = useRef<HTMLInputElement>(null);
   const canEdit = session?.role !== "viewer";
 
   useEffect(() => {
@@ -135,6 +106,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           setVersionsByDoc(result.versions);
           setAttachments(result.attachments);
           setSelectedId(result.selectedId);
+          setLastOpenedId(result.lastOpenedId);
           setReady(true);
           return;
         } catch (error) {
@@ -191,6 +163,14 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     setSavedId(null);
   }
 
+  function openCreate(parentId: string | null) {
+    const isRoot = parentId === null;
+    const name = isRoot ? (tree.length ? "Nytt kapitel" : "Ledningssystemet") : "Nytt avsnitt";
+    setDialog("create-doc");
+    setDialogName(name);
+    setDialogParent(parentId ?? "root");
+  }
+
   async function handleSave() {
     if (!selectedId) return;
     if (cloud) {
@@ -203,17 +183,6 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     }
     setSavedId(selectedId);
     setDirtyIds((current) => current.filter((item) => item !== selectedId));
-  }
-
-  async function handleReview() {
-    if (!selectedId || !session || !canEdit) return;
-    try {
-      if (cloud) await persistReview(selectedId, session.userId);
-      setReviewStatus("pending");
-      setStatus("Dokumentet är skickat för granskning.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Kunde inte skicka för granskning");
-    }
   }
 
   async function handlePublish() {
@@ -260,9 +229,8 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
 
   async function confirmCreate() {
     const parentId = dialogParent === "root" ? null : dialogParent;
-  const kind = "document" as const;
-  const title = dialogName.trim() || "Nytt avsnitt";
-
+    const kind = "document" as const;
+    const title = dialogName.trim() || (parentId ? "Nytt avsnitt" : tree.length ? "Nytt kapitel" : "Ledningssystemet");
     let id = `${kind}-${Date.now()}`;
     if (cloud && manualId) {
       try {
@@ -274,11 +242,11 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     }
     const node: ManualNode = { id, title, kind, children: [] };
     setTree((current) => insertNode(current, parentId, node));
-    if (kind === "document") {
-      setDrafts((current) => ({ ...current, [id]: defaultDocumentContent }));
-      setSelectedId(id);
-      setActiveTab("work");
-    }
+    setDrafts((current) => ({ ...current, [id]: defaultDocumentContent }));
+    setSelectedId(id);
+    setLastOpenedId(id);
+    rememberLastOpened(id);
+    setActiveTab("work");
     setDialog(null);
   }
 
@@ -295,21 +263,6 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       }
     }
     setTree((current) => renameNode(current, dialogTarget.id, title));
-    setDialog(null);
-  }
-
-  async function confirmMove() {
-    if (!dialogTarget) return;
-    const parentId = dialogParent === "root" ? null : dialogParent;
-    if (cloud) {
-      try {
-        await persistMove(dialogTarget.id, parentId);
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Kunde inte flytta");
-        return;
-      }
-    }
-    setTree((current) => moveNode(current, dialogTarget.id, parentId));
     setDialog(null);
   }
 
@@ -364,14 +317,31 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       if (!window.confirm("Du har osparade ändringar. Byt dokument ändå?")) return;
     }
     setSelectedId(node.id);
-    if (node.kind === "document") setLastOpenedId(node.id);
+    if (node.kind === "document") {
+      setLastOpenedId(node.id);
+      rememberLastOpened(node.id);
+    }
     setTreeOpen(false);
     if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
   }
 
+  const treeProps = {
+    nodes: tree,
+    lastOpenedId,
+    onNewDocument: openCreate,
+    onHide: () => undefined,
+    onRename: (node: ManualNode) => {
+      setDialogTarget(node);
+      setDialogName(node.title);
+      setDialog("rename");
+    },
+    onSelect: handleSelect,
+    selectedId,
+  };
+
   if (!ready) {
     return (
-      <div className="flex h-[calc(100vh-5.5rem)] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
         Laddar manual…
       </div>
     );
@@ -381,50 +351,46 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     <div className="flex h-screen min-h-0 overflow-hidden bg-muted/30">
       {hideTree ? null : (
         <aside className="hidden w-[288px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
-          <ManualTree
-            nodes={tree}
-            lastOpenedId={lastOpenedId}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName(parentId === null ? "Ledningssystemet" : "Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
-            onHide={() => undefined}
-            onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
-            onSelect={handleSelect}
-            selectedId={selectedId}
-          />
+          <ManualTree {...treeProps} />
         </aside>
       )}
       <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
         <DialogContent className="h-[80vh] p-0 md:hidden">
           <DialogHeader className="sr-only">
-            <DialogTitle>Dokumentträd</DialogTitle>
+            <DialogTitle>Innehållsförteckning</DialogTitle>
           </DialogHeader>
-          <ManualTree
-            nodes={tree}
-            lastOpenedId={lastOpenedId}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName(parentId === null ? "Ledningssystemet" : "Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
-            onHide={() => undefined}
-            onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
-            onSelect={handleSelect}
-            selectedId={selectedId}
-          />
+          <ManualTree {...treeProps} />
         </DialogContent>
       </Dialog>
       <input className="hidden" multiple onChange={(e) => { void handleAddAttachmentFiles(e.target.files); e.target.value = ""; }} ref={fileInputRef} type="file" />
-      <input accept=".txt,.md,.html,.htm,.pdf,.doc,.docx" className="hidden" multiple ref={uploadDocRef} type="file" />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
           <div className="flex flex-col gap-3 border-b bg-background px-4 pt-3 sm:px-5">
             <div className="flex items-center gap-2 px-1 py-1">
-              <span className="truncate text-sm font-medium">{documentTitle}</span>
-              <div className="ml-auto flex items-center gap-1">
-                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minimize /></Button>
+              <Button aria-label="Visa innehållsförteckning" className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
+                <PanelLeft />
+              </Button>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{documentTitle}</span>
+              <div className="flex items-center">
+                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minus /></Button>
                 <Button aria-label="Fönsterläge" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Square /></Button>
-                <Button aria-label={isFullscreen ? "Avsluta helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
-                <Button aria-label="Stäng" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
+                <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
+                <Button aria-label="Stäng manualen" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-3">
-              {!tree.length ? <Button disabled={!canEdit} onClick={() => { setDialog("create-doc"); setDialogName("Ledningssystemet"); setDialogParent("root"); }} size="sm"><Plus data-icon="inline-start" />Skapa 1.0</Button> : null}
+              {!tree.length ? (
+                <Button disabled={!canEdit} onClick={() => openCreate(null)} size="sm">
+                  <Plus data-icon="inline-start" />
+                  Skapa 1.0
+                </Button>
+              ) : (
+                <Button disabled={!canEdit} onClick={() => openCreate(null)} size="sm" variant="outline">
+                  <Plus data-icon="inline-start" />
+                  Nytt kapitel
+                </Button>
+              )}
               <div className="ml-auto flex items-center gap-2">
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handleSave()} size="sm" variant="outline">Spara</Button>
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handlePublish()} size="sm">Publicera</Button>
@@ -435,7 +401,6 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                 <TabsTrigger value="original">Original</TabsTrigger>
               </TabsList>
               {status ? <span className="text-xs text-destructive">{status}</span> : null}
-              {shareStatus ? <span className="text-xs text-muted-foreground">{shareStatus}</span> : null}
             </div>
           </div>
           <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
@@ -471,11 +436,22 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                 value={draft}
               />
             ) : (
-              <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Välj ett dokument i trädet.</div>
+              <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+                {tree.length ? "Välj ett dokument i trädet." : "Manualen är tom. Skapa första kapitlet."}
+              </div>
             )}
           </TabsContent>
           <TabsContent className="flex min-h-0 flex-col" value="original">
-            <ManualOriginalPanel companyName={settings.name} content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} versions={versions} />
+            <ManualOriginalPanel
+              companyName={settings.name}
+              content={published?.content ?? null}
+              documentTitle={documentTitle}
+              edition={edition || 1}
+              footerText={settings.footerText}
+              headerText={settings.headerText}
+              publishedAt={published?.publishedAt ?? null}
+              versions={versions}
+            />
           </TabsContent>
         </Tabs>
         <footer className="flex items-center justify-between border-t bg-background px-4 py-3">
@@ -498,20 +474,26 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialog === "delete" ? "Ta bort" : dialog === "rename" ? "Byt namn" : "Nytt avsnitt"}
+              {dialog === "delete"
+                ? "Ta bort"
+                : dialog === "rename"
+                  ? "Byt namn"
+                  : dialogParent === "root"
+                    ? tree.length
+                      ? "Nytt kapitel"
+                      : "Skapa 1.0"
+                    : "Nytt underavsnitt"}
             </DialogTitle>
           </DialogHeader>
           {dialog === "delete" ? (
             <p className="text-sm text-muted-foreground">Ta bort “{dialogTarget?.title}”?</p>
           ) : (
-            <div className="space-y-4">
-              {dialog !== null ? (
-                <div className="space-y-2">
-                  <Label htmlFor="doc-name">Namn</Label>
-                  <Input id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="doc-name">Namn</Label>
+              <Input id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
+              {dialog === "create-doc" ? (
+                <p className="text-xs text-muted-foreground">Numret låses vid skapande.</p>
               ) : null}
-
             </div>
           )}
           <DialogFooter>
