@@ -193,6 +193,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
   const folders = useMemo(() => listFolders(tree), [tree]);
   const hideTree = viewMode === "focus";
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  };
 
   function markDirty(id: string) {
     setDirtyIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -270,8 +274,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     const parentId = dialogParent === "root" ? null : dialogParent;
     const kind = dialog === "create-folder" ? "folder" : "document";
     const siblings = parentId ? findNodeById(tree, parentId)?.children ?? [] : tree;
-    const documentNumber = siblings.filter((node) => node.kind === "document").length + 1;
-    const title = dialogName.trim() || (kind === "folder" ? "Ny mapp" : `${documentNumber}.0 Nytt dokument`);
+    const title = dialogName.trim() || (kind === "folder" ? "Ny mapp" : "Nytt avsnitt");
     let id = `${kind}-${Date.now()}`;
     if (cloud && manualId) {
       try {
@@ -393,10 +396,8 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           <ManualTree
             nodes={tree}
             lastOpenedId={lastOpenedId}
-            onDelete={(node) => { setDialogTarget(node); setDialog("delete"); }}
-            onMove={(node) => { setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(parentId ?? "root"); }}
-            onNewFolder={(parentId) => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(parentId ?? "root"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
+            onHide={() => undefined}
             onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
             onSelect={handleSelect}
             selectedId={selectedId}
@@ -411,10 +412,8 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           <ManualTree
             nodes={tree}
             lastOpenedId={lastOpenedId}
-            onDelete={(node) => { setDialogTarget(node); setDialog("delete"); }}
-            onMove={(node) => { setDialogTarget(node); setDialogParent(getParentId(tree, node.id) ?? "root"); setDialog("move"); }}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(parentId ?? "root"); }}
-            onNewFolder={(parentId) => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(parentId ?? "root"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
+            onHide={() => undefined}
             onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
             onSelect={handleSelect}
             selectedId={selectedId}
@@ -442,11 +441,12 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
               <span className="text-sm font-medium">{documentTitle}</span>
               {cloud ? <Badge variant="secondary">Moln</Badge> : <Badge variant="outline">Lokalt</Badge>}
               {selectedIsDocument ? (isDirty ? <Badge variant="secondary">Osparat</Badge> : published ? <Badge variant="success">Publicerad</Badge> : <Badge variant="secondary">Utkast</Badge>) : null}
+              {!tree.length ? <Button disabled={!canEdit} onClick={() => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent("root"); }} size="sm"><Plus data-icon="inline-start" />Skapa 1.0</Button> : null}
               <div className="ml-auto flex items-center gap-1">
                 <Button onClick={() => setViewMode((m) => (m === "focus" ? "normal" : "focus"))} size="icon" variant="ghost">
                   {hideTree ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
                 </Button>
-                <Button asChild size="icon" variant="ghost"><Link href="/manual/full" target="_blank"><Maximize2 className="size-4" /></Link></Button>
+                <Button aria-label="Helskärm" onClick={() => void toggleFullscreen()} size="icon" variant="ghost"><Maximize2 className="size-4" /></Button>
                 {viewMode === "full" ? <Button asChild size="icon" variant="ghost"><Link href="/manual"><Minimize2 className="size-4" /></Link></Button> : null}
               </div>
             </div>

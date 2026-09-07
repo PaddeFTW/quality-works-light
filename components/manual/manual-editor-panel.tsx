@@ -14,6 +14,8 @@ import TableRow from "@tiptap/extension-table-row";
 
 import {
   Bold,
+  Image,
+  Printer,
   Check,
   Heading1,
   Heading2,
@@ -248,7 +250,7 @@ export function ManualEditorPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
-        <div className="min-h-[38rem] h-full rounded-xl border border-border/70 bg-background shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
+        <div className="document-paper min-h-[38rem] h-full focus-within:ring-2 focus-within:ring-primary/30">
           <EditorContent
             aria-label={`Arbetsmanual för ${documentTitle}`}
             className="manual-tiptap-editor h-full min-h-[38rem] px-6 py-6 font-serif text-base leading-8"
