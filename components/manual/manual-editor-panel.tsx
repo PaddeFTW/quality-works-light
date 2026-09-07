@@ -12,32 +12,12 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
 
-import {
-  Bold,
-  Image,
-  Printer,
-  Check,
-  Heading1,
-  Heading2,
-  Heading3,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Paperclip,
-  Redo2,
-  Save,
-  Table2,
-  Underline,
-  Undo2,
-  Upload,
-} from "lucide-react";
+import { Bold, Check, ImagePlus, Italic, Link, List, ListOrdered, Paperclip, Printer, Redo2, Save, Table2, Underline, Undo2, Upload } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -98,24 +78,7 @@ export function ManualEditorPanel({
     if (url) editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
-  const insertModuleLink = (moduleTitle: string) => {
-    if (!editor) return;
-    const modulePath = modules.find((module) => module.title === moduleTitle)?.path ?? "/";
-    editor.chain().focus().insertContent(`<a href="${modulePath}">${moduleTitle}</a>`).run();
-  };
-
   const toolbarButtonClass = "size-8 p-0";
-  const modules = [
-    { title: "Årshjul", path: "/arshjul" },
-    { title: "Avvikelsehantering", path: "/avvikelse" },
-    { title: "Förbättringsförslag", path: "/forslag" },
-    { title: "Intern Revision", path: "/intern-revision" },
-    { title: "Kundtillfredsställelse", path: "/kund" },
-    { title: "Leverantörsbedömning", path: "/leverantor" },
-    { title: "Lagar & Bindande krav", path: "/lagar" },
-    { title: "Personal & Kompetens", path: "/kompetens" },
-    { title: "Miljöaspekter", path: "/miljoaspekter" },
-  ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted/10">
@@ -205,52 +168,24 @@ export function ManualEditorPanel({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-background px-4 py-2">
+        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
+        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
         <Button aria-label="Fetstil" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBold().run()} size="sm" title="Fetstil" type="button" variant="ghost"><Bold /></Button>
         <Button aria-label="Kursiv" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleItalic().run()} size="sm" title="Kursiv" type="button" variant="ghost"><Italic /></Button>
         <Button aria-label="Understruken" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleUnderline().run()} size="sm" title="Understruken" type="button" variant="ghost"><Underline /></Button>
-        <Separator className="mx-1 h-6" orientation="vertical" />
-        <Button aria-label="Rubrik 1" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} size="sm" title="Rubrik 1" type="button" variant="ghost"><Heading1 /></Button>
-        <Button aria-label="Rubrik 2" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} size="sm" title="Rubrik 2" type="button" variant="ghost"><Heading2 /></Button>
-        <Button aria-label="Rubrik 3" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} size="sm" title="Rubrik 3" type="button" variant="ghost"><Heading3 /></Button>
-        <Separator className="mx-1 h-6" orientation="vertical" />
         <Button aria-label="Punktlista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} size="sm" title="Punktlista" type="button" variant="ghost"><List /></Button>
         <Button aria-label="Numrerad lista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} size="sm" title="Numrerad lista" type="button" variant="ghost"><ListOrdered /></Button>
-        <Separator className="mx-1 h-6" orientation="vertical" />
-        <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button aria-label="Länka modul" className="h-8 px-2 text-xs" size="sm" title="Länka modul" type="button" variant="outline">
-              Länka modul
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Länka modul</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {modules.map((module) => (
-                <DialogClose asChild key={module.title}>
-                  <Button
-                    className="justify-start"
-                    onClick={() => insertModuleLink(module.title)}
-                    type="button"
-                    variant="outline"
-                  >
-                    {module.title}
-                  </Button>
-                </DialogClose>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Separator className="mx-1 h-6" orientation="vertical" />
-        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
-        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
+        <Button aria-label="Infoga bild" className={toolbarButtonClass} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
+        <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
+        <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
+        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => window.print()} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
         <div className="document-paper min-h-[38rem] h-full focus-within:ring-2 focus-within:ring-primary/30">
+          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">Quality Works Light</span></div>
+          <div className="px-6 pt-3 text-xs text-muted-foreground">Arbetsmanual – du kan ändra</div>
           <EditorContent
             aria-label={`Arbetsmanual för ${documentTitle}`}
             className="manual-tiptap-editor h-full min-h-[38rem] px-6 py-6 font-serif text-base leading-8"

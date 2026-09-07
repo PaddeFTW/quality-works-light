@@ -1,25 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import {
-  BadgeCheck,
-  Check,
-  ChevronRight,
-  FilePlus,
-  FolderPlus,
-  ListTree,
-  Maximize2,
-  Minimize2,
-  MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  Printer,
-  Share2,
-  Upload,
-  ClipboardCheck,
-} from "lucide-react";
+import { Check, Maximize2, Minimize2, MoreHorizontal, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,7 +88,7 @@ const initialSettings: ManualSettings = {
 };
 
 type ViewMode = "normal" | "focus" | "full";
-type DialogMode = "create-doc" | "create-folder" | "rename" | "move" | "delete" | null;
+type DialogMode = "create-doc" | "rename" | "delete" | null;
 
 export function ManualWorkspace({ initialView = "normal" }: { initialView?: ViewMode }) {
   const { session, loading: orgLoading } = useOrgSession();
@@ -191,8 +173,8 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const published = versions[0] ?? null;
   const edition = published?.edition ?? 0;
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
-  const folders = useMemo(() => listFolders(tree), [tree]);
   const hideTree = viewMode === "focus";
+  const isFullscreen = typeof document !== "undefined" && Boolean(document.fullscreenElement);
   const toggleFullscreen = async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
@@ -272,9 +254,9 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
 
   async function confirmCreate() {
     const parentId = dialogParent === "root" ? null : dialogParent;
-    const kind = dialog === "create-folder" ? "folder" : "document";
-    const siblings = parentId ? findNodeById(tree, parentId)?.children ?? [] : tree;
-    const title = dialogName.trim() || (kind === "folder" ? "Ny mapp" : "Nytt avsnitt");
+  const kind = "document" as const;
+  const title = dialogName.trim() || "Nytt avsnitt";
+
     let id = `${kind}-${Date.now()}`;
     if (cloud && manualId) {
       try {
@@ -284,7 +266,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
         return;
       }
     }
-    const node: ManualNode = kind === "folder" ? { id, title, kind, children: [] } : { id, title, kind };
+    const node: ManualNode = { id, title, kind, children: [] };
     setTree((current) => insertNode(current, parentId, node));
     if (kind === "document") {
       setDrafts((current) => ({ ...current, [id]: defaultDocumentContent }));
@@ -390,7 +372,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   }
 
   return (
-    <div className={viewMode === "full" ? "flex h-[calc(100vh-3rem)] min-h-0 overflow-hidden bg-muted/30" : "flex h-[calc(100vh-5.5rem)] min-h-0 overflow-hidden bg-muted/30"}>
+    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/30">
       {hideTree ? null : (
         <aside className="hidden w-[288px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
           <ManualTree
@@ -426,62 +408,21 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
           <div className="flex flex-col gap-3 border-b bg-background px-4 pt-3 sm:px-5">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <span className="rounded-sm bg-primary px-1.5 py-0.5 text-primary-foreground">QWL</span>
-              <span>Dokumenthantering</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
-                <ListTree className="size-4" />
-              </Button>
-              <Button asChild size="sm" variant="ghost"><Link href="/">Dashboard</Link></Button>
-              <ChevronRight className="size-3.5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{settings.name}</span>
-              <ChevronRight className="size-3.5 text-muted-foreground" />
-              <span className="text-sm font-medium">{documentTitle}</span>
-              {cloud ? <Badge variant="secondary">Moln</Badge> : <Badge variant="outline">Lokalt</Badge>}
-              {selectedIsDocument ? (isDirty ? <Badge variant="secondary">Osparat</Badge> : published ? <Badge variant="success">Publicerad</Badge> : <Badge variant="secondary">Utkast</Badge>) : null}
-              {!tree.length ? <Button disabled={!canEdit} onClick={() => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent("root"); }} size="sm"><Plus data-icon="inline-start" />Skapa 1.0</Button> : null}
+            <div className="flex items-center gap-2 px-1 py-1">
+              <span className="truncate text-sm font-medium">{documentTitle}</span>
               <div className="ml-auto flex items-center gap-1">
-                <Button onClick={() => setViewMode((m) => (m === "focus" ? "normal" : "focus"))} size="icon" variant="ghost">
-                  {hideTree ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-                </Button>
-                <Button aria-label="Helskärm" onClick={() => void toggleFullscreen()} size="icon" variant="ghost"><Maximize2 className="size-4" /></Button>
-                {viewMode === "full" ? <Button asChild size="icon" variant="ghost"><Link href="/manual"><Minimize2 className="size-4" /></Link></Button> : null}
+                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minimize2 /></Button>
+                <Button aria-label="Fönsterläge" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Maximize2 /></Button>
+                <Button aria-label={isFullscreen ? "Avsluta helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost"><Maximize2 /></Button>
+                <Button aria-label="Stäng" onClick={() => window.history.back()} size="icon" variant="ghost">×</Button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button disabled={!canEdit} size="sm"><Plus data-icon="inline-start" />Nytt</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => { setDialog("create-doc"); setDialogName("Nytt dokument"); setDialogParent(selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? "") ?? "root"); }}>
-                    <FilePlus className="size-4" /> Dokument
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setDialog("create-folder"); setDialogName("Ny mapp"); setDialogParent(selectedNode?.kind === "folder" ? selectedNode.id : getParentId(tree, selectedId ?? "") ?? "root"); }}>
-                    <FolderPlus className="size-4" /> Mapp
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button disabled={!selectedIsDocument || !canEdit || reviewStatus === "pending"} onClick={() => void handleReview()} size="sm" variant="outline">
-                <ClipboardCheck data-icon="inline-start" />
-                {reviewStatus === "pending" ? "Skickad för granskning" : "Skicka för granskning"}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline"><MoreHorizontal data-icon="inline-start" />Åtgärder</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogName(selectedNode.title), setDialog("rename"))}>Byt namn</DropdownMenuItem>
-                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialogParent(getParentId(tree, selectedNode.id) ?? "root"), setDialog("move"))}>Flytta</DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => { await navigator.clipboard.writeText(window.location.href); setShareStatus("Länk kopierad"); }}><Share2 className="size-4" /> Dela</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => published && printDocument(documentTitle, settings.headerText, published.content, settings.footerText)}><Printer className="size-4" /> Skriv ut</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => published && downloadHtmlAsFile(`${documentTitle}.doc`, documentTitle, settings.headerText, published.content, settings.footerText)}>Exportera Word</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled={!canEdit || !selectedNode} onClick={() => selectedNode && (setDialogTarget(selectedNode), setDialog("delete"))} variant="destructive">Ta bort</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {!tree.length ? <Button disabled={!canEdit} onClick={() => { setDialog("create-doc"); setDialogName("Ledningssystemet"); setDialogParent("root"); }} size="sm"><Plus data-icon="inline-start" />Skapa 1.0</Button> : null}
+              <div className="ml-auto flex items-center gap-2">
+                <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handleSave()} size="sm" variant="outline">Spara</Button>
+                <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handlePublish()} size="sm">Publicera</Button>
+              </div>
               <TabsList className="ml-2" variant="line">
                 <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
                 <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
@@ -550,41 +491,27 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialog === "delete" ? "Ta bort" : dialog === "rename" ? "Byt namn" : dialog === "move" ? "Flytta" : dialog === "create-folder" ? "Ny mapp" : "Nytt dokument"}
+              {dialog === "delete" ? "Ta bort" : dialog === "rename" ? "Byt namn" : "Nytt avsnitt"}
             </DialogTitle>
           </DialogHeader>
           {dialog === "delete" ? (
             <p className="text-sm text-muted-foreground">Ta bort “{dialogTarget?.title}”?</p>
           ) : (
             <div className="space-y-4">
-              {dialog !== "move" ? (
+              {dialog !== null ? (
                 <div className="space-y-2">
                   <Label htmlFor="doc-name">Namn</Label>
                   <Input id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
                 </div>
               ) : null}
-              {dialog === "create-doc" || dialog === "create-folder" || dialog === "move" ? (
-                <div className="space-y-2">
-                  <Label>Placering</Label>
-                  <Select onValueChange={setDialogParent} value={dialogParent}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="root">Roten av manualen</SelectItem>
-                      {folders.filter((folder) => folder.id !== dialogTarget?.id).map((folder) => (
-                        <SelectItem key={folder.id} value={folder.id}>{folder.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
+
             </div>
           )}
           <DialogFooter>
             <Button onClick={() => setDialog(null)} variant="outline">Avbryt</Button>
             {dialog === "delete" ? <Button onClick={() => void confirmDelete()} variant="destructive">Ta bort</Button> : null}
             {dialog === "rename" ? <Button onClick={() => void confirmRename()}>Spara</Button> : null}
-            {dialog === "move" ? <Button onClick={() => void confirmMove()}>Flytta</Button> : null}
-            {dialog === "create-doc" || dialog === "create-folder" ? <Button onClick={() => void confirmCreate()}>Skapa</Button> : null}
+            {dialog === "create-doc" ? <Button onClick={() => void confirmCreate()}>Skapa</Button> : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
