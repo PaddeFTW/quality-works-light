@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentVersion } from "@/types/domain";
 
 interface ManualOriginalPanelProps {
+  companyName: string;
   documentTitle: string;
   content: string | null;
   publishedAt: string | null;
@@ -19,6 +20,7 @@ interface ManualOriginalPanelProps {
 }
 
 export function ManualOriginalPanel({
+  companyName,
   documentTitle,
   content,
   publishedAt,
@@ -79,7 +81,7 @@ export function ManualOriginalPanel({
           </div>
         ) : null}
         <article className="document-paper overflow-hidden">
-          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">{headerText || documentTitle}</span></div>
+          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">{companyName}</span></div>
           <div className="px-6 pt-3 text-xs text-muted-foreground">Original – gällande version, låst</div>
           <div className="grid grid-cols-3 border-b px-6 py-3 text-xs text-muted-foreground">
             <span>Granskad / utfärdare</span>

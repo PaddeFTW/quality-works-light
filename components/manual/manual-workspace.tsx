@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Maximize2, Minimize2, MoreHorizontal, Plus } from "lucide-react";
+import { Check, Maximize, Minimize, MoreHorizontal, Plus, Square, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -174,11 +174,17 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const edition = published?.edition ?? 0;
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
   const hideTree = viewMode === "focus";
-  const isFullscreen = typeof document !== "undefined" && Boolean(document.fullscreenElement);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const toggleFullscreen = async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
   };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   function markDirty(id: string) {
     setDirtyIds((current) => (current.includes(id) ? current : [...current, id]));
@@ -378,7 +384,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           <ManualTree
             nodes={tree}
             lastOpenedId={lastOpenedId}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName(parentId === null ? "Ledningssystemet" : "Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
             onHide={() => undefined}
             onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
             onSelect={handleSelect}
@@ -394,7 +400,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           <ManualTree
             nodes={tree}
             lastOpenedId={lastOpenedId}
-            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName("Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
+            onNewDocument={(parentId) => { setDialog("create-doc"); setDialogName(parentId === null ? "Ledningssystemet" : "Nytt avsnitt"); setDialogParent(parentId ?? "root"); }}
             onHide={() => undefined}
             onRename={(node) => { setDialogTarget(node); setDialogName(node.title); setDialog("rename"); }}
             onSelect={handleSelect}
@@ -411,10 +417,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             <div className="flex items-center gap-2 px-1 py-1">
               <span className="truncate text-sm font-medium">{documentTitle}</span>
               <div className="ml-auto flex items-center gap-1">
-                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minimize2 /></Button>
-                <Button aria-label="Fönsterläge" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Maximize2 /></Button>
-                <Button aria-label={isFullscreen ? "Avsluta helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost"><Maximize2 /></Button>
-                <Button aria-label="Stäng" onClick={() => window.history.back()} size="icon" variant="ghost">×</Button>
+                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minimize /></Button>
+                <Button aria-label="Fönsterläge" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Square /></Button>
+                <Button aria-label={isFullscreen ? "Avsluta helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
+                <Button aria-label="Stäng" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-3">
@@ -439,6 +445,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             {selectedIsDocument ? (
               <ManualEditorPanel
                 attachments={attachments[selectedId ?? ""] ?? []}
+                companyName={settings.name}
                 documentTitle={documentTitle}
                 onAddAttachment={() => fileInputRef.current?.click()}
                 onChange={(value) => {
@@ -468,7 +475,7 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             )}
           </TabsContent>
           <TabsContent className="flex min-h-0 flex-col" value="original">
-            <ManualOriginalPanel content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} versions={versions} />
+            <ManualOriginalPanel companyName={settings.name} content={published?.content ?? null} documentTitle={documentTitle} edition={edition || 1} footerText={settings.footerText} headerText={settings.headerText} publishedAt={published?.publishedAt ?? null} versions={versions} />
           </TabsContent>
         </Tabs>
         <footer className="flex items-center justify-between border-t bg-background px-4 py-3">

@@ -26,6 +26,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 interface ManualEditorPanelProps {
+  companyName: string;
   documentTitle: string;
   value: string;
   onChange: (value: string) => void;
@@ -39,6 +40,7 @@ interface ManualEditorPanelProps {
 }
 
 export function ManualEditorPanel({
+  companyName,
   documentTitle,
   value,
   onChange,
@@ -176,7 +178,7 @@ export function ManualEditorPanel({
         <Button aria-label="Punktlista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} size="sm" title="Punktlista" type="button" variant="ghost"><List /></Button>
         <Button aria-label="Numrerad lista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} size="sm" title="Numrerad lista" type="button" variant="ghost"><ListOrdered /></Button>
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
-        <Button aria-label="Infoga bild" className={toolbarButtonClass} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
+        <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={onAddAttachment} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => window.print()} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
@@ -184,7 +186,7 @@ export function ManualEditorPanel({
 
       <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
         <div className="document-paper min-h-[38rem] h-full focus-within:ring-2 focus-within:ring-primary/30">
-          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">Quality Works Light</span></div>
+          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">{companyName}</span></div>
           <div className="px-6 pt-3 text-xs text-muted-foreground">Arbetsmanual – du kan ändra</div>
           <EditorContent
             aria-label={`Arbetsmanual för ${documentTitle}`}
