@@ -65,13 +65,16 @@ export function swedishAuthError(message: string) {
     return "Den här e-posten finns redan. Logga in i stället, eller använd en annan e-post.";
   }
   if (text.includes("invalid login") || text.includes("invalid credentials")) {
-    return "Fel e-post eller lösenord.";
+    return "Fel e-post eller lösenord. Använd kontot du skapat här, inte det gamla Quality Works-programmet.";
   }
   if (text.includes("email not confirmed")) {
-    return "E-posten är inte bekräftad. Stäng av Confirm email i Supabase Auth (utveckling) och försök igen.";
+    return "E-posten är inte bekräftad. I Supabase: Authentication → Providers → Email → stäng av Confirm email. Sen prova igen.";
   }
   if (text.includes("password")) {
     return "Lösenordet duger inte. Använd minst 6 tecken.";
+  }
+  if (text.includes("rate limit") || text.includes("too many")) {
+    return "För många försök. Vänta en minut och prova igen.";
   }
   return message;
 }

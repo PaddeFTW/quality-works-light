@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { swedishAuthError } from "@/lib/auth/ensure-company";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "");
+    const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
 
     const supabase = createClient();
@@ -34,7 +35,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message);
+      setError(swedishAuthError(signInError.message));
       return;
     }
 
@@ -43,7 +44,11 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell contentClassName="max-w-sm" title="Quality Works">
+    <AuthShell
+      contentClassName="max-w-sm"
+      description="Använd det företagskonto du skapat här. Inte det gamla Quality Works-programmet."
+      title="Logga in"
+    >
       <Card>
         <CardContent className="space-y-5 pt-6">
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -77,9 +82,15 @@ export default function LoginPage() {
               />
             </div>
             {error ? (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
+              <div className="space-y-2" role="alert">
+                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-muted-foreground">
+                  Har du inget konto här än?{" "}
+                  <Link className="font-medium text-primary hover:underline" href="/skapa-konto">
+                    Skapa företagskonto
+                  </Link>
+                </p>
+              </div>
             ) : null}
             <Button className="w-full" disabled={loading} size="lg" type="submit">
               {loading ? "Loggar in…" : "Logga in"}
@@ -88,7 +99,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <p className="text-center text-sm text-muted-foreground">
-        Har du inget företagskonto?{" "}
+        Första gången?{" "}
         <Link className="font-medium text-primary hover:underline" href="/skapa-konto">
           Skapa företagskonto
         </Link>

@@ -34,18 +34,20 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage =
+  const isPublicPage =
     path.startsWith("/login") ||
     path.startsWith("/skapa-konto") ||
-    path.startsWith("/glomt-losenord");
+    path.startsWith("/glomt-losenord") ||
+    path.startsWith("/nytt-losenord") ||
+    path.startsWith("/ga-med");
 
-  if (!user && !isAuthPage) {
+  if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  if (user && (path.startsWith("/login") || path.startsWith("/skapa-konto"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
