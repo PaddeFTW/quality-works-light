@@ -70,11 +70,17 @@ export function swedishAuthError(message: string) {
   if (text.includes("email not confirmed")) {
     return "E-posten är inte bekräftad. I Supabase: Authentication → Providers → Email → stäng av Confirm email. Sen prova igen.";
   }
-  if (text.includes("password")) {
+  if (text.includes("password") && !text.includes("invalid login")) {
     return "Lösenordet duger inte. Använd minst 6 tecken.";
   }
   if (text.includes("rate limit") || text.includes("too many")) {
     return "För många försök. Vänta en minut och prova igen.";
+  }
+  if (text.includes("signups not allowed")) {
+    return "Kunde inte skicka länken. Kolla e-postadressen och försök igen.";
+  }
+  if (text.includes("provider is not enabled") || text.includes("unsupported provider")) {
+    return "Den inloggningen är inte påslagen än. Använd mejllänken.";
   }
   return message;
 }

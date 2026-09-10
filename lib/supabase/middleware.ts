@@ -39,7 +39,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/skapa-konto") ||
     path.startsWith("/glomt-losenord") ||
     path.startsWith("/nytt-losenord") ||
-    path.startsWith("/ga-med");
+    path.startsWith("/ga-med") ||
+    path.startsWith("/auth/callback");
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
