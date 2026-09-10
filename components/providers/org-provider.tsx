@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import type { AppRole } from "@/lib/features";
@@ -30,6 +31,8 @@ const OrgContext = createContext<OrgContextValue>({
 export function OrgProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<OrgSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const router = useRouter();
 
   async function refresh() {
     const supabase = createClient();
@@ -87,7 +90,19 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh();
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      void refresh();
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (loading || !session) return;
+    const onWelcome = pathname.startsWith("/valkommen");
+    if (!session.organizationId && !onWelcome) router.replace("/valkommen");
+    if (session.organizationId && onWelcome) router.replace("/");
+  }, [loading, session, pathname, router]);
 
   return (
     <OrgContext.Provider value={{ session, loading, refresh }}>
