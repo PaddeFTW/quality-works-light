@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,17 +38,20 @@ function MicrosoftMark() {
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<"google" | "azure" | "link" | "password" | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(EMAIL_KEY);
     if (stored) setEmail(stored);
-  }, []);
+    const queryError = searchParams.get("error");
+    if (queryError) setError(swedishAuthError(queryError));
+  }, [searchParams]);
 
   function rememberEmail(value: string) {
     window.localStorage.setItem(EMAIL_KEY, value);
@@ -58,24 +61,40 @@ export function LoginForm() {
     setError(null);
     setLoading(provider);
     const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        skipBrowserRedirect: true,
+      },
     });
-    if (oauthError) {
+    if (oauthError || !data.url) {
+      setLoading(null);
+      setError("Den inloggningen är inte påslagen. Använd mejllänken.");
+      return;
+    }
+
+    const check = await fetch("/api/auth/oauth/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: data.url }),
+    });
+    if (!check.ok) {
       setLoading(null);
       setError(
         provider === "google"
-          ? "Google är inte påslaget än. Använd mejllänken under tiden."
-          : "Microsoft är inte påslaget än. Använd mejllänken under tiden.",
+          ? "Google är inte påslaget i Supabase än. Använd mejllänken."
+          : "Microsoft är inte påslaget i Supabase än. Använd mejllänken.",
       );
+      return;
     }
+
+    window.location.assign(data.url);
   }
 
-  async function sendLink(event: FormEvent) {
-    event.preventDefault();
+  async function sendLink(event?: FormEvent) {
+    event?.preventDefault();
     setError(null);
-    setStatus(null);
     const trimmed = email.trim();
     if (!trimmed) return;
     rememberEmail(trimmed);
@@ -91,15 +110,15 @@ export function LoginForm() {
     setLoading(null);
     if (otpError) {
       setError(swedishAuthError(otpError.message));
+      setSent(false);
       return;
     }
-    setStatus("Kolla din mejl. Klicka på länken så är du inne. Inget lösenord.");
+    setSent(true);
   }
 
   async function signInWithPassword(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setStatus(null);
     const trimmed = email.trim();
     rememberEmail(trimmed);
     setLoading("password");
@@ -115,6 +134,49 @@ export function LoginForm() {
     }
     router.push("/");
     router.refresh();
+  }
+
+  if (sent) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <p className="text-sm font-medium">Kolla mejlen</p>
+          <p className="text-sm leading-6 text-muted-foreground">
+            En länk är skickad till <span className="font-medium text-foreground">{email}</span>.
+            Klicka på den så är du inne. Länken gäller en stund.
+          </p>
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button asChild className="w-full" variant="outline">
+            <a href="https://mail.google.com" rel="noreferrer" target="_blank">
+              Öppna mejl
+            </a>
+          </Button>
+          <Button
+            className="w-full"
+            disabled={loading === "link"}
+            onClick={() => void sendLink()}
+            type="button"
+            variant="ghost"
+          >
+            {loading === "link" ? "Skickar…" : "Skicka igen"}
+          </Button>
+          <button
+            className="w-full text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            onClick={() => {
+              setSent(false);
+              setShowPassword(true);
+            }}
+            type="button"
+          >
+            Logga in med lösenord i stället
+          </button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -182,11 +244,6 @@ export function LoginForm() {
               {error}
             </p>
           ) : null}
-          {status ? (
-            <p className="text-sm text-muted-foreground" role="status">
-              {status}
-            </p>
-          ) : null}
           <Button className="w-full" disabled={Boolean(loading)} size="lg" type="submit">
             {showPassword ? (
               loading === "password" ? "Loggar in…" : "Logga in"
@@ -204,7 +261,6 @@ export function LoginForm() {
           onClick={() => {
             setShowPassword((value) => !value);
             setError(null);
-            setStatus(null);
           }}
           type="button"
         >

@@ -76,6 +76,9 @@ export function swedishAuthError(message: string) {
   if (text.includes("rate limit") || text.includes("too many")) {
     return "För många försök. Vänta en minut och prova igen.";
   }
+  if (text.includes("expired") || text.includes("otp_expired") || text.includes("invalid token")) {
+    return "Länken gick ut. Skicka en ny.";
+  }
   if (text.includes("signups not allowed")) {
     return "Kunde inte skicka länken. Kolla e-postadressen och försök igen.";
   }
