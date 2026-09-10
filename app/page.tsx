@@ -5,9 +5,9 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 export default function HomePage() {
   return (
     <DashboardLayout
-      description="Överblick över kvalitet, aktiviteter och kundupplevelse."
+      description="Det som behöver göras i ledningssystemet, idag."
       navigation={navigation}
-      title="Dashboard"
+      title="Start"
     >
       <DashboardOverview />
     </DashboardLayout>

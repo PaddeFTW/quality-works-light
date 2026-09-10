@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowUpRight,
   CalendarDays,
   ClipboardCheck,
   FileText,
-  MoreHorizontal,
+  Lightbulb,
   Plus,
-  Star,
   TriangleAlert,
 } from "lucide-react";
 
@@ -22,47 +20,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { createClient } from "@/lib/supabase/client";
-
-const metrics = [
-  {
-    label: "Öppna avvikelser",
-    value: "—",
-    detail: "Kopplas till data snart",
-    icon: TriangleAlert,
-    tone: "text-warning",
-  },
-  {
-    label: "Dokument att kvittera",
-    value: "—",
-    detail: "Kopplas till Manual",
-    icon: ClipboardCheck,
-    tone: "text-primary",
-  },
-  {
-    label: "Kommande aktiviteter",
-    value: "—",
-    detail: "Kopplas till Årshjul",
-    icon: CalendarDays,
-    tone: "text-success",
-  },
-  {
-    label: "Genomsnittlig kundpoäng",
-    value: "—",
-    detail: "Kopplas till Kundmodul",
-    icon: Star,
-    tone: "text-primary",
-  },
-];
+import { useOrgSession } from "@/components/providers/org-provider";
+import { caseNumber, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
+import type { OpsStats } from "@/lib/ops/types";
 
 function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] || fullName;
 }
 
+const emptyStats: OpsStats = {
+  openDeviations: 0,
+  openSuggestions: 0,
+  upcomingActivities: [],
+  recentDeviations: [],
+};
+
 export function DashboardOverview() {
-  const [greetingName, setGreetingName] = useState("");
+  const { session, loading } = useOrgSession();
   const [todayLabel, setTodayLabel] = useState("");
+  const [stats, setStats] = useState<OpsStats>(emptyStats);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setTodayLabel(
@@ -73,18 +50,19 @@ export function DashboardOverview() {
         year: "numeric",
       }),
     );
-
-    const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      const full =
-        (user.user_metadata?.full_name as string | undefined) ||
-        user.email?.split("@")[0] ||
-        "där";
-      setGreetingName(firstName(full));
-    });
   }, []);
+
+  useEffect(() => {
+    if (loading || !session?.organizationId) return;
+    void loadOpsStats(session.organizationId)
+      .then((next) => {
+        setStats(next);
+        setStatus(null);
+      })
+      .catch((error) => setStatus(missingTableMessage(error)));
+  }, [loading, session?.organizationId]);
+
+  const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
   return (
     <div className="flex flex-col gap-8">
@@ -95,7 +73,7 @@ export function DashboardOverview() {
             {greetingName ? `Hej ${greetingName}` : "Hej"}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Här är en överblick över vad som händer i verksamheten.
+            Det som behöver göras i ledningssystemet, idag.
           </p>
         </div>
         <Button asChild>
@@ -106,25 +84,13 @@ export function DashboardOverview() {
         </Button>
       </section>
 
+      {status ? <p className="text-sm text-destructive">{status}</p> : null}
+
       <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={metric.label} className="shadow-sm transition-token hover:-translate-y-0.5 hover:shadow-md">
-              <CardContent className="flex flex-col gap-5 p-5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">{metric.label}</span>
-                  <Icon className={`size-5 ${metric.tone}`} />
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <p className="text-3xl font-semibold tracking-tight">{metric.value}</p>
-                  <ArrowUpRight className="mb-1 size-4 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground">{metric.detail}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" value={String(stats.openDeviations)} />
+        <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" value={String(stats.openSuggestions)} />
+        <Metric href="/arshjul" icon={CalendarDays} label="Aktiviteter 30 dagar" value={String(stats.upcomingActivities.length)} />
+        <Metric href="/manual" icon={ClipboardCheck} label="Manual" value="Öppna" />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -153,35 +119,85 @@ export function DashboardOverview() {
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div className="flex flex-col gap-1.5">
-              <CardTitle>Senaste aktivitet</CardTitle>
-              <CardDescription>Visas när händelser sparas i databasen.</CardDescription>
-            </div>
-            <Button aria-label="Fler aktivitetsalternativ" size="icon" variant="ghost">
-              <MoreHorizontal />
-            </Button>
+          <CardHeader>
+            <CardTitle>Senaste avvikelser</CardTitle>
+            <CardDescription>Det som nyligen lämnats in.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="px-2 py-6 text-sm text-muted-foreground">
-              Ingen aktivitet ännu. När du publicerar dokument eller registrerar avvikelser syns de här.
-            </p>
+            {stats.recentDeviations.length === 0 ? (
+              <p className="px-2 py-6 text-sm text-muted-foreground">
+                Inga avvikelser ännu. När någon lämnar en syns den här.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {stats.recentDeviations.map((item) => (
+                  <li key={item.id}>
+                    <Link className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent" href="/avvikelse">
+                      <span className="min-w-0">
+                        <span className="mr-2 font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</span>
+                        <span className="font-medium">{item.title}</span>
+                      </span>
+                      <Badge variant={item.status === "closed" ? "secondary" : "outline"}>
+                        {item.status === "closed" ? "Stängd" : item.status === "in_progress" ? "Pågår" : "Öppen"}
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Kommande 30 dagar</CardTitle>
-            <CardDescription>Från Årshjul när data finns.</CardDescription>
+            <CardDescription>Från årshjulet.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <p className="px-2 py-4 text-sm text-muted-foreground">Inga planerade aktiviteter ännu.</p>
-            <Button asChild className="mt-1 w-full" variant="outline">
+            {stats.upcomingActivities.length === 0 ? (
+              <p className="px-2 py-4 text-sm text-muted-foreground">Inga planerade aktiviteter ännu.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {stats.upcomingActivities.map((item) => (
+                  <li className="flex items-center justify-between gap-3 text-sm" key={item.id}>
+                    <span className="font-medium">{item.title}</span>
+                    <span className="text-muted-foreground">{formatSvDate(item.plannedOn)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button asChild className="mt-2 w-full" variant="outline">
               <Link href="/arshjul">Öppna årshjul</Link>
             </Button>
           </CardContent>
         </Card>
       </section>
     </div>
+  );
+}
+
+function Metric({
+  href,
+  icon: Icon,
+  label,
+  value,
+}: {
+  href: string;
+  icon: typeof TriangleAlert;
+  label: string;
+  value: string;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="h-full shadow-sm transition-token hover:-translate-y-0.5 hover:shadow-md">
+        <CardContent className="flex flex-col gap-5 p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{label}</span>
+            <Icon className="size-5 text-primary" />
+          </div>
+          <p className="text-3xl font-semibold tracking-tight">{value}</p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
