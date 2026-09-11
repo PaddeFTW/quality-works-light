@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { isModuleVisible, type AppRole } from "@/lib/features";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { navigation, primaryNavHrefs } from "@/components/layout/navigation";
 import { Tip } from "@/components/ui/tooltip";
@@ -80,7 +80,7 @@ export function Sidebar({ items, className }: SidebarProps) {
           compact ? "h-14 items-center justify-center" : "h-16 items-center gap-3 px-4",
         )}
       >
-        <BookOpen aria-hidden className="size-5 shrink-0 text-primary" />
+        <BrandMark className="size-8" />
         {compact ? (
           <span className="sr-only">Quality Works Light</span>
         ) : (
