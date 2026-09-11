@@ -80,7 +80,7 @@ export function Sidebar({ items, className }: SidebarProps) {
           compact ? "h-14 items-center justify-center" : "h-16 items-center gap-3 px-4",
         )}
       >
-        <BrandMark className="size-8" />
+        <BrandMark markClassName="size-8" />
         {compact ? (
           <span className="sr-only">Quality Works Light</span>
         ) : (

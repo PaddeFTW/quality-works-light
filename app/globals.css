@@ -188,6 +188,16 @@ a { color: inherit; text-decoration: none; }
     min-height: 36rem;
     outline: none;
     color: inherit;
+    caret-color: var(--paper-foreground);
+    cursor: text;
+  }
+
+  .manual-tiptap-editor .ProseMirror.is-editor-empty p:first-child::before {
+    content: "Skriv här…";
+    color: var(--paper-muted);
+    float: left;
+    height: 0;
+    pointer-events: none;
   }
 
   .manual-tiptap-editor .ProseMirror h1 {

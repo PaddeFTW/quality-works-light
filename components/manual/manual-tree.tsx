@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, FileText, MoreHorizontal, Search } from "lucide-react";
+import { ChevronRight, FileCheck, FileText, MoreHorizontal, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ interface ManualTreeProps {
   nodes: ManualNode[];
   selectedId: string | null;
   lastOpenedId?: string | null;
+  publishedIds?: string[];
   onSelect: (node: ManualNode) => void;
   onRename: (node: ManualNode) => void;
   onHide: (node: ManualNode) => void;
@@ -28,7 +29,7 @@ function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
   }, []);
 }
 
-export function ManualTree({ nodes, selectedId, lastOpenedId, onSelect, onRename, onHide, onNewDocument }: ManualTreeProps) {
+export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [], onSelect, onRename, onHide, onNewDocument }: ManualTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
@@ -75,7 +76,11 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, onSelect, onRename
             onClick={() => onSelect(node)}
             type="button"
           >
-            <FileText className="size-4 shrink-0" />
+            {publishedIds.includes(node.id) ? (
+              <FileCheck className="size-4 shrink-0 text-emerald-600" />
+            ) : (
+              <FileText className="size-4 shrink-0" />
+            )}
             <span className="truncate">
               <span className="mr-2 font-mono text-xs text-muted-foreground">{number}</span>
               {node.title}

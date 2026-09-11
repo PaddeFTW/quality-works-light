@@ -104,7 +104,6 @@ export function insertNode(
     if (node.id === parentId) {
       return {
         ...node,
-        kind: "folder",
         children: [...(node.children ?? []), newNode],
       };
     }

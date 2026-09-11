@@ -27,7 +27,7 @@ export function AuthShell({
     >
       <div className={cn("w-full space-y-8", contentClassName)}>
         <div className="flex flex-col items-center gap-3 text-center">
-          <BrandMark className="size-20" priority />
+          <BrandMark className="justify-center" markClassName="size-12" wordmark />
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {description ? (
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">
