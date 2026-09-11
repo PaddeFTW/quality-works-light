@@ -36,7 +36,13 @@ export default function ValkommenPage() {
       router.push("/");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? swedishAuthError(err.message) : "Kunde inte spara företaget.");
+      const message =
+        err instanceof Error
+          ? swedishAuthError(err.message)
+          : typeof err === "object" && err && "message" in err
+            ? swedishAuthError(String((err as { message?: string }).message))
+            : "Kunde inte spara företaget.";
+      setError(message);
       setLoading(false);
     }
   }
@@ -52,7 +58,13 @@ export default function ValkommenPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="company-name">Företag</Label>
-              <Input autoFocus id="company-name" name="company-name" placeholder="Exempel AB" required />
+              <Input
+                autoFocus
+                id="company-name"
+                name="company-name"
+                placeholder="Exempel AB"
+                required
+              />
             </div>
             {error ? (
               <p className="text-sm text-destructive" role="alert">
