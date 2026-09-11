@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FileLock2, Link2, Printer, ShieldCheck } from "lucide-react";
+import { FileLock2, Printer } from "lucide-react";
 
+import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,24 +11,29 @@ import type { DocumentVersion } from "@/types/domain";
 
 interface ManualOriginalPanelProps {
   companyName: string;
+  documentCode: string;
   documentTitle: string;
   content: string | null;
   publishedAt: string | null;
   edition: number;
+  issuer?: string;
   headerText: string;
   footerText: string;
   versions?: DocumentVersion[];
+  onRestore?: (edition: number) => void;
 }
 
 export function ManualOriginalPanel({
   companyName,
+  documentCode,
   documentTitle,
   content,
   publishedAt,
   edition,
-  headerText,
+  issuer,
   footerText,
   versions = [],
+  onRestore,
 }: ManualOriginalPanelProps) {
   const [selectedEdition, setSelectedEdition] = useState<number | null>(null);
   const selectedVersion = versions.find((version) => version.edition === selectedEdition);
@@ -51,50 +57,80 @@ export function ManualOriginalPanel({
 
   return (
     <ScrollArea className="min-h-0 flex-1 bg-muted/40">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-[210mm] flex-col gap-5 px-6 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              <ShieldCheck className="size-5" />
-            </div>
-            <div>
-              <p className="font-semibold">Du är i originalmanualen</p>
-              <p className="text-xs text-muted-foreground">Skrivskyddad senaste utgåva</p>
-            </div>
+          <div>
+            <p className="font-semibold">Original – gällande version, låst</p>
+            <p className="text-xs text-muted-foreground">
+              {visibleDate ? `Godkänt ${visibleDate}` : "Gällande utgåva"}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => window.print()} size="sm" variant="outline"><Printer data-icon="inline-start" />Skriv ut</Button>
-            <Button onClick={() => void navigator.clipboard.writeText(window.location.href)} size="sm" variant="outline"><Link2 data-icon="inline-start" />Kopiera länk</Button>
-            <Badge variant="secondary">Utgåva {visibleEdition}</Badge>
-            {visibleDate ? <span className="text-xs text-muted-foreground">{visibleDate}</span> : null}
-          </div>
+          <Button onClick={() => window.print()} size="sm" variant="outline">
+            <Printer data-icon="inline-start" />
+            Skriv ut
+          </Button>
         </div>
         {versions.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background p-3" aria-label="Versionshistorik">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Versioner</span>
-            {versions.map((version) => (
-              <button className="rounded-md" key={version.id} onClick={() => setSelectedEdition(version.edition)} type="button">
-                <Badge variant={version.edition === visibleEdition ? "default" : "outline"}>Utgåva {version.edition} · {version.publishedAt}</Badge>
+          <div className="rounded-md border bg-background p-3" aria-label="Arkiverade dokument">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Arkiverade dokument
+            </p>
+            <div className="grid grid-cols-[5rem_1fr_auto] gap-2 text-xs">
+              <span className="text-muted-foreground">Utgåva</span>
+              <span className="text-muted-foreground">Reviderad</span>
+              <span />
+              {versions.map((version) => (
+                <div className="contents" key={version.id}>
+                  <button
+                    className="text-left font-medium"
+                    onClick={() => setSelectedEdition(version.edition)}
+                    type="button"
+                  >
+                    <Badge variant={version.edition === visibleEdition ? "default" : "outline"}>
+                      {version.edition}
+                    </Badge>
+                  </button>
+                  <button
+                    className="text-left text-muted-foreground"
+                    onClick={() => setSelectedEdition(version.edition)}
+                    type="button"
+                  >
+                    {version.publishedAt}
+                  </button>
+                  {onRestore ? (
+                    <button
+                      className="text-xs text-primary underline"
+                      onClick={() => onRestore(version.edition)}
+                      type="button"
+                    >
+                      Återställ till arbetsmanual
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ))}
+            </div>
+            {selectedVersion ? (
+              <button className="mt-2 text-xs text-primary underline" onClick={() => setSelectedEdition(null)} type="button">
+                Visa senaste
               </button>
-            ))}
-            {selectedVersion ? <button className="text-xs text-primary underline" onClick={() => setSelectedEdition(null)} type="button">Visa senaste</button> : null}
+            ) : null}
           </div>
         ) : null}
         <article className="document-paper overflow-hidden">
-          <div className="mx-6 mt-6 flex items-center justify-between border border-dashed px-4 py-3 text-xs text-muted-foreground"><span>Logotyp</span><span className="font-medium text-foreground">{companyName}</span></div>
-          <div className="px-6 pt-3 text-xs text-muted-foreground">Original – gällande version, låst</div>
-          <div className="grid grid-cols-3 border-b px-6 py-3 text-xs text-muted-foreground">
-            <span>Granskad / utfärdare</span>
-            <span className="text-center font-medium text-foreground">{headerText || documentTitle}</span>
-            <span className="text-right">Utgåva {visibleEdition}</span>
-          </div>
-          <div className="px-10 py-10">
-            <h3 className="mb-4 text-xl font-semibold tracking-tight">{documentTitle}</h3>
-            <div
-              className="manual-tiptap-editor text-sm leading-7"
-              dangerouslySetInnerHTML={{ __html: visibleContent ?? "" }}
-            />
-          </div>
+          <DocumentPaperHeader
+            companyName={companyName}
+            documentCode={documentCode}
+            documentTitle={documentTitle}
+            edition={visibleEdition}
+            issuer={issuer}
+            statusLabel="Original – gällande version, låst"
+          />
+          <div
+            className="manual-tiptap-editor px-6 pb-10 pt-2 font-serif text-base leading-8"
+            dangerouslySetInnerHTML={{ __html: visibleContent ?? "" }}
+          />
           <div className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</div>
         </article>
       </div>
