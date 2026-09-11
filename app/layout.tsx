@@ -21,6 +21,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,
+  icons: {
+    icon: "/logo.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({

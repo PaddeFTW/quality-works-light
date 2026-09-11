@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BrandMark } from "@/components/brand/brand-mark";
 import { cn } from "@/lib/utils";
 
 interface AuthShellProps {
@@ -25,13 +26,8 @@ export function AuthShell({
       )}
     >
       <div className={cn("w-full space-y-8", contentClassName)}>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <span
-            aria-hidden
-            className="flex size-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-token-sm"
-          >
-            QW
-          </span>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <BrandMark className="size-20" priority />
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {description ? (
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">
