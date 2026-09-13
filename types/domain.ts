@@ -60,7 +60,11 @@ export interface ReviewRequest {
   id: string;
   documentId: string;
   reviewerName: string;
+  reviewerUserId?: string;
+  requestedBy?: string;
   status: ReviewStatus;
   createdAt: string;
   message?: string;
+  dueAt?: string;
+  responseText?: string;
 }

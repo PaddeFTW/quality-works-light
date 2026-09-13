@@ -6,14 +6,14 @@ import {
   ensureManual,
   loadAttachments,
   loadManualBundle,
-  reviewsFromRows,
+  loadReviews,
   rowsToTree,
   settingsFromManual,
   versionsFromRows,
 } from "@/lib/manual/cloud";
 import type { ManualNode } from "@/components/manual/manual-data";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
-import type { DocumentVersion, ManualAttachment } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment, ReviewRequest } from "@/types/domain";
 
 const LAST_OPENED_KEY = "qw.manual.lastOpened";
 
@@ -26,7 +26,7 @@ export interface BootResult {
   selectedId: string | null;
   lastOpenedId: string | null;
   attachments: Record<string, ManualAttachment[]>;
-  reviews: Record<string, "draft" | "pending">;
+  reviews: ReviewRequest[];
 }
 
 export async function bootManualFromCloud(
@@ -37,10 +37,11 @@ export async function bootManualFromCloud(
   const manualId = await ensureManual(supabase, organizationId, existingManualId);
   let bundle = await loadManualBundle(supabase, manualId);
   const tree = rowsToTree(bundle.docs);
-  const attachments = await loadAttachments(
-    supabase,
-    bundle.docs.filter((row) => row.kind === "document").map((row) => row.id),
-  );
+  const documentIds = bundle.docs.filter((row) => row.kind === "document").map((row) => row.id);
+  const [attachments, reviews] = await Promise.all([
+    loadAttachments(supabase, documentIds),
+    loadReviews(supabase, documentIds),
+  ]);
   const storedOpened = typeof window === "undefined" ? null : window.localStorage.getItem(LAST_OPENED_KEY);
   const selectedId = storedOpened && bundle.docs.some((row) => row.id === storedOpened)
     ? storedOpened
@@ -62,7 +63,7 @@ export async function bootManualFromCloud(
         },
     versions: versionsFromRows(bundle.versions ?? []),
     attachments,
-    reviews: reviewsFromRows(bundle.docs),
+    reviews,
     selectedId,
     lastOpenedId: selectedId,
   };

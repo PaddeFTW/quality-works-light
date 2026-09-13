@@ -1,8 +1,11 @@
 import type { ManualNode, ManualNodeKind } from "@/components/manual/manual-data";
 import { defaultDocumentContent, defaultManualTree } from "@/components/manual/manual-data";
-import type { DocumentVersion, ManualAttachment, ReviewStatus } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment, ReviewRequest } from "@/types/domain";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
+import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { mapReviewRow } from "@/lib/manual/referral";
 
 export const MANUAL_BUCKET = "manuals";
 
@@ -108,6 +111,36 @@ export function reviewsFromRows(rows: DocRow[]): Record<string, "draft" | "pendi
     map[row.id] = row.review_status === "pending" ? "pending" : "draft";
   }
   return map;
+}
+
+export async function loadReviews(supabase: SupabaseClient, documentIds: string[]): Promise<ReviewRequest[]> {
+  if (documentIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("review_requests")
+    .select("id, document_id, reviewer_user_id, reviewer_name, status, message, created_at, requested_by")
+    .in("document_id", documentIds)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map(mapReviewRow);
+}
+
+export async function loadMyOpenReferrals(userId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("review_requests")
+    .select("id, document_id, reviewer_user_id, reviewer_name, status, message, created_at, requested_by, manual_documents ( title )")
+    .eq("reviewer_user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((row) => {
+    const mapped = mapReviewRow(row);
+    const doc = Array.isArray(row.manual_documents) ? row.manual_documents[0] : row.manual_documents;
+    return {
+      ...mapped,
+      documentTitle: (doc as { title?: string } | null)?.title || "Dokument",
+    };
+  });
 }
 
 export async function loadAttachments(supabase: SupabaseClient, documentIds: string[]) {
@@ -250,4 +283,3 @@ export async function uploadAttachment(
   };
 }
 
-export type { ReviewStatus };

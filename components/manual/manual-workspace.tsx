@@ -7,6 +7,14 @@ import { Check, Home, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -40,8 +48,13 @@ import {
   persistFiles,
   persistPublish,
   persistRename,
+  persistReviewClose,
+  persistReviewRespond,
+  persistReviewSend,
   persistSettings,
 } from "@/lib/manual/persist";
+import { latestReferralFor, openReferralFor } from "@/lib/manual/referral";
+import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
 import { firstDocumentId, insertNode, removeNode, renameNode } from "@/lib/manual/tree-ops";
 import {
   loadDrafts,
@@ -52,7 +65,7 @@ import {
   saveTree,
   SETTINGS_KEY,
 } from "@/lib/manual/storage";
-import type { DocumentVersion, ManualAttachment } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment, ReviewRequest } from "@/types/domain";
 
 const initialSettings: ManualSettings = {
   name: "Kvalitetsmanual",
@@ -65,9 +78,15 @@ const initialSettings: ManualSettings = {
 };
 
 type ViewMode = "normal" | "focus" | "full";
-type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | null;
+type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | "remiss" | "respond" | null;
 
-export function ManualWorkspace({ initialView = "normal" }: { initialView?: ViewMode }) {
+export function ManualWorkspace({
+  initialView = "normal",
+  openDocumentId = null,
+}: {
+  initialView?: ViewMode;
+  openDocumentId?: string | null;
+}) {
   const { session, loading: orgLoading } = useOrgSession();
   const [ready, setReady] = useState(false);
   const [cloud, setCloud] = useState(false);
@@ -97,6 +116,13 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const [revisedAt, setRevisedAt] = useState("");
   const [revisionStarted, setRevisionStarted] = useState<Record<string, boolean>>({});
   const [tipsOpen, setTipsOpen] = useState(false);
+  const [reviews, setReviews] = useState<ReviewRequest[]>([]);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [remissTo, setRemissTo] = useState("");
+  const [remissDue, setRemissDue] = useState("");
+  const [remissMessage, setRemissMessage] = useState("Stämmer detta med hur ni jobbar?");
+  const [remissResponse, setRemissResponse] = useState("");
+  const [publishAnyway, setPublishAnyway] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canEdit = session?.role !== "viewer";
 
@@ -115,8 +141,13 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
           setSettings(result.settings);
           setVersionsByDoc(result.versions);
           setAttachments(result.attachments);
-          setSelectedId(result.selectedId);
+          const selected =
+            openDocumentId && findNodeById(result.tree, openDocumentId)
+              ? openDocumentId
+              : result.selectedId;
+          setSelectedId(selected);
           setLastOpenedId(result.lastOpenedId);
+          setReviews(result.reviews);
           setReady(true);
           return;
         } catch (error) {
@@ -138,7 +169,14 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     return () => {
       cancelled = true;
     };
-  }, [orgLoading, session?.organizationId, session?.manualId]);
+  }, [orgLoading, session?.organizationId, session?.manualId, openDocumentId]);
+
+  useEffect(() => {
+    if (!session?.organizationId) return;
+    void loadOrgMembers(session.organizationId)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [session?.organizationId]);
 
   useEffect(() => {
     if (!ready || cloud) return;
@@ -151,6 +189,11 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
   const selectedIsDocument = selectedNode?.kind === "document";
   const documentTitle = selectedIsDocument ? selectedNode.title : "Välj dokument";
   const documentCode = selectedId ? (getNodeNumber(tree, selectedId) ?? "–") : "–";
+  const openReferral = openReferralFor(reviews, selectedId);
+  const latestReferral = latestReferralFor(reviews, selectedId);
+  const isReferralRecipient =
+    Boolean(openReferral && session && openReferral.reviewerUserId === session.userId);
+  const canSeeDraft = canEdit || isReferralRecipient;
   const draft = selectedId && selectedIsDocument ? (drafts[selectedId] ?? defaultDocumentContent) : "";
   const versions = selectedId ? (versionsByDoc[selectedId] ?? []) : [];
   const published = versions[0] ?? null;
@@ -223,13 +266,94 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
       setStatus("Inget att publicera.");
       return;
     }
+    if (openReferral) {
+      setStatus(`Väntar på ${openReferral.reviewerName || "remiss"}. Publicera när svaret kommit.`);
+      return;
+    }
     if (edition > 0 && !revisionStarted[selectedId]) {
       openRevise();
       return;
     }
+    setPublishAnyway(false);
     setApprovedBy(settings.approver || settings.issuer || "Administratör");
     setApprovedAt(new Date().toISOString().slice(0, 10));
     setDialog("publish");
+  }
+
+  function openRemiss() {
+    if (!selectedId || !selectedIsDocument) return;
+    const firstOther = members.find((member) => member.userId !== session?.userId);
+    setRemissTo(firstOther?.userId || members[0]?.userId || "");
+    setRemissDue(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+    setRemissMessage("Stämmer detta med hur ni jobbar?");
+    setDialog("remiss");
+  }
+
+  async function confirmRemiss() {
+    if (!selectedId || !session) return;
+    const member = members.find((item) => item.userId === remissTo);
+    const reviewerName = member?.name || "Medarbetare";
+    if (cloud) {
+      try {
+        const row = await persistReviewSend({
+          documentId: selectedId,
+          requestedBy: session.userId,
+          reviewerUserId: remissTo || null,
+          reviewerName,
+          dueAt: remissDue,
+          message: remissMessage,
+        });
+        setReviews((current) => [row, ...current.filter((item) => item.documentId !== selectedId || item.status !== "pending")]);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte skicka remiss");
+        return;
+      }
+    } else {
+      setReviews((current) => [
+        {
+          id: `remiss-${Date.now()}`,
+          documentId: selectedId,
+          reviewerName,
+          reviewerUserId: remissTo,
+          requestedBy: session.userId,
+          status: "pending",
+          createdAt: new Date().toISOString(),
+          message: remissMessage,
+          dueAt: remissDue,
+        },
+        ...current,
+      ]);
+    }
+    setDialog(null);
+    setStatus(`Remiss skickad till ${reviewerName}.`);
+  }
+
+  async function confirmRespond(statusValue: "approved" | "rejected") {
+    if (!selectedId || !openReferral) return;
+    if (cloud) {
+      try {
+        await persistReviewRespond({
+          reviewId: openReferral.id,
+          documentId: selectedId,
+          status: statusValue,
+          dueAt: openReferral.dueAt ?? "",
+          instruction: openReferral.message ?? "",
+          response: remissResponse,
+        });
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Kunde inte spara svaret");
+        return;
+      }
+    }
+    setReviews((current) =>
+      current.map((item) =>
+        item.id === openReferral.id
+          ? { ...item, status: statusValue, responseText: remissResponse }
+          : item,
+      ),
+    );
+    setDialog(null);
+    setStatus(statusValue === "approved" ? "Remissen är godkänd." : "Remissen är avstyrkt.");
   }
 
   async function confirmRevise() {
@@ -241,6 +365,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
 
   async function confirmPublish() {
     if (!selectedId || !selectedIsDocument) return;
+    if (latestReferral?.status === "rejected" && !publishAnyway) {
+      setStatus("Remissen är avstyrkt. Kryssa i Publicera ändå.");
+      return;
+    }
     const nextEdition = (versions[0]?.edition ?? 0) + 1;
     const publishedLabel = approvedAt
       ? new Date(`${approvedAt}T12:00:00`).toLocaleDateString("sv-SE")
@@ -284,6 +412,20 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
     setSavedId(selectedId);
     setSaveStatus("sparad");
     setRevisionStarted((current) => ({ ...current, [selectedId]: false }));
+    if (cloud) {
+      try {
+        await persistReviewClose(selectedId);
+      } catch {
+        /* remiss already closed or missing */
+      }
+    }
+    setReviews((current) =>
+      current.map((item) =>
+        item.documentId === selectedId && item.status === "pending"
+          ? { ...item, status: "approved" as const }
+          : item,
+      ),
+    );
     setActiveTab("original");
     setDialog(null);
   }
@@ -482,6 +624,9 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
                   Spara
                 </Button>
+                <Button disabled={!selectedIsDocument || !canEdit} onClick={openRemiss} size="sm" variant="outline">
+                  Remiss
+                </Button>
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={openPublish} size="sm">
                   Publicera
                 </Button>
@@ -501,7 +646,27 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
           </TabsContent>
           <TabsContent className="flex min-h-0 flex-col" value="work">
-            {selectedIsDocument ? (
+            {selectedIsDocument && (openReferral || latestReferral?.status === "rejected") ? (
+              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-4 py-2 text-sm">
+                {openReferral ? (
+                  isReferralRecipient ? (
+                    <>
+                      <span>Du har en remiss på {documentCode}. Svara senast {openReferral.dueAt || "–"}.</span>
+                      <Button onClick={() => { setRemissResponse(""); setDialog("respond"); }} size="sm">
+                        Svara
+                      </Button>
+                    </>
+                  ) : (
+                    <span>Väntar på {openReferral.reviewerName}. Svara senast {openReferral.dueAt || "–"}.</span>
+                  )
+                ) : latestReferral?.status === "rejected" ? (
+                  <span className="text-destructive">
+                    Remissen är avstyrkt{latestReferral.responseText ? `: ${latestReferral.responseText}` : "."}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {selectedIsDocument && canSeeDraft ? (
               <ManualEditorPanel
                 attachments={attachments[selectedId ?? ""] ?? []}
                 companyName={session?.organizationName || settings.name}
@@ -534,6 +699,10 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                 saved={savedId === selectedId && !isDirty}
                 value={draft}
               />
+            ) : selectedIsDocument ? (
+              <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+                Du läser boken i fliken Original.
+              </div>
             ) : (
               <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
                 {tree.length ? "Välj ett dokument i trädet." : "Manualen är tom. Skapa första kapitlet."}
@@ -601,11 +770,15 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
                     ? "Publicera dokumentet"
                     : dialog === "revise"
                       ? "Information om dokumentet som håller på att revideras"
-                      : dialogParent === "root"
-                        ? tree.length
-                          ? "Nytt kapitel"
-                          : "Skapa 1.0"
-                        : "Nytt underavsnitt"}
+                      : dialog === "remiss"
+                        ? "Skicka remiss"
+                        : dialog === "respond"
+                          ? "Svara på remiss"
+                          : dialogParent === "root"
+                            ? tree.length
+                              ? "Nytt kapitel"
+                              : "Skapa 1.0"
+                            : "Nytt underavsnitt"}
             </DialogTitle>
           </DialogHeader>
           {dialog === "delete" ? (
@@ -621,6 +794,53 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
               <div className="space-y-2">
                 <Label htmlFor="approved-by">Godkänd av</Label>
                 <Input id="approved-by" onChange={(e) => setApprovedBy(e.target.value)} value={approvedBy} />
+              </div>
+              {latestReferral?.status === "rejected" ? (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    checked={publishAnyway}
+                    onChange={(event) => setPublishAnyway(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Publicera ändå (remissen är avstyrkt)
+                </label>
+              ) : null}
+            </div>
+          ) : dialog === "remiss" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {documentCode} {documentTitle}. Mottagaren läser utkastet och svarar Godkänn eller Avstyrk.
+              </p>
+              <div className="space-y-2">
+                <Label>Till</Label>
+                <Select onValueChange={setRemissTo} value={remissTo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj person" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="remiss-due">Sista svarsdatum</Label>
+                <Input id="remiss-due" onChange={(e) => setRemissDue(e.target.value)} type="date" value={remissDue} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="remiss-message">Meddelande</Label>
+                <Textarea id="remiss-message" onChange={(e) => setRemissMessage(e.target.value)} value={remissMessage} />
+              </div>
+            </div>
+          ) : dialog === "respond" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{openReferral?.message}</p>
+              <div className="space-y-2">
+                <Label htmlFor="remiss-response">Kommentar</Label>
+                <Textarea id="remiss-response" onChange={(e) => setRemissResponse(e.target.value)} value={remissResponse} />
               </div>
             </div>
           ) : dialog === "revise" ? (
@@ -653,6 +873,13 @@ export function ManualWorkspace({ initialView = "normal" }: { initialView?: View
             {dialog === "create-doc" ? <Button onClick={() => void confirmCreate()}>Skapa</Button> : null}
             {dialog === "publish" ? <Button onClick={() => void confirmPublish()}>Publicera</Button> : null}
             {dialog === "revise" ? <Button onClick={() => void confirmRevise()}>Spara</Button> : null}
+            {dialog === "remiss" ? <Button disabled={!remissTo} onClick={() => void confirmRemiss()}>Skicka</Button> : null}
+            {dialog === "respond" ? (
+              <>
+                <Button onClick={() => void confirmRespond("rejected")} variant="outline">Avstyrk</Button>
+                <Button onClick={() => void confirmRespond("approved")}>Godkänn</Button>
+              </>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
