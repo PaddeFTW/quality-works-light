@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/card";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { caseNumber, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
+import { loadMyOpenReferrals } from "@/lib/manual/cloud";
 import type { OpsStats } from "@/lib/ops/types";
+import type { ReviewRequest } from "@/types/domain";
 
 function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] || fullName;
@@ -39,6 +41,7 @@ export function DashboardOverview() {
   const { session, loading } = useOrgSession();
   const [todayLabel, setTodayLabel] = useState("");
   const [stats, setStats] = useState<OpsStats>(emptyStats);
+  const [referrals, setReferrals] = useState<(ReviewRequest & { documentTitle?: string })[]>([]);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,6 +64,11 @@ export function DashboardOverview() {
       })
       .catch((error) => setStatus(missingTableMessage(error)));
   }, [loading, session?.organizationId]);
+
+  useEffect(() => {
+    if (loading || !session?.userId) return;
+    void loadMyOpenReferrals(session.userId).then(setReferrals).catch(() => setReferrals([]));
+  }, [loading, session?.userId]);
 
   const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
@@ -85,6 +93,35 @@ export function DashboardOverview() {
       </section>
 
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
+
+      {referrals.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Remiss att svara på</CardTitle>
+            <CardDescription>Läs utkastet och säg om det stämmer.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {referrals.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent"
+                    href={`/manual?blad=${item.documentId}`}
+                  >
+                    <span className="min-w-0">
+                      <span className="font-medium">{item.documentTitle}</span>
+                      {item.dueAt ? (
+                        <span className="ml-2 text-xs text-muted-foreground">senast {item.dueAt}</span>
+                      ) : null}
+                    </span>
+                    <Badge>Öppen</Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" value={String(stats.openDeviations)} />

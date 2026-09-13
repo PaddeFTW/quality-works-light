@@ -3,6 +3,7 @@ import { slugifyTitle } from "@/lib/manual/tree-ops";
 import { defaultDocumentContent } from "@/components/manual/manual-data";
 import type { ManualSettings } from "@/components/manual/manual-settings-panel";
 import { MANUAL_BUCKET, uploadAttachment } from "@/lib/manual/cloud";
+import { encodeReferralMessage, mapReviewRow } from "@/lib/manual/referral";
 
 export async function persistDraft(documentId: string, html: string) {
   const supabase = createClient();
@@ -126,18 +127,84 @@ export async function persistDeleteAttachment(attachmentId: string, storagePath?
 }
 
 export async function persistReview(documentId: string, userId: string) {
+  return persistReviewSend({
+    documentId,
+    requestedBy: userId,
+    reviewerUserId: null,
+    reviewerName: "",
+    dueAt: "",
+    message: "",
+  });
+}
+
+export async function persistReviewSend(params: {
+  documentId: string;
+  requestedBy: string;
+  reviewerUserId: string | null;
+  reviewerName: string;
+  dueAt: string;
+  message: string;
+}) {
   const supabase = createClient();
   const { error: statusError } = await supabase
     .from("manual_documents")
     .update({ review_status: "pending", updated_at: new Date().toISOString() })
-    .eq("id", documentId);
+    .eq("id", params.documentId);
   if (statusError) throw statusError;
-  const { error } = await supabase.from("review_requests").insert({
-    document_id: documentId,
-    requested_by: userId,
-    status: "pending",
-  });
+  const { data, error } = await supabase
+    .from("review_requests")
+    .insert({
+      document_id: params.documentId,
+      requested_by: params.requestedBy,
+      reviewer_user_id: params.reviewerUserId,
+      reviewer_name: params.reviewerName,
+      status: "pending",
+      message: encodeReferralMessage(params.dueAt, params.message),
+    })
+    .select("id, document_id, reviewer_user_id, reviewer_name, status, message, created_at, requested_by")
+    .single();
+  if (error || !data) throw error ?? new Error("Kunde inte skicka remiss");
+  return mapReviewRow(data);
+}
+
+export async function persistReviewRespond(params: {
+  reviewId: string;
+  documentId: string;
+  status: "approved" | "rejected";
+  dueAt: string;
+  instruction: string;
+  response: string;
+}) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("review_requests")
+    .update({
+      status: params.status,
+      resolved_at: new Date().toISOString(),
+      message: encodeReferralMessage(params.dueAt, params.instruction, params.response),
+    })
+    .eq("id", params.reviewId);
   if (error) throw error;
+  await supabase
+    .from("manual_documents")
+    .update({
+      review_status: params.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.documentId);
+}
+
+export async function persistReviewClose(documentId: string) {
+  const supabase = createClient();
+  await supabase
+    .from("review_requests")
+    .update({ status: "approved", resolved_at: new Date().toISOString() })
+    .eq("document_id", documentId)
+    .eq("status", "pending");
+  await supabase
+    .from("manual_documents")
+    .update({ review_status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", documentId);
 }
 
 export async function persistFiles(
