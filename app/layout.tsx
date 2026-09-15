@@ -33,8 +33,13 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
+<<<<<<< HEAD
     <html className={`${geist.variable} ${inter.variable}`} lang="sv" suppressHydrationWarning>
       <body className={geist.className}>
+=======
+    <html lang="en">
+      <body className="antialiased">
+>>>>>>> 8e63f24 (Restore theme and organization providers)
         <ThemeProvider>
           <OrgProvider>{children}</OrgProvider>
         </ThemeProvider>
