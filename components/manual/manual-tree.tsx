@@ -122,16 +122,16 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [],
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            aria-label="Hitta avsnitt"
+            aria-label="Sök i manualen"
             className="h-9 pl-9"
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Hitta avsnitt…"
+            placeholder="Sök i manualen…"
             value={query}
           />
         </div>
         {nodes.length ? (
           <Button onClick={() => onNewDocument(null)} size="sm" variant="outline">
-            Nytt kapitel
+            Nytt dokument
           </Button>
         ) : null}
       </div>
@@ -141,7 +141,7 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [],
             <ul>{visibleNodes.map((node, index) => renderNode(node, 0, [index + 1]))}</ul>
           ) : (
             <div className="flex flex-col gap-3 px-3 py-6 text-sm text-muted-foreground">
-              <p>Manualen är tom. Skapa första kapitlet. Numret låses vid skapande.</p>
+              <p>Manualen är tom. Skapa 1.0. Numret låses. Namnet väljer du själv.</p>
               <Button onClick={() => onNewDocument(null)} size="sm">
                 Skapa 1.0
               </Button>

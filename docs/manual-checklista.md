@@ -19,8 +19,9 @@ Nästa utvecklingspass: **skrivytan (TipTap)** – bild i papperet, klick, mark�
 ## Tom pärm (första dagen)
 
 - [ ] Ingen seed, inga Policyer/Mål/Processer, ingen ISO-katalog
-- [ ] Sök: “Hitta avsnitt…”
-- [ ] Knapp: “Skapa 1.0”
+- [ ] Sök: “Sök i manualen…”
+- [ ] Knapp: “Skapa 1.0” / “Nytt dokument”
+- [ ] Tomt namnfält. Förslag “Ledningssystemet” går att välja, inte tvång.
 - [ ] Text: “Manualen är tom. Skapa första kapitlet. Numret låses vid skapande.”
 
 ## Träd och nummer
