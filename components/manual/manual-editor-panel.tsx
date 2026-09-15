@@ -7,6 +7,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import UnderlineExtension from "@tiptap/extension-underline";
 import LinkExtension from "@tiptap/extension-link";
+import ImageExtension from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
 import { Table } from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
@@ -33,6 +35,16 @@ import {
 
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
 import { printIfContent } from "@/lib/export-document";
+
+function readLocalImage(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +70,7 @@ interface ManualEditorPanelProps {
   editable?: boolean;
   attachments: ManualAttachment[];
   onAddAttachment: () => void;
+  onUploadImage?: (file: File) => Promise<string | null>;
   onRemoveAttachment: (attachmentId: string) => void;
   onDownloadAttachment: (attachment: ManualAttachment) => void;
 }
@@ -77,15 +90,37 @@ export function ManualEditorPanel({
   editable = true,
   attachments,
   onAddAttachment,
+  onUploadImage,
   onRemoveAttachment,
   onDownloadAttachment,
 }: ManualEditorPanelProps) {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const lastEmitted = useRef(value);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+  const uploadImageRef = useRef(onUploadImage);
+  uploadImageRef.current = onUploadImage;
+
+  const insertImages = async (files: File[]) => {
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    const current = editorRef.current;
+    if (!current || !images.length) return;
+    for (const file of images) {
+      const src = uploadImageRef.current ? await uploadImageRef.current(file) : await readLocalImage(file);
+      if (!src) continue;
+      current.chain().focus().setImage({ src, alt: file.name }).run();
+    }
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       UnderlineExtension,
+      ImageExtension.configure({ inline: false, allowBase64: true }),
+      Placeholder.configure({
+        placeholder: "Skriv hur ni faktiskt gör…",
+        emptyEditorClass: "is-editor-empty",
+      }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
       Table.configure({ resizable: true }),
       TableRow,
@@ -100,6 +135,23 @@ export function ManualEditorPanel({
         "aria-label": `Arbetsmanual för ${documentTitle}`,
         class: "min-h-[36rem] px-6 pb-10 pt-4 font-serif text-base leading-8",
       },
+      handlePaste: (_view, event) => {
+        const files = event.clipboardData?.files;
+        if (!files?.length) return false;
+        const images = Array.from(files).filter((file) => file.type.startsWith("image/"));
+        if (!images.length) return false;
+        void insertImages(images);
+        return true;
+      },
+      handleDrop: (_view, event) => {
+        const files = event.dataTransfer?.files;
+        if (!files?.length) return false;
+        const images = Array.from(files).filter((file) => file.type.startsWith("image/"));
+        if (!images.length) return false;
+        event.preventDefault();
+        void insertImages(images);
+        return true;
+      },
     },
     onUpdate: ({ editor: nextEditor }) => {
       const html = nextEditor.getHTML();
@@ -107,6 +159,7 @@ export function ManualEditorPanel({
       onChange(html);
     },
   });
+  editorRef.current = editor;
 
   useEffect(() => {
     if (!editor) return;
@@ -212,7 +265,7 @@ export function ManualEditorPanel({
         <Button aria-label="Punktlista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} size="sm" title="Punktlista" type="button" variant="ghost"><List /></Button>
         <Button aria-label="Numrerad lista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} size="sm" title="Numrerad lista" type="button" variant="ghost"><ListOrdered /></Button>
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
-        <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={onAddAttachment} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
+        <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={() => imageInputRef.current?.click()} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
@@ -230,6 +283,15 @@ export function ManualEditorPanel({
           />
           <div
             onClick={() => editor?.commands.focus()}
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+            }}
+            onDrop={(event) => {
+              const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith("image/"));
+              if (!files.length) return;
+              event.preventDefault();
+              void insertImages(files);
+            }}
             onKeyDown={() => undefined}
             role="presentation"
           >
@@ -240,6 +302,17 @@ export function ManualEditorPanel({
           </footer>
         </div>
       </div>
+      <input
+        accept="image/*"
+        className="hidden"
+        multiple
+        onChange={(event) => {
+          void insertImages(Array.from(event.target.files ?? []));
+          event.target.value = "";
+        }}
+        ref={imageInputRef}
+        type="file"
+      />
     </div>
   );
 }
