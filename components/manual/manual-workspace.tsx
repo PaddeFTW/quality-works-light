@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Home, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
+import { Check, Home, LifeBuoy, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,8 @@ import {
 import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { GuidanceHint } from "@/components/common/guidance-hint";
+import { GuidancePanel } from "@/components/common/guidance-panel";
+import { Tip } from "@/components/ui/tooltip";
 import { FIRST_DOCUMENT_HINT, SUBSECTION_HINT } from "@/lib/guidance";
 import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
 import {
@@ -163,11 +165,12 @@ export function ManualWorkspace({
           setSelectedId(selected);
           setLastOpenedId(result.lastOpenedId);
           setReviews(result.reviews);
+          notice(null);
           setReady(true);
           return;
         } catch (error) {
           console.error(error);
-          setStatus("Kunde inte läsa manualen från molnet. Kontrollera anslutningen och försök igen.");
+          notice("Kunde inte läsa manualen från molnet. Försök igen.", "fel");
           setReady(true);
           return;
         }
@@ -690,9 +693,16 @@ export function ManualWorkspace({
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={openPublish} size="sm">
                   Publicera
                 </Button>
-                <Button onClick={() => setTipsOpen((open) => !open)} size="sm" variant="ghost">
-                  Tips
-                </Button>
+                <Tip label="Vägledning">
+                  <Button
+                    aria-label="Vägledning"
+                    onClick={() => setTipsOpen((open) => !open)}
+                    size="icon"
+                    variant={tipsOpen ? "default" : "ghost"}
+                  >
+                    <LifeBuoy />
+                  </Button>
+                </Tip>
               </div>
               <TabsList className="ml-2" variant="line">
                 <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
@@ -702,6 +712,11 @@ export function ManualWorkspace({
               {status ? (
                 <span className={statusTone === "fel" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
                   {status}
+                  {status.includes("molnet") ? (
+                    <button className="ml-2 underline" onClick={() => window.location.reload()} type="button">
+                      Försök igen
+                    </button>
+                  ) : null}
                 </span>
               ) : null}
             </div>
@@ -770,7 +785,7 @@ export function ManualWorkspace({
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-                {tree.length ? "Välj ett dokument i trädet." : "Manualen är tom. Skapa första kapitlet."}
+                {tree.length ? "Välj ett dokument i trädet." : "Manualen är tom. Skapa 1.0. Namnet väljer du själv."}
               </div>
             )}
           </TabsContent>
@@ -812,14 +827,15 @@ export function ManualWorkspace({
         </footer>
       </div>
       {tipsOpen ? (
-        <aside className="hidden w-72 shrink-0 overflow-auto border-l bg-background p-4 md:block">
-          <h2 className="text-sm font-semibold">Tips och vägledning</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {selectedIsDocument
-              ? `Skriv hur ni faktiskt gör i ${documentCode} ${documentTitle}. Originalet är boken andra läser. Publicera när det stämmer.`
-              : "Skapa 1.0 och skriv första kapitlet. Numret låses. Medarbetare ser bara originalet."}
-          </p>
-        </aside>
+        <GuidancePanel
+          intro={
+            selectedIsDocument
+              ? `Du är i ${documentCode} ${documentTitle}. Skriv hur ni gör. Publicera när det stämmer.`
+              : "Skapa 1.0. Numret låses. Namnet väljer du. Andra läser bara originalet."
+          }
+          onClose={() => setTipsOpen(false)}
+          place="manual"
+        />
       ) : null}
       </div>
 
