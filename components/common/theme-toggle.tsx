@@ -1,6 +1,6 @@
 "use client";
 
-import { Contrast, Monitor, SunMedium } from "lucide-react";
+import { Contrast, Moon, SunMedium } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { useMounted } from "@/hooks/use-mounted";
@@ -9,9 +9,10 @@ import { Tip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const modes = [
-  { id: "system", label: "System", icon: Monitor },
   { id: "light", label: "Ljust", icon: SunMedium },
-  { id: "dark", label: "H\u00f6g kontrast", icon: Contrast },
+  { id: "dark", label: "Mörkt", icon: Moon },
+  { id: "contrast", label: "Kontrast", icon: Contrast },
+  { id: "contrast-dark", label: "Kontrast mörk", icon: Contrast },
 ] as const;
 
 export function ThemeToggle() {
@@ -38,7 +39,7 @@ export function ThemeToggle() {
               variant={active ? "default" : "ghost"}
             >
               <Icon className="size-3.5" />
-              <span className="sr-only sm:not-sr-only sm:inline">{mode.label}</span>
+              <span className="sr-only">{mode.label}</span>
             </Button>
           </Tip>
         );

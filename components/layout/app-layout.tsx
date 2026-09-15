@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { HelperDock } from "@/components/common/helper-dock";
 import type { NavItem } from "@/types";
 
 interface AppLayoutProps {
@@ -30,6 +31,7 @@ export function AppLayout({
         <main className={cn("flex-1 px-4 py-6 pb-20 sm:px-6 lg:px-8 lg:pb-6", contentClassName)}>
           {children}
         </main>
+        <HelperDock />
       </div>
     </div>
   );

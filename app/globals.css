@@ -5,20 +5,20 @@
 
 :root {
   color-scheme: light;
-  --background: hsl(192 55.6% 94.7%);
-  --foreground: hsl(206.7 60% 5.9%);
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(210 24% 12%);
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(206.7 60% 5.9%);
+  --card-foreground: hsl(210 24% 12%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(206.7 60% 5.9%);
+  --popover-foreground: hsl(210 24% 12%);
   --primary: hsl(190.4 100% 22.5%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(263.4 69.3% 42.2%);
-  --secondary-foreground: hsl(0 0% 100%);
-  --muted: hsl(190.7 53.8% 89.8%);
-  --muted-foreground: hsl(202.1 23.5% 31.8%);
-  --accent: hsl(188 48% 86%);
-  --accent-foreground: hsl(206.7 60% 5.9%);
+  --secondary: hsl(200 12% 94%);
+  --secondary-foreground: hsl(210 24% 12%);
+  --muted: hsl(200 14% 95%);
+  --muted-foreground: hsl(210 10% 38%);
+  --accent: hsl(200 14% 94%);
+  --accent-foreground: hsl(210 24% 12%);
   --hover: hsl(188 55% 80%);
   --hover-foreground: hsl(206.7 60% 5.9%);
   --success: hsl(160 93% 24%);
@@ -57,48 +57,81 @@
   --font-mono: ui-monospace, SFMono-Regular, monospace;
 }
 
-.dark,
-[data-theme="high-contrast"] {
+.dark {
   color-scheme: dark;
-  --background: hsl(0 0% 0%);
-  --foreground: hsl(0 0% 100%);
-  --card: hsl(218.2 44% 4.9%);
-  --card-foreground: hsl(0 0% 100%);
-  --popover: hsl(220.9 39.3% 11%);
-  --popover-foreground: hsl(0 0% 100%);
-  --primary: hsl(186.1 100% 50%);
-  --primary-foreground: hsl(193.6 100% 4.3%);
-  --secondary: hsl(255.1 91.7% 76.3%);
-  --secondary-foreground: hsl(270 50% 4%);
-  --muted: hsl(220.9 39.3% 11%);
-  --muted-foreground: hsl(213.8 23.2% 72.9%);
-  --accent: hsl(191 100% 15%);
-  --accent-foreground: hsl(0 0% 100%);
-  --hover: hsl(191 90% 22%);
-  --hover-foreground: hsl(0 0% 100%);
-  --success: hsl(158 83% 66%);
-  --success-foreground: hsl(160 50% 8%);
-  --warning: hsl(45 100% 64%);
-  --warning-foreground: hsl(32 80% 10%);
-  --info: hsl(191 100% 62%);
-  --info-foreground: hsl(193 100% 6%);
-  --destructive: hsl(352 100% 74%);
-  --destructive-foreground: hsl(0 0% 4%);
-  --border: hsl(216 20% 39.2%);
-  --input: hsl(216 20% 39.2%);
-  --ring: hsl(0 0% 100%);
-  --surface: hsl(218.2 44% 4.9%);
-  --surface-elevated: hsl(226 48% 8%);
-  --sidebar: hsl(210 45% 3%);
-  --sidebar-foreground: hsl(0 0% 100%);
-  --overlay: hsl(0 0% 0% / 0.62);
-  --helper: hsl(186.1 100% 50%);
-  --helper-ring: hsl(190 100% 22%);
+  --background: hsl(210 16% 8%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(210 16% 11%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(210 16% 11%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(190.4 70% 32%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 12% 16%);
+  --secondary-foreground: hsl(0 0% 98%);
+  --muted: hsl(210 12% 16%);
+  --muted-foreground: hsl(210 12% 70%);
+  --accent: hsl(210 12% 18%);
+  --accent-foreground: hsl(0 0% 98%);
+  --hover: hsl(210 12% 20%);
+  --hover-foreground: hsl(0 0% 98%);
+  --border: hsl(210 10% 24%);
+  --input: hsl(210 10% 24%);
+  --ring: hsl(190.4 70% 40%);
+  --sidebar: hsl(210 16% 9%);
+  --sidebar-foreground: hsl(0 0% 98%);
   --paper: hsl(0 0% 100%);
   --paper-foreground: hsl(210 24% 16%);
   --paper-muted: hsl(210 10% 38%);
   --paper-border: hsl(200 15% 82%);
-  --paper-shadow: 0 0 0 1px hsl(200 15% 82%), 0 22px 50px rgb(0 0 0 / 0.55);
+}
+
+.contrast {
+  color-scheme: light;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 0%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 0%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 0%);
+  --primary: hsl(0 0% 0%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(0 0% 92%);
+  --secondary-foreground: hsl(0 0% 0%);
+  --muted: hsl(0 0% 92%);
+  --muted-foreground: hsl(0 0% 20%);
+  --accent: hsl(0 0% 90%);
+  --accent-foreground: hsl(0 0% 0%);
+  --border: hsl(0 0% 0%);
+  --input: hsl(0 0% 0%);
+  --ring: hsl(0 0% 0%);
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(0 0% 0%);
+}
+
+.contrast-dark {
+  color-scheme: dark;
+  --background: hsl(0 0% 0%);
+  --foreground: hsl(0 0% 100%);
+  --card: hsl(0 0% 0%);
+  --card-foreground: hsl(0 0% 100%);
+  --popover: hsl(0 0% 0%);
+  --popover-foreground: hsl(0 0% 100%);
+  --primary: hsl(0 0% 100%);
+  --primary-foreground: hsl(0 0% 0%);
+  --secondary: hsl(0 0% 12%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(0 0% 12%);
+  --muted-foreground: hsl(0 0% 85%);
+  --accent: hsl(0 0% 16%);
+  --accent-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 100%);
+  --input: hsl(0 0% 100%);
+  --ring: hsl(0 0% 100%);
+  --sidebar: hsl(0 0% 0%);
+  --sidebar-foreground: hsl(0 0% 100%);
+  --paper: hsl(0 0% 100%);
+  --paper-foreground: hsl(0 0% 0%);
 }
 
 @theme inline {
