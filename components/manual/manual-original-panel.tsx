@@ -9,6 +9,15 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentVersion } from "@/types/domain";
 
+function handlePrint(content: string | null) {
+  const text = content?.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  if (!text) {
+    window.alert("Inget att skriva ut.");
+    return;
+  }
+  window.print();
+}
+
 interface ManualOriginalPanelProps {
   companyName: string;
   documentCode: string;
@@ -65,7 +74,7 @@ export function ManualOriginalPanel({
               {visibleDate ? `Godkänt ${visibleDate}` : "Gällande utgåva"}
             </p>
           </div>
-          <Button onClick={() => window.print()} size="sm" variant="outline">
+          <Button onClick={() => handlePrint(visibleContent)} size="sm" variant="outline">
             <Printer data-icon="inline-start" />
             Skriv ut
           </Button>

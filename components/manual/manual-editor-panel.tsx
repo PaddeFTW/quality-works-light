@@ -61,6 +61,15 @@ interface ManualEditorPanelProps {
   onDownloadAttachment: (attachment: ManualAttachment) => void;
 }
 
+function handlePrint(content: string) {
+  const text = content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  if (!text) {
+    window.alert("Inget att skriva ut.");
+    return;
+  }
+  window.print();
+}
+
 export function ManualEditorPanel({
   companyName,
   documentCode,
@@ -214,7 +223,7 @@ export function ManualEditorPanel({
         <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={onAddAttachment} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
-        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => window.print()} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
+        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => handlePrint(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
@@ -234,6 +243,10 @@ export function ManualEditorPanel({
           >
             <EditorContent className="manual-tiptap-editor" editor={editor} />
           </div>
+          <footer className="border-t px-6 py-3 text-xs text-muted-foreground">
+            Utkast – inte original
+            <span className="print-page-number" aria-hidden="true" />
+          </footer>
         </div>
       </div>
     </div>
