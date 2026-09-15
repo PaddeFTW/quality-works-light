@@ -130,9 +130,39 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [],
           />
         </div>
         {nodes.length ? (
-          <Button onClick={() => onNewDocument(null)} size="sm" variant="outline">
-            Nytt dokument
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => onNewDocument(null)} size="sm" variant="outline">
+              Nytt dokument
+            </Button>
+            <Button
+              onClick={() => setCollapsed([])}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Visa alla
+            </Button>
+            <Button
+              onClick={() => {
+                const ids: string[] = [];
+                const walk = (list: ManualNode[]) => {
+                  for (const node of list) {
+                    if (node.children?.length) {
+                      ids.push(node.id);
+                      walk(node.children);
+                    }
+                  }
+                };
+                walk(nodes);
+                setCollapsed(ids);
+              }}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Fäll ihop
+            </Button>
+          </div>
         ) : null}
       </div>
       <ScrollArea className="min-h-0 flex-1">
