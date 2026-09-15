@@ -53,6 +53,7 @@ import {
   persistReviewSend,
   persistSettings,
 } from "@/lib/manual/persist";
+import { createYearActivity, missingTableMessage } from "@/lib/ops/persist";
 import { latestReferralFor, openReferralFor } from "@/lib/manual/referral";
 import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
 import { firstDocumentId, insertNode, removeNode, renameNode } from "@/lib/manual/tree-ops";
@@ -87,7 +88,7 @@ const initialSettings: ManualSettings = {
 };
 
 type ViewMode = "normal" | "focus" | "full";
-type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | "remiss" | "respond" | null;
+type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | "remiss" | "respond" | "audit" | null;
 
 export function ManualWorkspace({
   initialView = "normal",
@@ -132,6 +133,8 @@ export function ManualWorkspace({
   const [remissMessage, setRemissMessage] = useState("Stämmer detta med hur ni jobbar?");
   const [remissResponse, setRemissResponse] = useState("");
   const [publishAnyway, setPublishAnyway] = useState(false);
+  const [auditAt, setAuditAt] = useState("");
+  const [auditOwner, setAuditOwner] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canEdit = session?.role !== "viewer";
 
@@ -287,6 +290,30 @@ export function ManualWorkspace({
     setApprovedBy(settings.approver || settings.issuer || "Administratör");
     setApprovedAt(new Date().toISOString().slice(0, 10));
     setDialog("publish");
+  }
+
+  function openAudit() {
+    if (!selectedId || !selectedIsDocument) return;
+    setAuditOwner(settings.issuer || session?.fullName || "");
+    setAuditAt(new Date().toISOString().slice(0, 10));
+    setDialog("audit");
+  }
+
+  async function confirmAudit() {
+    if (!selectedId || !session?.organizationId) return;
+    try {
+      await createYearActivity({
+        organizationId: session.organizationId,
+        title: `Intern revision ${documentCode} ${documentTitle}`,
+        kind: "revision",
+        plannedOn: auditAt,
+        ownerName: auditOwner,
+      });
+      setDialog(null);
+      setStatus("Lagd i årshjulet.");
+    } catch (error) {
+      setStatus(missingTableMessage(error));
+    }
   }
 
   function openRemiss() {
@@ -644,6 +671,9 @@ export function ManualWorkspace({
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
                   Spara
                 </Button>
+                <Button disabled={!selectedIsDocument || !canEdit} onClick={openAudit} size="sm" variant="outline">
+                  Intern revision
+                </Button>
                 <Button disabled={!selectedIsDocument || !canEdit} onClick={openRemiss} size="sm" variant="outline">
                   Remiss
                 </Button>
@@ -795,7 +825,9 @@ export function ManualWorkspace({
                         ? "Skicka remiss"
                         : dialog === "respond"
                           ? "Svara på remiss"
-                          : dialogParent === "root"
+                          : dialog === "audit"
+                            ? "Intern revision"
+                            : dialogParent === "root"
                             ? tree.length
                               ? "Nytt kapitel"
                               : "Skapa 1.0"
@@ -864,6 +896,20 @@ export function ManualWorkspace({
                 <Textarea id="remiss-response" onChange={(e) => setRemissResponse(e.target.value)} value={remissResponse} />
               </div>
             </div>
+          ) : dialog === "audit" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {documentCode} {documentTitle} läggs i årshjulet. Inte en ny modul – samma kalender som skyddsrond och ledningens genomgång.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="audit-at">Datum</Label>
+                <Input id="audit-at" onChange={(e) => setAuditAt(e.target.value)} type="date" value={auditAt} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="audit-owner">Ansvarig</Label>
+                <Input id="audit-owner" onChange={(e) => setAuditOwner(e.target.value)} value={auditOwner} />
+              </div>
+            </div>
           ) : dialog === "revise" ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
@@ -901,6 +947,7 @@ export function ManualWorkspace({
                 <Button onClick={() => void confirmRespond("approved")}>Godkänn</Button>
               </>
             ) : null}
+            {dialog === "audit" ? <Button disabled={!auditAt} onClick={() => void confirmAudit()}>Lägg in i årshjulet</Button> : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
