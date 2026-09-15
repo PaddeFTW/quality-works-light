@@ -1,7 +1,7 @@
 # Manualen – checklista
 
 Gå igenom i denna ordning. Kryssa när det stämmer.  
-Nästa utvecklingspass: **skrivytan (TipTap)** – den är den svagaste delen just nu.
+Nästa utvecklingspass: **skrivytan (TipTap)** – bild i papperet, klick, markör, spara. Drag-and-drop i trädet och intern revision kommer efter det.
 
 ## Fönster
 
@@ -62,7 +62,7 @@ Nästa utvecklingspass: **skrivytan (TipTap)** – den är den svagaste delen ju
 - [ ] Status: “Original – gällande version, låst”
 - [ ] Går inte att ändra originaltexten
 - [ ] Utgåva 1, 2, 3 syns i historiken
-- [ ] Skriv ut öppnar utskrift
+- [x] Skriv ut öppnar utskrift (A4, bara papperet)
 
 ## Grundinställningar
 

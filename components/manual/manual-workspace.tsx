@@ -67,6 +67,15 @@ import {
 } from "@/lib/manual/storage";
 import type { DocumentVersion, ManualAttachment, ReviewRequest } from "@/types/domain";
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 const initialSettings: ManualSettings = {
   name: "Kvalitetsmanual",
   issuer: "",
@@ -508,11 +517,22 @@ export function ManualWorkspace({
           ...current,
           [selectedId]: [...(current[selectedId] ?? []), ...uploaded],
         }));
-        return;
+        return uploaded;
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Uppladdning misslyckades");
       }
     }
+    return [];
+  }
+
+  async function handleUploadImage(file: File) {
+    const uploaded = await handleAddAttachmentFiles((() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      return transfer.files;
+    })());
+    if (uploaded?.[0]?.url) return uploaded[0].url;
+    return readFileAsDataUrl(file);
   }
 
   async function handleSettingsChange(next: ManualSettings) {
@@ -676,6 +696,7 @@ export function ManualWorkspace({
                 edition={edition}
                 issuer={settings.issuer}
                 onAddAttachment={() => fileInputRef.current?.click()}
+                onUploadImage={handleUploadImage}
                 onChange={(value) => {
                   if (!selectedId || !canEdit) return;
                   setDrafts((current) => ({ ...current, [selectedId]: value }));
