@@ -38,6 +38,8 @@ import {
 } from "@/components/manual/manual-settings-panel";
 import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
+import { GuidanceHint } from "@/components/common/guidance-hint";
+import { FIRST_DOCUMENT_HINT, SUBSECTION_HINT } from "@/lib/guidance";
 import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
 import {
   persistAck,
@@ -119,6 +121,7 @@ export function ManualWorkspace({
   const [dialogName, setDialogName] = useState("");
   const [dialogParent, setDialogParent] = useState<string>("root");
   const [status, setStatus] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<"ok" | "fel">("ok");
   const [saveStatus, setSaveStatus] = useState<"sparar" | "sparad" | "osparad" | "fel">("sparad");
   const [approvedBy, setApprovedBy] = useState("");
   const [approvedAt, setApprovedAt] = useState("");
@@ -224,6 +227,11 @@ export function ManualWorkspace({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
+  function notice(message: string | null, tone: "ok" | "fel" = "ok") {
+    setStatus(message);
+    setStatusTone(tone);
+  }
+
   function markDirty(id: string) {
     setDirtyIds((current) => (current.includes(id) ? current : [...current, id]));
     setSavedId(null);
@@ -231,10 +239,8 @@ export function ManualWorkspace({
   }
 
   function openCreate(parentId: string | null) {
-    const isRoot = parentId === null;
-    const name = isRoot ? (tree.length ? "Nytt kapitel" : "Ledningssystemet") : "Nytt avsnitt";
     setDialog("create-doc");
-    setDialogName(name);
+    setDialogName("");
     setDialogParent(parentId ?? "root");
   }
 
@@ -310,9 +316,9 @@ export function ManualWorkspace({
         ownerName: auditOwner,
       });
       setDialog(null);
-      setStatus("Lagd i årshjulet.");
+      notice("Lagd i årshjulet.", "ok");
     } catch (error) {
-      setStatus(missingTableMessage(error));
+      notice(missingTableMessage(error), "fel");
     }
   }
 
@@ -361,7 +367,7 @@ export function ManualWorkspace({
       ]);
     }
     setDialog(null);
-    setStatus(`Remiss skickad till ${reviewerName}.`);
+    notice(`Remiss skickad till ${reviewerName}.`, "ok");
   }
 
   async function confirmRespond(statusValue: "approved" | "rejected") {
@@ -480,7 +486,11 @@ export function ManualWorkspace({
   async function confirmCreate() {
     const parentId = dialogParent === "root" ? null : dialogParent;
     const kind = "document" as const;
-    const title = dialogName.trim() || (parentId ? "Nytt avsnitt" : tree.length ? "Nytt kapitel" : "Ledningssystemet");
+    const title = dialogName.trim();
+    if (!title) {
+      notice("Skriv ett namn, eller använd förslaget.", "fel");
+      return;
+    }
     let id = `${kind}-${Date.now()}`;
     if (cloud && manualId) {
       try {
@@ -661,7 +671,7 @@ export function ManualWorkspace({
               ) : (
                 <Button disabled={!canEdit} onClick={() => openCreate(null)} size="sm" variant="outline">
                   <Plus data-icon="inline-start" />
-                  Nytt kapitel
+                  Nytt dokument
                 </Button>
               )}
               <div className="ml-auto flex items-center gap-2">
@@ -689,7 +699,11 @@ export function ManualWorkspace({
                 <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
                 <TabsTrigger value="original">Original</TabsTrigger>
               </TabsList>
-              {status ? <span className="text-xs text-destructive">{status}</span> : null}
+              {status ? (
+                <span className={statusTone === "fel" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                  {status}
+                </span>
+              ) : null}
             </div>
           </div>
           <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
@@ -829,7 +843,7 @@ export function ManualWorkspace({
                             ? "Intern revision"
                             : dialogParent === "root"
                             ? tree.length
-                              ? "Nytt kapitel"
+                              ? "Nytt dokument"
                               : "Skapa 1.0"
                             : "Nytt underavsnitt"}
             </DialogTitle>
@@ -925,11 +939,28 @@ export function ManualWorkspace({
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label htmlFor="doc-name">Namn</Label>
-              <Input id="doc-name" onChange={(e) => setDialogName(e.target.value)} value={dialogName} />
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="doc-name">Dokumentnamn</Label>
+                <Input
+                  id="doc-name"
+                  onChange={(e) => setDialogName(e.target.value)}
+                  placeholder="Ange dokumentnamn"
+                  value={dialogName}
+                />
+              </div>
               {dialog === "create-doc" ? (
-                <p className="text-xs text-muted-foreground">Numret låses vid skapande.</p>
+                <>
+                  <GuidanceHint
+                    hint={dialogParent === "root" && !tree.length ? FIRST_DOCUMENT_HINT : SUBSECTION_HINT}
+                    onApply={
+                      dialogParent === "root" && !tree.length
+                        ? (value) => setDialogName(value)
+                        : undefined
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">Numret låses vid skapande. Namnet väljer du själv.</p>
+                </>
               ) : null}
             </div>
           )}
