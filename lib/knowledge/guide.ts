@@ -19,6 +19,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     body: "Första bladet får nummer 1.0. Numret låses. Namnet väljer du. Många tar Ledningssystemet, men det är bara ett förslag.",
   },
   {
+    id: "editor",
+    place: "manual",
+    title: "Skriva i bladet",
+    body: "Markera text och välj typsnitt, storlek, färg och justering. Spara ofta. Öppna i Word laddar ner en fil som Word kan öppna.",
+  },
+  {
     id: "publicera",
     place: "manual",
     title: "Spara och publicera",

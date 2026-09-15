@@ -85,7 +85,7 @@ export function DashboardOverview() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/manual">
+          <Link href="/manual" rel="noopener noreferrer" target="_blank">
             <Plus data-icon="inline-start" />
             Öppna manual
           </Link>
@@ -107,6 +107,8 @@ export function DashboardOverview() {
                   <Link
                     className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent"
                     href={`/manual?blad=${item.documentId}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
                   >
                     <span className="min-w-0">
                       <span className="font-medium">{item.documentTitle}</span>
@@ -134,7 +136,7 @@ export function DashboardOverview() {
         <h3 className="text-base font-semibold">Snabbåtgärder</h3>
         <div className="flex flex-wrap gap-3">
           <Button asChild variant="outline">
-            <Link href="/manual">
+            <Link href="/manual" rel="noopener noreferrer" target="_blank">
               <FileText data-icon="inline-start" />
               Manual
             </Link>
@@ -225,7 +227,7 @@ function Metric({
   value: string;
 }) {
   return (
-    <Link href={href}>
+    <Link href={href} rel={href.startsWith("/manual") ? "noopener noreferrer" : undefined} target={href.startsWith("/manual") ? "_blank" : undefined}>
       <Card className="h-full shadow-sm transition-token hover:-translate-y-0.5 hover:shadow-md">
         <CardContent className="flex flex-col gap-5 p-5">
           <div className="flex items-center justify-between">

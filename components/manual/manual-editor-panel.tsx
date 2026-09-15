@@ -13,10 +13,19 @@ import { Table } from "@tiptap/extension-table";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyleKit } from "@tiptap/extension-text-style";
+import Highlight from "@tiptap/extension-highlight";
 
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
   Check,
+  FileDown,
+  Highlighter,
   ImagePlus,
   Italic,
   Link,
@@ -34,7 +43,7 @@ import {
 } from "lucide-react";
 
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
-import { printIfContent } from "@/lib/export-document";
+import { downloadHtmlAsFile, printIfContent } from "@/lib/export-document";
 
 function readLocalImage(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -122,6 +131,9 @@ export function ManualEditorPanel({
         emptyEditorClass: "is-editor-empty",
       }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
+      TextStyleKit,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Highlight.configure({ multicolor: false }),
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -160,6 +172,18 @@ export function ManualEditorPanel({
     },
   });
   editorRef.current = editor;
+
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!editor) return;
+    const ping = () => setTick((n) => n + 1);
+    editor.on("selectionUpdate", ping);
+    editor.on("transaction", ping);
+    return () => {
+      editor.off("selectionUpdate", ping);
+      editor.off("transaction", ping);
+    };
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -255,19 +279,108 @@ export function ManualEditorPanel({
         </span>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center gap-1 overflow-x-auto border-b bg-background px-4 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-1 overflow-x-auto border-b bg-background px-3 py-2">
         <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
         <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
-        <Button aria-label="Fetstil" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBold().run()} size="sm" title="Fetstil" type="button" variant="ghost"><Bold /></Button>
-        <Button aria-label="Kursiv" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleItalic().run()} size="sm" title="Kursiv" type="button" variant="ghost"><Italic /></Button>
-        <Button aria-label="Understruken" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleUnderline().run()} size="sm" title="Understruken" type="button" variant="ghost"><Underline /></Button>
-        <Button aria-label="Genomstruken" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleStrike().run()} size="sm" title="Genomstruken" type="button" variant="ghost"><Strikethrough /></Button>
-        <Button aria-label="Punktlista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} size="sm" title="Punktlista" type="button" variant="ghost"><List /></Button>
-        <Button aria-label="Numrerad lista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} size="sm" title="Numrerad lista" type="button" variant="ghost"><ListOrdered /></Button>
+        <select
+          aria-label="Rubrik"
+          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          disabled={!editable}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (!editor) return;
+            if (value === "p") editor.chain().focus().setParagraph().run();
+            else editor.chain().focus().toggleHeading({ level: Number(value) as 1 | 2 | 3 }).run();
+          }}
+          value={editor?.isActive("heading", { level: 1 }) ? "1" : editor?.isActive("heading", { level: 2 }) ? "2" : editor?.isActive("heading", { level: 3 }) ? "3" : "p"}
+        >
+          <option value="p">Brödtext</option>
+          <option value="1">Rubrik 1</option>
+          <option value="2">Rubrik 2</option>
+          <option value="3">Rubrik 3</option>
+        </select>
+        <select
+          aria-label="Typsnitt"
+          className="h-8 max-w-32 rounded-md border bg-background px-2 text-xs shadow-xs"
+          disabled={!editable}
+          onChange={(event) => {
+            const family = event.target.value;
+            if (family === "inherit") editor?.chain().focus().unsetFontFamily().run();
+            else editor?.chain().focus().setFontFamily(family).run();
+          }}
+          value={(editor?.getAttributes("textStyle").fontFamily as string | undefined) || "inherit"}
+        >
+          <option value="inherit">Typsnitt</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value='"Times New Roman", Times, serif'>Times</option>
+          <option value="Inter, sans-serif">Inter</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Calibri, sans-serif">Calibri</option>
+        </select>
+        <select
+          aria-label="Textstorlek"
+          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          disabled={!editable}
+          onChange={(event) => {
+            const size = event.target.value;
+            if (size === "inherit") editor?.chain().focus().unsetFontSize().run();
+            else editor?.chain().focus().setFontSize(size).run();
+          }}
+          value={(editor?.getAttributes("textStyle").fontSize as string | undefined) || "inherit"}
+        >
+          <option value="inherit">Storlek</option>
+          <option value="12px">12</option>
+          <option value="14px">14</option>
+          <option value="16px">16</option>
+          <option value="18px">18</option>
+          <option value="24px">24</option>
+          <option value="32px">32</option>
+        </select>
+        <Button aria-label="Fetstil" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBold().run()} size="sm" title="Fetstil" type="button" variant={editor?.isActive("bold") ? "secondary" : "ghost"}><Bold /></Button>
+        <Button aria-label="Kursiv" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleItalic().run()} size="sm" title="Kursiv" type="button" variant={editor?.isActive("italic") ? "secondary" : "ghost"}><Italic /></Button>
+        <Button aria-label="Understruken" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleUnderline().run()} size="sm" title="Understruken" type="button" variant={editor?.isActive("underline") ? "secondary" : "ghost"}><Underline /></Button>
+        <Button aria-label="Genomstruken" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleStrike().run()} size="sm" title="Genomstruken" type="button" variant={editor?.isActive("strike") ? "secondary" : "ghost"}><Strikethrough /></Button>
+        <label className="inline-flex size-8 items-center justify-center" title="Textfärg">
+          <span className="sr-only">Textfärg</span>
+          <input
+            aria-label="Textfärg"
+            className="size-6 cursor-pointer rounded border bg-background"
+            disabled={!editable}
+            onChange={(event) => editor?.chain().focus().setColor(event.target.value).run()}
+            type="color"
+            value={(editor?.getAttributes("textStyle").color as string | undefined) || "#111111"}
+          />
+        </label>
+        <Button aria-label="Markera" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleHighlight().run()} size="sm" title="Markera" type="button" variant={editor?.isActive("highlight") ? "secondary" : "ghost"}><Highlighter /></Button>
+        <Button aria-label="Vänsterställd" className={toolbarButtonClass} onClick={() => editor?.chain().focus().setTextAlign("left").run()} size="sm" title="Vänsterställd" type="button" variant={editor?.isActive({ textAlign: "left" }) ? "secondary" : "ghost"}><AlignLeft /></Button>
+        <Button aria-label="Centrerad" className={toolbarButtonClass} onClick={() => editor?.chain().focus().setTextAlign("center").run()} size="sm" title="Centrerad" type="button" variant={editor?.isActive({ textAlign: "center" }) ? "secondary" : "ghost"}><AlignCenter /></Button>
+        <Button aria-label="Högerställd" className={toolbarButtonClass} onClick={() => editor?.chain().focus().setTextAlign("right").run()} size="sm" title="Högerställd" type="button" variant={editor?.isActive({ textAlign: "right" }) ? "secondary" : "ghost"}><AlignRight /></Button>
+        <Button aria-label="Justera" className={toolbarButtonClass} onClick={() => editor?.chain().focus().setTextAlign("justify").run()} size="sm" title="Justera" type="button" variant={editor?.isActive({ textAlign: "justify" }) ? "secondary" : "ghost"}><AlignJustify /></Button>
+        <Button aria-label="Punktlista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} size="sm" title="Punktlista" type="button" variant={editor?.isActive("bulletList") ? "secondary" : "ghost"}><List /></Button>
+        <Button aria-label="Numrerad lista" className={toolbarButtonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} size="sm" title="Numrerad lista" type="button" variant={editor?.isActive("orderedList") ? "secondary" : "ghost"}><ListOrdered /></Button>
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
         <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={() => imageInputRef.current?.click()} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
         <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
+        <Button
+          aria-label="Öppna i Word"
+          className={toolbarButtonClass}
+          onClick={() =>
+            downloadHtmlAsFile(
+              `${documentCode} ${documentTitle}.doc`,
+              `${documentCode} ${documentTitle}`,
+              companyName,
+              value,
+              "Arbetsmanual – utkast",
+            )
+          }
+          size="sm"
+          title="Öppna i Word"
+          type="button"
+          variant="ghost"
+        >
+          <FileDown />
+        </Button>
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
       </div>
 
