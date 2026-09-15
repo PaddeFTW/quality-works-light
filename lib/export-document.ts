@@ -68,6 +68,15 @@ export function printDocument(
   win.document.close();
 }
 
+export function printIfContent(html: string | null | undefined) {
+  const text = (html ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
+  if (!text) {
+    window.alert("Inget att skriva ut.");
+    return;
+  }
+  window.print();
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")

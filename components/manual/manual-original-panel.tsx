@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileLock2, Printer } from "lucide-react";
 
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
+import { printIfContent } from "@/lib/export-document";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -65,7 +66,7 @@ export function ManualOriginalPanel({
               {visibleDate ? `Godkänt ${visibleDate}` : "Gällande utgåva"}
             </p>
           </div>
-          <Button onClick={() => window.print()} size="sm" variant="outline">
+          <Button onClick={() => printIfContent(visibleContent)} size="sm" variant="outline">
             <Printer data-icon="inline-start" />
             Skriv ut
           </Button>
@@ -131,7 +132,7 @@ export function ManualOriginalPanel({
             className="manual-tiptap-editor px-6 pb-10 pt-2 font-serif text-base leading-8"
             dangerouslySetInnerHTML={{ __html: visibleContent ?? "" }}
           />
-          <div className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</div>
+          <footer className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</footer>
         </article>
       </div>
     </ScrollArea>
