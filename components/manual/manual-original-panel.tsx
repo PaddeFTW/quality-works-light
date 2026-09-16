@@ -44,14 +44,23 @@ export function ManualOriginalPanel({
 
   if (!content) {
     return (
-      <div className="flex min-h-[28rem] flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-        <div className="rounded-2xl bg-muted p-4 text-muted-foreground">
-          <FileLock2 className="size-6" />
+      <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-gradient-to-b from-muted/70 to-muted/30 p-6 md:p-10">
+        <div className="document-paper flex min-h-[42rem] w-full max-w-[210mm] flex-col">
+          <DocumentPaperHeader
+            companyName={companyName}
+            documentCode={documentCode}
+            documentTitle={documentTitle}
+            edition={edition}
+            issuer={issuer}
+            statusLabel="Original – gällande version, låst"
+          />
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-10 py-16 text-center">
+            <FileLock2 className="size-6 text-paper-muted" />
+            <p className="max-w-sm text-sm leading-7 text-paper-muted">
+              Inget original än. Publicera från Arbetsmanual när texten stämmer.
+            </p>
+          </div>
         </div>
-        <h3 className="text-lg font-semibold">Inget publicerat dokument ännu</h3>
-        <p className="max-w-md text-sm leading-6 text-muted-foreground">
-          Publicera från Arbetsmanual för att låsa en originalutgåva.
-        </p>
       </div>
     );
   }

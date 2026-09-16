@@ -36,6 +36,7 @@ import {
   ManualSettingsPanel,
   type ManualSettings,
 } from "@/components/manual/manual-settings-panel";
+import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
 import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { GuidanceHint } from "@/components/common/guidance-hint";
@@ -206,7 +207,7 @@ export function ManualWorkspace({
 
   const selectedNode = selectedId ? findNodeById(tree, selectedId) : undefined;
   const selectedIsDocument = selectedNode?.kind === "document";
-  const documentTitle = selectedIsDocument ? selectedNode.title : "Välj dokument";
+  const documentTitle = selectedIsDocument ? selectedNode.title : "";
   const documentCode = selectedId ? (getNodeNumber(tree, selectedId) ?? "–") : "–";
   const openReferral = openReferralFor(reviews, selectedId);
   const latestReferral = latestReferralFor(reviews, selectedId);
@@ -626,7 +627,7 @@ export function ManualWorkspace({
   }
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/30">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/50">
       {hideTree ? null : (
         <aside className="hidden w-[288px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
           <ManualTree {...treeProps} />
@@ -645,58 +646,60 @@ export function ManualWorkspace({
       <div className="flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
-          <div className="flex flex-col gap-3 border-b bg-background px-4 pt-3 sm:px-5">
-            <div className="flex items-center gap-2 px-1 py-1">
+          <div className="flex flex-col gap-2 border-b bg-card/90 px-4 pt-3 shadow-token-xs sm:px-5">
+            <div className="flex items-center gap-2 pb-1">
               <Button aria-label="Visa innehållsförteckning" className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
                 <PanelLeft />
               </Button>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {selectedIsDocument ? `${documentCode} ${documentTitle}` : documentTitle}
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                {selectedIsDocument
+                  ? `${documentCode} ${documentTitle}`
+                  : tree.length
+                    ? "Välj ett blad till vänster"
+                    : settings.name || "Manualen"}
               </span>
               <Button asChild size="sm" variant="ghost">
                 <Link href="/">
                   <Home data-icon="inline-start" />
-                  Till startsida
+                  Start
                 </Link>
               </Button>
-              <div className="flex items-center">
-                <Button aria-label="Minimera" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minus /></Button>
-                <Button aria-label="Fönsterläge" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Square /></Button>
-                <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
-                <Button aria-label="Stäng manualen" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
+              <div className="flex overflow-hidden rounded-lg border bg-background">
+                <Button aria-label="Minimera" className="rounded-none" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minus /></Button>
+                <Button aria-label="Fönsterläge" className="rounded-none" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Square /></Button>
+                <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} className="rounded-none" onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
+                <Button aria-label="Stäng manualen" className="rounded-none" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-3">
-              {!tree.length ? (
-                <Button disabled={!canEdit} onClick={() => openCreate(null)} size="sm">
-                  <Plus data-icon="inline-start" />
-                  Skapa 1.0
-                </Button>
-              ) : (
-                <Button disabled={!canEdit} onClick={() => openCreate(null)} size="sm" variant="outline">
-                  <Plus data-icon="inline-start" />
-                  Nytt dokument
-                </Button>
-              )}
-              <div className="ml-auto flex items-center gap-2">
-                <Button disabled={!selectedIsDocument || !canEdit || edition === 0} onClick={openRevise} size="sm" variant="outline">
-                  Revidera
-                </Button>
-                <Button disabled={!selectedIsDocument || !canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
-                  Spara
-                </Button>
-                <Button disabled={!selectedIsDocument || !canEdit} onClick={openAudit} size="sm" variant="outline">
-                  Intern revision
-                </Button>
-                <Button disabled={!selectedIsDocument || !canEdit} onClick={openRemiss} size="sm" variant="outline">
-                  Remiss
-                </Button>
-                <Button disabled={!selectedIsDocument || !canEdit} onClick={openPublish} size="sm">
-                  Publicera
-                </Button>
-                <Tip label="Vägledning">
+              <TabsList variant="line">
+                <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
+                <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
+                <TabsTrigger value="original">Original</TabsTrigger>
+              </TabsList>
+              <div className="ml-auto flex items-center gap-1.5">
+                {selectedIsDocument ? (
+                  <>
+                    <Button disabled={!canEdit || edition === 0} onClick={openRevise} size="sm" variant="ghost">
+                      Revidera
+                    </Button>
+                    <Button disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
+                      Spara
+                    </Button>
+                    <Button disabled={!canEdit} onClick={openAudit} size="sm" variant="ghost">
+                      Intern revision
+                    </Button>
+                    <Button disabled={!canEdit} onClick={openRemiss} size="sm" variant="ghost">
+                      Remiss
+                    </Button>
+                    <Button disabled={!canEdit} onClick={openPublish} size="sm">
+                      Publicera
+                    </Button>
+                  </>
+                ) : null}
+                <Tip label="Hjälp">
                   <Button
-                    aria-label="Vägledning"
+                    aria-label="Hjälp"
                     onClick={() => setTipsOpen((open) => !open)}
                     size="icon"
                     variant={tipsOpen ? "default" : "ghost"}
@@ -705,15 +708,10 @@ export function ManualWorkspace({
                   </Button>
                 </Tip>
               </div>
-              <TabsList className="ml-2" variant="line">
-                <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
-                <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
-                <TabsTrigger value="original">Original</TabsTrigger>
-              </TabsList>
               {status ? (
-                <span className={statusTone === "fel" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                <span className={statusTone === "fel" ? "w-full text-xs text-destructive" : "w-full text-xs text-muted-foreground"}>
                   {status}
-                  {status.includes("molnet") ? (
+                  {(status.includes("molnet") || status.includes("Databasen") || status.includes("Kunde inte läsa")) ? (
                     <button className="ml-2 underline" onClick={() => window.location.reload()} type="button">
                       Försök igen
                     </button>
@@ -790,8 +788,30 @@ export function ManualWorkspace({
                 Du läser boken i fliken Original.
               </div>
             ) : (
-              <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-                {tree.length ? "Välj ett dokument i trädet." : "Manualen är tom. Skapa 1.0. Namnet väljer du själv."}
+              <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-gradient-to-b from-muted/70 to-muted/30 p-6 md:p-10">
+                <div className="document-paper flex min-h-[42rem] w-full max-w-[210mm] flex-col">
+                  <DocumentPaperHeader
+                    companyName={session?.organizationName || settings.name}
+                    documentCode=""
+                    documentTitle=""
+                    edition={0}
+                    issuer={settings.issuer}
+                    statusLabel={tree.length ? "Välj ett blad i trädet" : "Ny pärm"}
+                  />
+                  <div className="flex flex-1 flex-col items-center justify-center gap-4 px-10 py-16 text-center">
+                    <p className="max-w-sm text-sm leading-7 text-paper-muted">
+                      {tree.length
+                        ? "Klicka ett blad till vänster. Då öppnas det på papperet."
+                        : "Pärmen är tom. Första bladet får nummer 1.0. Namnet väljer du."}
+                    </p>
+                    {!tree.length && canEdit ? (
+                      <Button onClick={() => openCreate(null)}>
+                        <Plus data-icon="inline-start" />
+                        Skapa 1.0
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -811,25 +831,33 @@ export function ManualWorkspace({
             />
           </TabsContent>
         </Tabs>
-        <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-background px-4 py-2 text-xs text-muted-foreground">
-          <span>{saveStatus === "sparar" ? "Sparar…" : saveStatus === "sparad" ? "Sparad" : saveStatus === "fel" ? "Kunde inte spara" : "Osparat"}</span>
-          <span>{countPlainText(draft)} tecken</span>
-          <span>{canEdit ? "Redigera" : "Läsa"}</span>
-          <span>{edition > 0 ? `Utgåva ${edition}` : "Ingen utgåva"}</span>
-          <span>Godkänt {published?.publishedAt ?? "–"}</span>
-          <span className="ml-auto">
-            <Button
-              disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
-              onClick={() => {
-                if (!selectedId) return;
-                setAcknowledgedIds((current) => [...current, selectedId]);
-                if (cloud && session) void persistAck(selectedId, session.userId, edition);
-              }}
-              size="sm"
-            >
-              {selectedId && acknowledgedIds.includes(selectedId) ? <><Check /> Kvitterad</> : "Kvittera"}
-            </Button>
-          </span>
+        <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t bg-card/90 px-5 py-2 text-xs text-muted-foreground">
+          {selectedIsDocument ? (
+            <>
+              <span>{saveStatus === "sparar" ? "Sparar…" : saveStatus === "sparad" ? "Sparad" : saveStatus === "fel" ? "Kunde inte spara" : "Osparat"}</span>
+              <span>{countPlainText(draft)} tecken</span>
+              <span>{canEdit ? "Arbetsmanual – du kan ändra" : "Läsa"}</span>
+              <span>{edition > 0 ? `Utgåva ${edition}` : "Ingen utgåva"}</span>
+              {edition > 0 ? (
+                <span className="ml-auto">
+                  <Button
+                    disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
+                    onClick={() => {
+                      if (!selectedId) return;
+                      setAcknowledgedIds((current) => [...current, selectedId]);
+                      if (cloud && session) void persistAck(selectedId, session.userId, edition);
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {selectedId && acknowledgedIds.includes(selectedId) ? <><Check /> Kvitterad</> : "Kvittera"}
+                  </Button>
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span>Pärmen är tom. Skapa 1.0 när du är redo.</span>
+          )}
         </footer>
       </div>
       {tipsOpen ? (

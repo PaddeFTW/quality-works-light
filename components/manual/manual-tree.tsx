@@ -113,11 +113,11 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [],
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-sidebar">
-      <div className="flex flex-col gap-3 border-b px-4 py-4">
+    <div className="flex h-full min-h-0 flex-col border-r border-primary/10 bg-sidebar">
+      <div className="flex flex-col gap-3 border-b px-4 py-5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Dokument</p>
-          <h2 className="text-base font-semibold tracking-tight">Arbetsmanual</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Pärm</p>
+          <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -170,9 +170,11 @@ export function ManualTree({ nodes, selectedId, lastOpenedId, publishedIds = [],
           {visibleNodes.length ? (
             <ul>{visibleNodes.map((node, index) => renderNode(node, 0, [index + 1]))}</ul>
           ) : (
-            <div className="flex flex-col gap-3 px-3 py-6 text-sm text-muted-foreground">
-              <p>Manualen är tom. Skapa 1.0. Numret låses. Namnet väljer du själv.</p>
-              <Button onClick={() => onNewDocument(null)} size="sm">
+            <div className="flex flex-col gap-4 px-2 py-8 text-sm">
+              <p className="leading-6 text-muted-foreground">
+                Tom pärm. Första bladet blir 1.0. Namnet väljer du.
+              </p>
+              <Button onClick={() => onNewDocument(null)}>
                 Skapa 1.0
               </Button>
             </div>

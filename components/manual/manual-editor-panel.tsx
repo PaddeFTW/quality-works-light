@@ -213,7 +213,7 @@ export function ManualEditorPanel({
           : "Osparat";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-muted/10">
+    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-muted/70 to-muted/30">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2.5">
         <Button disabled={!editable} onClick={onSave} size="sm" variant="outline">
           {saved ? <Check data-icon="inline-start" /> : <Save data-icon="inline-start" />}
@@ -384,7 +384,7 @@ export function ManualEditorPanel({
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+      <div className="min-h-0 flex-1 overflow-auto p-6 md:p-10">
         <div className="document-paper mx-auto min-h-[42rem] max-w-[210mm]">
           <DocumentPaperHeader
             companyName={companyName}
