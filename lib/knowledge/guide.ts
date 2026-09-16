@@ -43,6 +43,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     body: "Klicka Intern revision i Manualen. Då hamnar en rad i Årshjulet. Sen syns den på Start. Det är samma kalender, inte en ny modul.",
   },
   {
+    id: "visning",
+    place: "start",
+    title: "Visa för en kollega",
+    body: "Gör tre saker: öppna Manualen och skriv 1.0, bjud in kollegan under Inställningar, lägg intern revision i Årshjulet. Noll avvikelser är bra. Det är inte fel.",
+  },
+  {
     id: "start",
     place: "start",
     title: "Startsidan",

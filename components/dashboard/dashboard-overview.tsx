@@ -9,6 +9,7 @@ import {
   Lightbulb,
   Plus,
   TriangleAlert,
+  UserPlus,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +126,28 @@ export function DashboardOverview() {
         </Card>
       ) : null}
 
+      <section aria-label="Börja här" className="grid gap-4 md:grid-cols-3">
+        <StartStep
+          href="/manual"
+          newTab
+          step="1"
+          text="Öppna boken. Skapa 1.0. Skriv hur ni faktiskt gör."
+          title="Manualen"
+        />
+        <StartStep
+          href="/installningar"
+          step="2"
+          text="Skicka mejl till en kollega. Hen klickar och går med."
+          title="Bjud in"
+        />
+        <StartStep
+          href="/arshjul"
+          step="3"
+          text="Lägg intern revision i kalendern. Den syns här på Start."
+          title="Årshjulet"
+        />
+      </section>
+
       <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" value={String(stats.openDeviations)} />
         <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" value={String(stats.openSuggestions)} />
@@ -151,6 +174,12 @@ export function DashboardOverview() {
             <Link href="/forslag">
               <Plus data-icon="inline-start" />
               Nytt förslag
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/installningar">
+              <UserPlus data-icon="inline-start" />
+              Bjud in kollega
             </Link>
           </Button>
         </div>
@@ -234,7 +263,33 @@ function Metric({
             <span className="text-sm font-medium text-muted-foreground">{label}</span>
             <Icon className="size-5 text-primary" />
           </div>
-          <p className="text-3xl font-semibold tracking-tight">{value}</p>
+          <p className="text-3xl font-bold tracking-tight">{value}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function StartStep({
+  href,
+  title,
+  text,
+  step,
+  newTab,
+}: {
+  href: string;
+  title: string;
+  text: string;
+  step: string;
+  newTab?: boolean;
+}) {
+  return (
+    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
+      <Card className="h-full bg-gradient-to-br from-card to-accent/40 shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
+        <CardContent className="flex flex-col gap-3 p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Steg {step}</p>
+          <p className="text-lg font-bold">{title}</p>
+          <p className="text-sm leading-6 text-muted-foreground">{text}</p>
         </CardContent>
       </Card>
     </Link>
