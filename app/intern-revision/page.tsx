@@ -1,15 +1,5 @@
-import { ModuleShell } from "@/components/common/module-shell";
+import { redirect } from "next/navigation";
 
 export default function InternRevisionPage() {
-  return (
-    <ModuleShell
-      title="Intern revision"
-      description="Planera, genomför och dokumentera interna revisioner enligt ISO."
-      comingSoonPoints={[
-        "Revisionsplan",
-        "Checklistor per process",
-        "Avvikelser från revision",
-      ]}
-    />
-  );
+  redirect("/arshjul");
 }
