@@ -717,6 +717,11 @@ export function ManualWorkspace({
                       Försök igen
                     </button>
                   ) : null}
+                  {status === "Lagd i årshjulet." ? (
+                    <Link className="ml-2 font-semibold text-primary underline" href="/arshjul">
+                      Öppna årshjul
+                    </Link>
+                  ) : null}
                 </span>
               ) : null}
             </div>
