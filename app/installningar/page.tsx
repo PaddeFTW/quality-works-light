@@ -42,6 +42,7 @@ export default function InstallningarPage() {
   const [role, setRole] = useState<AppRole>("viewer");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<"ok" | "fel">("ok");
 
@@ -129,26 +130,43 @@ export default function InstallningarPage() {
   async function handleInvite(event: FormEvent) {
     event.preventDefault();
     if (!session?.organizationId || !email.trim()) return;
+    setInviteBusy(true);
+    const trimmed = email.trim();
     const supabase = createClient();
     const { data, error } = await supabase
       .from("organization_invites")
       .insert({
         organization_id: session.organizationId,
-        email: email.trim(),
+        email: trimmed,
         role,
         invited_by: session.userId,
       })
       .select("token")
       .single();
     if (error || !data) {
+      setInviteBusy(false);
       notice(error?.message ?? "Kunde inte skapa inbjudan. Kör schema_phase_a.sql.", "fel");
       return;
     }
-    const url = `${window.location.origin}/ga-med?token=${data.token}`;
+    const joinPath = `/ga-med?token=${data.token}`;
+    const url = `${window.location.origin}${joinPath}`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(joinPath)}`;
+    const { error: mailError } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: redirectTo,
+      },
+    });
     setInviteUrl(url);
-    setInviteEmail(email.trim());
-    notice("Inbjudan skapad.");
+    setInviteEmail(trimmed);
     setEmail("");
+    setInviteBusy(false);
+    if (mailError) {
+      notice("Länken skapades men mejlet gick inte. Kopiera länken och skicka den själv.", "fel");
+      return;
+    }
+    notice(`Mejl skickat till ${trimmed}. Hen klickar i mejlet och går med.`);
   }
 
   if (session && session.role !== "admin") {
@@ -239,7 +257,7 @@ export default function InstallningarPage() {
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
           <h3 className="text-base font-bold">Bjud in användare</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Skapar en länk. Personen skapar eget lösenord. Du väljer roll.
+            Vi skickar ett mejl med en länk. Hen klickar, sen är hen med i företaget.
           </p>
           <form className="mt-4 flex flex-col gap-4" onSubmit={(event) => void handleInvite(event)}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -261,7 +279,9 @@ export default function InstallningarPage() {
                 </Select>
               </div>
             </div>
-            <Button type="submit">Skapa inbjudan</Button>
+            <Button disabled={inviteBusy} type="submit">
+              {inviteBusy ? "Skickar…" : "Skicka inbjudan"}
+            </Button>
           </form>
           {message ? (
             <p className={`mt-3 text-sm ${tone === "fel" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
