@@ -141,7 +141,7 @@ export function DeviationWorkspace() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="rounded-md bg-primary/10 p-3 text-primary">
+            <div className="rounded-md bg-destructive/10 p-3 text-destructive">
               <AlertTriangle className="size-5" />
             </div>
             <div>
@@ -191,11 +191,15 @@ export function DeviationWorkspace() {
                     <TableCell className="font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</TableCell>
                     <TableCell className="font-medium">{item.title}</TableCell>
                     <TableCell>
-                      <Badge variant={item.status === "closed" ? "secondary" : item.status === "in_progress" ? "outline" : "default"}>
+                      <Badge variant={item.status === "closed" ? "success" : item.status === "in_progress" ? "warning" : "destructive"}>
                         {STATUS[item.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell>{SEVERITY[item.severity]}</TableCell>
+                    <TableCell>
+                      <Badge variant={item.severity === "high" ? "destructive" : item.severity === "medium" ? "warning" : "secondary"}>
+                        {SEVERITY[item.severity]}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{formatSvDate(item.createdAt)}</TableCell>
                   </TableRow>
                 ))}

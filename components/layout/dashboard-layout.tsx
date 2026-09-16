@@ -20,7 +20,7 @@ export function DashboardLayout({
   actions,
 }: DashboardLayoutProps) {
   return (
-    <AppLayout navigation={navigation} topbarActions={actions}>
+    <AppLayout navigation={navigation}>
       <div className="space-y-6">
         <PageHeader
           actions={actions}

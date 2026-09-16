@@ -190,8 +190,9 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   background-image:
-    radial-gradient(1100px 480px at 0% -18%, color-mix(in oklab, var(--primary) 13%, transparent), transparent 58%),
-    radial-gradient(820px 360px at 100% 0%, color-mix(in oklab, var(--info) 11%, transparent), transparent 52%);
+    radial-gradient(1100px 480px at 0% -18%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 58%),
+    radial-gradient(820px 360px at 100% 0%, color-mix(in oklab, var(--info) 14%, transparent), transparent 52%),
+    radial-gradient(640px 280px at 80% 100%, color-mix(in oklab, var(--warning) 8%, transparent), transparent 55%);
   background-attachment: fixed;
 }
 

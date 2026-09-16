@@ -52,11 +52,21 @@ export function Sidebar({ items, className }: SidebarProps) {
   const isActive = (item: NavItem) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
+const NAV_TINT: Record<string, string> = {
+  "/": "text-primary",
+  "/manual": "text-info",
+  "/arshjul": "text-warning",
+  "/kompetens": "text-success",
+  "/avvikelse": "text-destructive",
+  "/forslag": "text-warning",
+  "/installningar": "text-muted-foreground",
+};
+
   const linkClass = (item: NavItem, labeled: boolean) =>
     cn(
       "flex items-center rounded-lg text-muted-foreground shadow-none transition-token hover:bg-accent hover:text-accent-foreground",
-      labeled ? "h-10 w-full gap-3 px-3 text-sm font-medium" : "size-10 justify-center",
-      isActive(item) && "bg-accent text-accent-foreground",
+      labeled ? "h-10 w-full gap-3 px-3 text-sm font-semibold" : "size-10 justify-center",
+      isActive(item) && "bg-primary text-primary-foreground shadow-token-sm hover:bg-primary hover:text-primary-foreground",
     );
 
   function NavLink({ item, labeled }: { item: NavItem; labeled: boolean }) {
@@ -71,7 +81,9 @@ export function Sidebar({ items, className }: SidebarProps) {
           rel={newTab ? "noopener noreferrer" : undefined}
           target={newTab ? "_blank" : undefined}
         >
-          {item.icon}
+          <span className={cn("inline-flex", isActive(item) ? "text-primary-foreground" : NAV_TINT[item.href] || "text-primary")}>
+            {item.icon}
+          </span>
           {labeled ? <span className="truncate">{item.title}</span> : <span className="sr-only">{item.title}</span>}
         </Link>
       </Tip>
@@ -82,7 +94,7 @@ export function Sidebar({ items, className }: SidebarProps) {
     <aside
       aria-label="Huvudnavigation"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar/90 text-sidebar-foreground shadow-token-md backdrop-blur-xl lg:static lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-t-0",
+        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar/95 text-sidebar-foreground shadow-token-md backdrop-blur-xl lg:static lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-t-0",
         collapsed ? "lg:w-14" : "lg:w-60",
         className,
       )}
