@@ -1,14 +1,9 @@
 import type { ReactNode } from "react";
 
-import { BellDot, Search } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Tip } from "@/components/ui/tooltip";
 
 interface TopbarProps {
   title?: string;
@@ -19,7 +14,7 @@ interface TopbarProps {
 
 export function Topbar({
   title = "Min arbetsyta",
-  description = "Din samlade vy f\u00f6r kvalitet och verksamhet.",
+  description = "Din samlade vy för kvalitet och verksamhet.",
   actions,
   className,
 }: TopbarProps) {
@@ -37,23 +32,11 @@ export function Topbar({
           </h2>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-72">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input aria-label="S\u00f6k" className="pl-9" placeholder="S\u00f6k..." title="S\u00f6k" />
-          </div>
-          <div className="flex items-center gap-2">
-            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-            <Tip label="Notiser">
-              <Button aria-label="Notiser" size="icon" type="button" variant="ghost">
-                <BellDot className="size-4" />
-                <span className="sr-only">Notiser</span>
-              </Button>
-            </Tip>
-            <ThemeToggle />
-            <Separator className="mx-1 hidden h-8 sm:block" orientation="vertical" />
-            <AccountMenu />
-          </div>
+        <div className="flex items-center gap-2">
+          {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+          <ThemeToggle />
+          <Separator className="mx-1 hidden h-8 sm:block" orientation="vertical" />
+          <AccountMenu />
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ import {
   missingTableMessage,
   updateYearActivity,
 } from "@/lib/ops/persist";
+import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import type { ActivityStatus, YearActivity } from "@/lib/ops/types";
 
 const MONTHS = [
@@ -53,20 +54,6 @@ const STATUS: Record<ActivityStatus, string> = {
   done: "Genomförd",
   skipped: "Inställd",
 };
-
-function laterThisYear(weeks: number) {
-  const now = new Date();
-  const date = new Date(now);
-  date.setDate(now.getDate() + weeks * 7);
-  if (date.getFullYear() !== now.getFullYear()) return `${now.getFullYear()}-12-15`;
-  return date.toISOString().slice(0, 10);
-}
-
-const PRESETS = [
-  { title: "Intern revision", kind: "revision", weeks: 6 },
-  { title: "Skyddsrond", kind: "skyddsrond", weeks: 4 },
-  { title: "Ledningens genomgång", kind: "ledning", weeks: 12 },
-] as const;
 
 export function ArshjulWorkspace() {
   const { session, loading } = useOrgSession();
@@ -105,7 +92,7 @@ export function ArshjulWorkspace() {
 
   const next = items.find((item) => item.status === "planned" && item.plannedOn >= new Date().toISOString().slice(0, 10));
 
-  async function addPreset(preset: (typeof PRESETS)[number]) {
+  async function addPreset(preset: (typeof YEAR_PRESETS)[number]) {
     if (!session?.organizationId) return;
     try {
       const row = await createYearActivity({
@@ -208,7 +195,7 @@ export function ArshjulWorkspace() {
             </p>
             {canEdit ? (
               <div className="flex flex-wrap justify-center gap-2">
-                {PRESETS.map((preset) => (
+                {YEAR_PRESETS.map((preset) => (
                   <Button key={preset.kind} onClick={() => void addPreset(preset)} type="button" variant="secondary">
                     {preset.title}
                   </Button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { LifeBuoy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,18 +12,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tip } from "@/components/ui/tooltip";
-import { articlesFor } from "@/lib/knowledge/guide";
+import { articlesFor, type GuideArticle } from "@/lib/knowledge/guide";
+
+function placeFromPath(path: string): GuideArticle["place"] {
+  if (path.startsWith("/manual")) return "manual";
+  if (path.startsWith("/arshjul")) return "arshjul";
+  return "start";
+}
 
 export function HelperDock() {
   const [open, setOpen] = useState(false);
-  const articles = articlesFor("start");
+  const path = usePathname() || "/";
+  const articles = articlesFor(placeFromPath(path));
 
   return (
     <>
-      <Tip label="Vägledning">
+      <Tip label="Hjälp">
         <Button
-          aria-label="Vägledning"
-          className="fixed bottom-4 right-4 z-40 size-12 rounded-full shadow-token-lg"
+          aria-label="Hjälp"
+          className="fixed bottom-4 right-4 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-token-lg"
           onClick={() => setOpen(true)}
           size="icon"
           type="button"
@@ -33,18 +41,15 @@ export function HelperDock() {
       <Dialog onOpenChange={setOpen} open={open}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Vägledning</DialogTitle>
+            <DialogTitle>Hjälp</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
             {articles.map((article) => (
               <section key={article.id}>
-                <h3 className="font-medium">{article.title}</h3>
+                <h3 className="font-bold">{article.title}</h3>
                 <p className="mt-1 leading-6 text-muted-foreground">{article.body}</p>
               </section>
             ))}
-            <p className="text-xs text-muted-foreground">
-              Färdiga svar från kunskapsbanken. En pratande hjälpreda kommer senare.
-            </p>
           </div>
         </DialogContent>
       </Dialog>
