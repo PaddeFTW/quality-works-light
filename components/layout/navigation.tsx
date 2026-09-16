@@ -34,7 +34,7 @@ export const navigationGroups: NavGroup[] = [
     label: "Resurser & intressenter",
     items: [
       {
-        title: "Personal- och kompetensutveckling",
+        title: "Personal",
         href: "/kompetens",
         icon: <Users className="size-4" />,
       },
@@ -107,7 +107,7 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/avvikelse", "/forslag"] as const;
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/avvikelse", "/forslag", "/kompetens"] as const;
 
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 

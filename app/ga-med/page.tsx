@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,12 @@ function JoinForm() {
   const token = params.get("token") ?? "";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }) => setLoggedIn(Boolean(data.user)));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,20 +34,26 @@ function JoinForm() {
     const password = String(form.get("password") ?? "");
 
     const supabase = createClient();
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (signUpError || !signUpData.user) {
-      setLoading(false);
-      setError(signUpError?.message ?? "Kunde inte skapa konto");
-      return;
-    }
-    if (!signUpData.session) {
-      setLoading(false);
-      setError("Bekräfta e-post eller stäng av e-postbekräftelse i Supabase, logga sedan in och öppna länken igen.");
-      return;
+    const { data: existing } = await supabase.auth.getUser();
+    let userId = existing.user?.id ?? null;
+
+    if (!userId) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      if (signUpError || !signUpData.user) {
+        setLoading(false);
+        setError(signUpError?.message ?? "Kunde inte skapa konto");
+        return;
+      }
+      if (!signUpData.session) {
+        setLoading(false);
+        setError("Bekräfta e-post eller stäng av e-postbekräftelse i Supabase, logga sedan in och öppna länken igen.");
+        return;
+      }
+      userId = signUpData.user.id;
     }
 
     const { data: invite, error: inviteError } = await supabase
@@ -58,7 +70,7 @@ function JoinForm() {
 
     const { error: memberError } = await supabase.from("organization_members").insert({
       organization_id: invite.organization_id,
-      user_id: signUpData.user.id,
+      user_id: userId,
       role: invite.role,
     });
     if (memberError) {
@@ -87,18 +99,24 @@ function JoinForm() {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="space-y-2">
-        <Label htmlFor="full-name">Namn</Label>
-        <Input id="full-name" name="full-name" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">E-post</Label>
-        <Input id="email" name="email" required type="email" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Lösenord</Label>
-        <Input id="password" minLength={6} name="password" required type="password" />
-      </div>
+      {loggedIn ? (
+        <p className="text-sm text-muted-foreground">Du är redan inloggad. Klicka för att gå med i företaget.</p>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="full-name">Namn</Label>
+            <Input id="full-name" name="full-name" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">E-post</Label>
+            <Input id="email" name="email" required type="email" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Lösenord</Label>
+            <Input id="password" minLength={6} name="password" required type="password" />
+          </div>
+        </>
+      )}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button className="w-full" disabled={loading} type="submit">
         {loading ? "Ansluter…" : "Gå med i företaget"}
