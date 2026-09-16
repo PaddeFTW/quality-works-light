@@ -95,11 +95,11 @@ export function AccountMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/installningar")}>
             <User />
-            Profil
+            Mitt konto
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/installningar")}>
             <Settings />
             Inställningar
           </DropdownMenuItem>

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { isModuleVisible, type AppRole } from "@/lib/features";
+import { ROLE_LABEL, isModuleVisible } from "@/lib/features";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { navigation, primaryNavHrefs } from "@/components/layout/navigation";
@@ -21,12 +21,6 @@ interface SidebarProps {
   footer?: ReactNode;
   className?: string;
 }
-
-const ROLE: Record<AppRole, string> = {
-  viewer: "Läsare",
-  editor: "Redaktör",
-  admin: "Administratör",
-};
 
 const SIDEBAR_KEY = "qw.sidebar.collapsed";
 
@@ -105,7 +99,7 @@ export function Sidebar({ items, className }: SidebarProps) {
         ) : (
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-bold">Quality Works Light</p>
-            <p className="truncate text-xs text-muted-foreground">{ROLE[role]}</p>
+            <p className="truncate text-xs text-muted-foreground">{ROLE_LABEL[role]}</p>
           </div>
         )}
       </div>

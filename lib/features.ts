@@ -41,6 +41,12 @@ const roleRank: Record<AppRole, number> = {
   admin: 3,
 };
 
+export const ROLE_LABEL: Record<AppRole, string> = {
+  viewer: "Läsare",
+  editor: "Redigerare",
+  admin: "Administratör",
+};
+
 export function roleAtLeast(userRole: AppRole, minRole: AppRole) {
   return roleRank[userRole] >= roleRank[minRole];
 }
@@ -52,7 +58,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "swot", href: "/swot", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "mal", href: "/mal", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "arshjul", href: "/arshjul", enabled: true, minRole: "viewer", viewerAccess: "read" },
-  { key: "kompetens", href: "/kompetens", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "kompetens", href: "/kompetens", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "kund", href: "/kund", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "leverantor", href: "/leverantor", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "lagar", href: "/lagar", enabled: true, minRole: "editor", viewerAccess: "read" },
