@@ -22,7 +22,7 @@ export function HelperDock() {
       <Tip label="Vägledning">
         <Button
           aria-label="Vägledning"
-          className="fixed bottom-4 right-4 z-40 size-11 rounded-full shadow-md"
+          className="fixed bottom-4 right-4 z-40 size-12 rounded-full shadow-token-lg"
           onClick={() => setOpen(true)}
           size="icon"
           type="button"

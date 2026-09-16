@@ -88,7 +88,7 @@ export function Sidebar({ items, className }: SidebarProps) {
     <aside
       aria-label="Huvudnavigation"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar text-sidebar-foreground shadow-sm lg:static lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-t-0",
+        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar/90 text-sidebar-foreground shadow-token-md backdrop-blur-xl lg:static lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-t-0",
         collapsed ? "lg:w-14" : "lg:w-60",
         className,
       )}
@@ -104,7 +104,7 @@ export function Sidebar({ items, className }: SidebarProps) {
           <span className="sr-only">Quality Works Light</span>
         ) : (
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold">Quality Works Light</p>
+            <p className="truncate text-sm font-bold">Quality Works Light</p>
             <p className="truncate text-xs text-muted-foreground">{ROLE[role]}</p>
           </div>
         )}

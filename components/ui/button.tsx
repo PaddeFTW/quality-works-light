@@ -8,22 +8,25 @@ import { cn } from "@/lib/utils";
 import { Tip } from "@/components/ui/tooltip";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none ring-offset-background transition-token disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold outline-none ring-offset-background transition-token disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[1.15rem] [&_svg]:shrink-0 [&_svg]:stroke-[2.25] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-token-sm hover:bg-primary/90",
-        secondary: "bg-secondary text-secondary-foreground shadow-token-xs hover:bg-secondary/90",
-        outline: "border bg-background shadow-token-xs hover:bg-accent hover:text-accent-foreground",
+        default:
+          "bg-primary text-primary-foreground shadow-token-md hover:-translate-y-px hover:bg-primary/90",
+        secondary:
+          "border border-primary/15 bg-secondary text-secondary-foreground shadow-token-xs hover:-translate-y-px hover:bg-accent",
+        outline:
+          "border bg-card text-foreground shadow-token-xs hover:-translate-y-px hover:bg-accent hover:text-accent-foreground",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         destructive: "bg-destructive text-destructive-foreground shadow-token-sm hover:bg-destructive/90",
       },
       size: {
-        sm: "h-8 rounded-md px-3",
-        default: "h-9 px-4 py-2",
-        lg: "h-10 rounded-md px-5",
-        icon: "size-9",
+        sm: "h-8 rounded-lg px-3 text-xs",
+        default: "h-10 px-4 py-2",
+        lg: "h-11 rounded-xl px-5",
+        icon: "size-10",
       },
     },
     defaultVariants: {
