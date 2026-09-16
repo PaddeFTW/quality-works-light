@@ -54,6 +54,20 @@ const STATUS: Record<ActivityStatus, string> = {
   skipped: "Inställd",
 };
 
+function laterThisYear(weeks: number) {
+  const now = new Date();
+  const date = new Date(now);
+  date.setDate(now.getDate() + weeks * 7);
+  if (date.getFullYear() !== now.getFullYear()) return `${now.getFullYear()}-12-15`;
+  return date.toISOString().slice(0, 10);
+}
+
+const PRESETS = [
+  { title: "Intern revision", kind: "revision", weeks: 6 },
+  { title: "Skyddsrond", kind: "skyddsrond", weeks: 4 },
+  { title: "Ledningens genomgång", kind: "ledning", weeks: 12 },
+] as const;
+
 export function ArshjulWorkspace() {
   const { session, loading } = useOrgSession();
   const year = new Date().getFullYear();
@@ -90,6 +104,22 @@ export function ArshjulWorkspace() {
   }, [items]);
 
   const next = items.find((item) => item.status === "planned" && item.plannedOn >= new Date().toISOString().slice(0, 10));
+
+  async function addPreset(preset: (typeof PRESETS)[number]) {
+    if (!session?.organizationId) return;
+    try {
+      const row = await createYearActivity({
+        organizationId: session.organizationId,
+        title: preset.title,
+        kind: preset.kind,
+        plannedOn: laterThisYear(preset.weeks),
+        ownerName: session.fullName || "",
+      });
+      setItems((current) => [...current, row].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
+    } catch (error) {
+      setStatus(missingTableMessage(error));
+    }
+  }
 
   async function handleCreate() {
     if (!session?.organizationId || !title.trim() || !plannedOn) return;
@@ -171,12 +201,23 @@ export function ArshjulWorkspace() {
 
       {items.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-            <p className="font-medium">Årshjulet är tomt</p>
+          <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
+            <p className="font-bold">Årshjulet är tomt</p>
             <p className="max-w-md text-sm text-muted-foreground">
-              Lägg in intern revision, skyddsrond och ledningens genomgång. Då syns de på startsidan.
+              Tre vanliga jobb. Ett klick var. Sen syns de på Start.
             </p>
-            {canEdit ? <Button onClick={() => setCreateOpen(true)}>Planera första aktiviteten</Button> : null}
+            {canEdit ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {PRESETS.map((preset) => (
+                  <Button key={preset.kind} onClick={() => void addPreset(preset)} type="button" variant="secondary">
+                    {preset.title}
+                  </Button>
+                ))}
+                <Button onClick={() => setCreateOpen(true)} type="button">
+                  Annan aktivitet
+                </Button>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -261,6 +302,36 @@ export function ArshjulWorkspace() {
           </DialogHeader>
           {selected ? (
             <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="andring-titel">Namn</Label>
+                <Input
+                  disabled={!canEdit}
+                  id="andring-titel"
+                  onChange={(event) => setSelected({ ...selected, title: event.target.value })}
+                  value={selected.title}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="andring-datum">Datum</Label>
+                  <Input
+                    disabled={!canEdit}
+                    id="andring-datum"
+                    onChange={(event) => setSelected({ ...selected, plannedOn: event.target.value })}
+                    type="date"
+                    value={selected.plannedOn}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="andring-ansvar">Ansvarig</Label>
+                  <Input
+                    disabled={!canEdit}
+                    id="andring-ansvar"
+                    onChange={(event) => setSelected({ ...selected, ownerName: event.target.value })}
+                    value={selected.ownerName}
+                  />
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
                 <Select
