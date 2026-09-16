@@ -231,7 +231,7 @@ export function ArshjulWorkspace() {
                           {formatSvDate(item.plannedOn)} · {KIND[item.kind] ?? item.kind}
                         </span>
                       </span>
-                      <Badge variant={item.status === "done" ? "secondary" : "outline"}>{STATUS[item.status]}</Badge>
+                      <Badge variant={item.status === "done" ? "success" : item.status === "skipped" ? "secondary" : "warning"}>{STATUS[item.status]}</Badge>
                     </button>
                   ))
                 )}

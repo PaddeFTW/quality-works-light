@@ -20,7 +20,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-6 rounded-2xl border surface-elevated bg-gradient-to-br from-card to-accent/40 p-6 shadow-token-md lg:flex-row lg:items-end lg:justify-between",
+        "flex flex-col gap-6 rounded-2xl border border-primary/15 surface-elevated bg-gradient-to-br from-secondary via-card to-accent/50 p-6 shadow-token-md lg:flex-row lg:items-end lg:justify-between",
         className,
       )}
     >

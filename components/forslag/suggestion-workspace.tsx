@@ -174,7 +174,7 @@ export function SuggestionWorkspace() {
                     <TableCell className="font-mono text-xs text-muted-foreground">{caseNumber("F", item.number)}</TableCell>
                     <TableCell className="font-medium">{item.title}</TableCell>
                     <TableCell>
-                      <Badge variant={item.status === "done" ? "secondary" : item.status === "rejected" ? "outline" : "default"}>
+                      <Badge variant={item.status === "done" ? "success" : item.status === "rejected" ? "destructive" : item.status === "reviewing" ? "warning" : "default"}>
                         {STATUS[item.status]}
                       </Badge>
                     </TableCell>
