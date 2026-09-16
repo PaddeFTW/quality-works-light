@@ -13,10 +13,22 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     body: "Öppna Manualen och skriv hur ni jobbar. Noll avvikelser är bra. Det betyder att inget fel är anmält.",
   },
   {
-    id: "start-inbjudan",
+    id: "personal",
     place: "start",
     title: "Hur bjuder jag in någon?",
-    body: "Gå till Inställningar. Skriv personens e-post. Klicka Skicka inbjudan. Hen får ett mejl med en länk.",
+    body: "Öppna Personal eller Inställningar. Skriv e-post. Välj roll. Klicka Skicka inbjudan. Hen får ett mejl.",
+  },
+  {
+    id: "avvikelse",
+    place: "start",
+    title: "Vad är en avvikelse?",
+    body: "När något inte stämmer med hur det ska vara. Lämna vad som hänt. Noll stycken är bra.",
+  },
+  {
+    id: "forslag",
+    place: "start",
+    title: "Vad är ett förslag?",
+    body: "En idé som gör arbetet bättre. Alla kan lämna. Admin tar vidare eller avslår.",
   },
   {
     id: "start-arshjul",

@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 import { ModuleShell } from "@/components/common/module-shell";
+import { InviteForm } from "@/components/org/invite-form";
 import { useOrgSession } from "@/components/providers/org-provider";
-import { Button } from "@/components/ui/button";
 import { ROLE_LABEL } from "@/lib/features";
 import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
 
@@ -23,14 +22,22 @@ export default function KompetensPage() {
 
   return (
     <ModuleShell
-      description="Personerna i företaget. Roller och inbjudan sköts under Inställningar."
+      description="Personerna i företaget. Bjud in här. Roller kan du också ändra under Inställningar."
       title="Personal"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        {session?.role === "admin" ? (
-          <Button asChild className="self-start">
-            <Link href="/installningar">Bjud in eller ändra roll</Link>
-          </Button>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {session?.role === "admin" && session.organizationId ? (
+          <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
+            <h3 className="text-base font-bold">Bjud in</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Personen får ett mejl med en länk.</p>
+            <div className="mt-4">
+              <InviteForm
+                organizationId={session.organizationId}
+                organizationName={session.organizationName}
+                userId={session.userId}
+              />
+            </div>
+          </section>
         ) : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <ul className="flex flex-col gap-3">
