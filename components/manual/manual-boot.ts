@@ -39,8 +39,8 @@ export async function bootManualFromCloud(
   const tree = rowsToTree(bundle.docs);
   const documentIds = bundle.docs.filter((row) => row.kind === "document").map((row) => row.id);
   const [attachments, reviews] = await Promise.all([
-    loadAttachments(supabase, documentIds),
-    loadReviews(supabase, documentIds),
+    loadAttachments(supabase, documentIds).catch(() => ({})),
+    loadReviews(supabase, documentIds).catch(() => []),
   ]);
   const storedOpened = typeof window === "undefined" ? null : window.localStorage.getItem(LAST_OPENED_KEY);
   const selectedId = storedOpened && bundle.docs.some((row) => row.id === storedOpened)

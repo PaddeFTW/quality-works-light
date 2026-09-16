@@ -58,6 +58,7 @@ import {
   persistSettings,
 } from "@/lib/manual/persist";
 import { createYearActivity, missingTableMessage } from "@/lib/ops/persist";
+import { cloudReadMessage } from "@/lib/manual/cloud";
 import { latestReferralFor, openReferralFor } from "@/lib/manual/referral";
 import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
 import { firstDocumentId, insertNode, removeNode, renameNode } from "@/lib/manual/tree-ops";
@@ -170,7 +171,7 @@ export function ManualWorkspace({
           return;
         } catch (error) {
           console.error(error);
-          notice("Kunde inte läsa manualen från molnet. Försök igen.", "fel");
+          notice(cloudReadMessage(error), "fel");
           setReady(true);
           return;
         }
