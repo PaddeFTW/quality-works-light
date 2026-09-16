@@ -19,10 +19,50 @@ function JoinForm() {
   const [loading, setLoading] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
 
+  const [done, setDone] = useState(false);
+
+  async function acceptInvite(userId: string) {
+    const supabase = createClient();
+    const { data: invite, error: inviteError } = await supabase
+      .from("organization_invites")
+      .select("id, organization_id, role, accepted_at")
+      .eq("token", token)
+      .maybeSingle();
+    if (inviteError || !invite || invite.accepted_at) {
+      throw new Error("Inbjudan är ogiltig eller redan använd.");
+    }
+    const { error: memberError } = await supabase.from("organization_members").insert({
+      organization_id: invite.organization_id,
+      user_id: userId,
+      role: invite.role,
+    });
+    if (memberError && !/duplicate|unique/i.test(memberError.message)) {
+      throw new Error(memberError.message);
+    }
+    await supabase
+      .from("organization_invites")
+      .update({ accepted_at: new Date().toISOString() })
+      .eq("id", invite.id);
+  }
+
   useEffect(() => {
     const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => setLoggedIn(Boolean(data.user)));
-  }, []);
+    void supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setLoggedIn(Boolean(user));
+      if (!user || !token) return;
+      setLoading(true);
+      try {
+        await acceptInvite(user.id);
+        setDone(true);
+        router.push("/");
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Kunde inte gå med.");
+        setLoading(false);
+      }
+    });
+  }, [token, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,8 +72,8 @@ function JoinForm() {
     const fullName = String(form.get("full-name") ?? "").trim();
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-
     const supabase = createClient();
+
     const { data: existing } = await supabase.auth.getUser();
     let userId = existing.user?.id ?? null;
 
@@ -56,37 +96,14 @@ function JoinForm() {
       userId = signUpData.user.id;
     }
 
-    const { data: invite, error: inviteError } = await supabase
-      .from("organization_invites")
-      .select("id, organization_id, role, accepted_at")
-      .eq("token", token)
-      .maybeSingle();
-
-    if (inviteError || !invite || invite.accepted_at) {
+    try {
+      await acceptInvite(userId);
+      router.push("/");
+      router.refresh();
+    } catch (err) {
       setLoading(false);
-      setError("Inbjudan är ogiltig eller redan använd.");
-      return;
+      setError(err instanceof Error ? err.message : "Kunde inte gå med.");
     }
-
-    const { error: memberError } = await supabase.from("organization_members").insert({
-      organization_id: invite.organization_id,
-      user_id: userId,
-      role: invite.role,
-    });
-    if (memberError) {
-      setLoading(false);
-      setError(memberError.message);
-      return;
-    }
-
-    await supabase
-      .from("organization_invites")
-      .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
-
-    setLoading(false);
-    router.push("/");
-    router.refresh();
   }
 
   if (!token) {
@@ -100,7 +117,9 @@ function JoinForm() {
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {loggedIn ? (
-        <p className="text-sm text-muted-foreground">Du är redan inloggad. Klicka för att gå med i företaget.</p>
+        <p className="text-sm text-muted-foreground">
+          {done || loading ? "Du går med i företaget…" : "Du är inloggad. Klicka för att gå med."}
+        </p>
       ) : (
         <>
           <div className="space-y-2">
