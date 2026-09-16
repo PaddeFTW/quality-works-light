@@ -20,7 +20,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-6 rounded-2xl border surface-elevated p-6 shadow-token-sm lg:flex-row lg:items-end lg:justify-between",
+        "flex flex-col gap-6 rounded-2xl border surface-elevated bg-gradient-to-br from-card to-accent/40 p-6 shadow-token-md lg:flex-row lg:items-end lg:justify-between",
         className,
       )}
     >
@@ -31,7 +31,7 @@ export function PageHeader({
           </p>
         ) : null}
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold sm:text-4xl">{title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
           {description ? (
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
               {description}

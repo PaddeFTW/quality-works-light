@@ -77,7 +77,7 @@ export function DashboardOverview() {
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium capitalize text-primary">{todayLabel}</p>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             {greetingName ? `Hej ${greetingName}` : "Hej"}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
@@ -228,7 +228,7 @@ function Metric({
 }) {
   return (
     <Link href={href} rel={href.startsWith("/manual") ? "noopener noreferrer" : undefined} target={href.startsWith("/manual") ? "_blank" : undefined}>
-      <Card className="h-full shadow-sm transition-token hover:-translate-y-0.5 hover:shadow-md">
+      <Card className="h-full shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
         <CardContent className="flex flex-col gap-5 p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-muted-foreground">{label}</span>
