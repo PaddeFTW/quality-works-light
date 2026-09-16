@@ -81,14 +81,22 @@ export async function ensureManual(
   return data.id;
 }
 
+export function cloudReadMessage(error: unknown) {
+  const text = error instanceof Error ? error.message : String(error ?? "");
+  if (/kind|review_status|column|does not exist|schema cache/i.test(text)) {
+    return "Databasen saknar kolumner. Kör schema_manual_fix.sql i Supabase.";
+  }
+  if (/permission|rls|policy|not authorized/i.test(text)) {
+    return "Databasen stoppar läsningen. Kör schema_manual_fix.sql i Supabase.";
+  }
+  return text ? `Kunde inte läsa manualen. ${text}` : "Kunde inte läsa manualen från molnet.";
+}
+
 export async function loadManualBundle(supabase: SupabaseClient, manualId: string) {
-  const [{ data: manual, error: manualError }, { data: docs, error: docsError }, { data: versions, error: versionsError }] =
+  const [{ data: manual, error: manualError }, { data: docs, error: docsError }, versionsResult] =
     await Promise.all([
       supabase.from("manuals").select("*").eq("id", manualId).single(),
-      supabase
-        .from("manual_documents")
-        .select("id, manual_id, parent_id, slug, title, kind, sort_order, draft_html, review_status")
-        .eq("manual_id", manualId),
+      supabase.from("manual_documents").select("*").eq("manual_id", manualId),
       supabase
         .from("document_versions")
         .select("id, document_id, edition, content_html, published_at, published_by")
@@ -96,12 +104,23 @@ export async function loadManualBundle(supabase: SupabaseClient, manualId: strin
     ]);
   if (manualError) throw manualError;
   if (docsError) throw docsError;
-  if (versionsError) throw versionsError;
+
+  const docsRows = ((docs ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    manual_id: String(row.manual_id),
+    parent_id: (row.parent_id as string | null) ?? null,
+    slug: String(row.slug ?? row.id),
+    title: String(row.title ?? ""),
+    kind: row.kind === "folder" ? "folder" : "document",
+    sort_order: Number(row.sort_order ?? 0),
+    draft_html: String(row.draft_html ?? ""),
+    review_status: String(row.review_status ?? "draft"),
+  })) as DocRow[];
 
   return {
     manual,
-    docs: (docs ?? []) as DocRow[],
-    versions: versions ?? [],
+    docs: docsRows,
+    versions: versionsResult.error ? [] : versionsResult.data ?? [],
   };
 }
 
