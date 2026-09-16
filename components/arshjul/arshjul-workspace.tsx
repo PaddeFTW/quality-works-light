@@ -94,6 +94,10 @@ export function ArshjulWorkspace() {
 
   async function addPreset(preset: (typeof YEAR_PRESETS)[number]) {
     if (!session?.organizationId) return;
+    if (items.some((item) => item.kind === preset.kind)) {
+      setStatus(`${preset.title} finns redan i år.`);
+      return;
+    }
     try {
       const row = await createYearActivity({
         organizationId: session.organizationId,
@@ -103,6 +107,7 @@ export function ArshjulWorkspace() {
         ownerName: session.fullName || "",
       });
       setItems((current) => [...current, row].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
+      setStatus(null);
     } catch (error) {
       setStatus(missingTableMessage(error));
     }
@@ -186,24 +191,33 @@ export function ArshjulWorkspace() {
         </Card>
       </div>
 
+      {canEdit ? (
+        <div className="flex flex-wrap gap-2">
+          {YEAR_PRESETS.map((preset) => (
+            <Button
+              key={preset.kind}
+              disabled={items.some((item) => item.kind === preset.kind)}
+              onClick={() => void addPreset(preset)}
+              type="button"
+              variant="secondary"
+            >
+              {preset.title}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+
       {items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
             <p className="font-bold">Årshjulet är tomt</p>
             <p className="max-w-md text-sm text-muted-foreground">
-              Tre vanliga jobb. Ett klick var. Sen syns de på Start.
+              Klicka en av knapparna ovan. Ett klick räcker. Sen syns jobbet på Start.
             </p>
             {canEdit ? (
-              <div className="flex flex-wrap justify-center gap-2">
-                {YEAR_PRESETS.map((preset) => (
-                  <Button key={preset.kind} onClick={() => void addPreset(preset)} type="button" variant="secondary">
-                    {preset.title}
-                  </Button>
-                ))}
-                <Button onClick={() => setCreateOpen(true)} type="button">
-                  Annan aktivitet
-                </Button>
-              </div>
+              <Button onClick={() => setCreateOpen(true)} type="button">
+                Annan aktivitet
+              </Button>
             ) : null}
           </CardContent>
         </Card>

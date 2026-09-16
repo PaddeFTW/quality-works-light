@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InviteForm } from "@/components/org/invite-form";
 import { ROLE_LABEL, type AppRole } from "@/lib/features";
 import { createClient } from "@/lib/supabase/client";
 
@@ -38,11 +39,6 @@ export default function InstallningarPage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [companyName, setCompanyName] = useState("");
   const [myName, setMyName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<AppRole>("viewer");
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteBusy, setInviteBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<"ok" | "fel">("ok");
 
@@ -127,48 +123,6 @@ export default function InstallningarPage() {
     notice("Personen är borttagen.");
   }
 
-  async function handleInvite(event: FormEvent) {
-    event.preventDefault();
-    if (!session?.organizationId || !email.trim()) return;
-    setInviteBusy(true);
-    const trimmed = email.trim();
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("organization_invites")
-      .insert({
-        organization_id: session.organizationId,
-        email: trimmed,
-        role,
-        invited_by: session.userId,
-      })
-      .select("token")
-      .single();
-    if (error || !data) {
-      setInviteBusy(false);
-      notice(error?.message ?? "Kunde inte skapa inbjudan. Kör schema_phase_a.sql.", "fel");
-      return;
-    }
-    const joinPath = `/ga-med?token=${data.token}`;
-    const url = `${window.location.origin}${joinPath}`;
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(joinPath)}`;
-    const { error: mailError } = await supabase.auth.signInWithOtp({
-      email: trimmed,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: redirectTo,
-      },
-    });
-    setInviteUrl(url);
-    setInviteEmail(trimmed);
-    setEmail("");
-    setInviteBusy(false);
-    if (mailError) {
-      notice("Länken skapades men mejlet gick inte. Kopiera länken och skicka den själv.", "fel");
-      return;
-    }
-    notice(`Mejl skickat till ${trimmed}. Hen klickar i mejlet och går med.`);
-  }
-
   if (session && session.role !== "admin") {
     return (
       <ModuleShell
@@ -179,13 +133,12 @@ export default function InstallningarPage() {
     );
   }
 
-  const mailHref = inviteUrl
-    ? `mailto:${encodeURIComponent(inviteEmail)}?subject=${encodeURIComponent(`Inbjudan till ${session?.organizationName ?? "Quality Works"}`)}&body=${encodeURIComponent(`Du är inbjuden till ledningssystemet.\n\nÖppna länken och skapa ditt konto:\n${inviteUrl}\n`)}`
-    : null;
-
   return (
     <ModuleShell description="Företag, användare, roller och hur programmet ser ut." title="Inställningar">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-1 py-2">
+        {message ? (
+          <p className={`text-sm ${tone === "fel" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
+        ) : null}
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
           <h3 className="text-base font-bold">Företag</h3>
           <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(event) => void saveCompany(event)}>
@@ -259,48 +212,15 @@ export default function InstallningarPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Vi skickar ett mejl med en länk. Hen klickar, sen är hen med i företaget.
           </p>
-          <form className="mt-4 flex flex-col gap-4" onSubmit={(event) => void handleInvite(event)}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="invite-email">E-post</Label>
-                <Input id="invite-email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
-              </div>
-              <div className="space-y-2">
-                <Label>Roll</Label>
-                <Select onValueChange={(value) => setRole(value as AppRole)} value={role}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">{ROLE_LABEL.viewer} (läsa)</SelectItem>
-                    <SelectItem value="editor">{ROLE_LABEL.editor}</SelectItem>
-                    <SelectItem value="admin">{ROLE_LABEL.admin}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button disabled={inviteBusy} type="submit">
-              {inviteBusy ? "Skickar…" : "Skicka inbjudan"}
-            </Button>
-          </form>
-          {message ? (
-            <p className={`mt-3 text-sm ${tone === "fel" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
-          ) : null}
-          {inviteUrl ? (
-            <div className="mt-3 flex flex-col gap-2">
-              <p className="break-all rounded-md bg-muted p-3 text-xs">{inviteUrl}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void navigator.clipboard.writeText(inviteUrl)} size="sm" type="button" variant="outline">
-                  Kopiera länk
-                </Button>
-                {mailHref ? (
-                  <Button asChild size="sm">
-                    <a href={mailHref}>Öppna e-post</a>
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
+          <div className="mt-4">
+            {session?.organizationId && session.userId ? (
+              <InviteForm
+                organizationId={session.organizationId}
+                organizationName={session.organizationName}
+                userId={session.userId}
+              />
+            ) : null}
+          </div>
         </section>
       </div>
     </ModuleShell>
