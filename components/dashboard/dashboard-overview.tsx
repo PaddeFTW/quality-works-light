@@ -22,7 +22,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useOrgSession } from "@/components/providers/org-provider";
-import { caseNumber, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
+import { caseNumber, createYearActivity, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
+import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import { loadMyOpenReferrals } from "@/lib/manual/cloud";
 import type { OpsStats } from "@/lib/ops/types";
 import type { ReviewRequest } from "@/types/domain";
@@ -73,6 +74,23 @@ export function DashboardOverview() {
 
   const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
+  async function addPreset(preset: (typeof YEAR_PRESETS)[number]) {
+    if (!session?.organizationId) return;
+    try {
+      await createYearActivity({
+        organizationId: session.organizationId,
+        title: preset.title,
+        kind: preset.kind,
+        plannedOn: laterThisYear(preset.weeks),
+        ownerName: session.fullName || "",
+      });
+      setStats(await loadOpsStats(session.organizationId));
+      setStatus(null);
+    } catch (error) {
+      setStatus(missingTableMessage(error));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -85,7 +103,7 @@ export function DashboardOverview() {
             Det som behöver göras i ledningssystemet, idag.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="bg-primary text-primary-foreground shadow-token-md">
           <Link href="/manual" rel="noopener noreferrer" target="_blank">
             <Plus data-icon="inline-start" />
             Öppna manual
@@ -223,7 +241,21 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {stats.upcomingActivities.length === 0 ? (
-              <p className="px-2 py-4 text-sm text-muted-foreground">Inga planerade aktiviteter ännu.</p>
+              <div className="flex flex-col gap-3 px-1 py-2">
+                <p className="text-sm text-muted-foreground">Inget inlagt än. Ett klick räcker:</p>
+                <div className="flex flex-col gap-2">
+                  {YEAR_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.kind}
+                      onClick={() => void addPreset(preset)}
+                      type="button"
+                      variant="secondary"
+                    >
+                      {preset.title}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <ul className="flex flex-col gap-2">
                 {stats.upcomingActivities.map((item) => (
@@ -257,11 +289,13 @@ function Metric({
 }) {
   return (
     <Link href={href} rel={href.startsWith("/manual") ? "noopener noreferrer" : undefined} target={href.startsWith("/manual") ? "_blank" : undefined}>
-      <Card className="h-full shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
+      <Card className="h-full border-primary/20 bg-gradient-to-br from-secondary/80 to-card shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
         <CardContent className="flex flex-col gap-5 p-5">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-muted-foreground">{label}</span>
-            <Icon className="size-5 text-primary" />
+            <span className="rounded-md bg-primary/10 p-2 text-primary">
+              <Icon className="size-4" />
+            </span>
           </div>
           <p className="text-3xl font-bold tracking-tight">{value}</p>
         </CardContent>
@@ -283,9 +317,15 @@ function StartStep({
   step: string;
   newTab?: boolean;
 }) {
+  const tint =
+    step === "1"
+      ? "border-primary/30 bg-gradient-to-br from-secondary to-card"
+      : step === "2"
+        ? "border-info/25 bg-gradient-to-br from-accent to-card"
+        : "border-warning/25 bg-gradient-to-br from-secondary/50 to-card";
   return (
     <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className="h-full bg-gradient-to-br from-card to-accent/40 shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
+      <Card className={`h-full ${tint} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
         <CardContent className="flex flex-col gap-3 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Steg {step}</p>
           <p className="text-lg font-bold">{title}</p>

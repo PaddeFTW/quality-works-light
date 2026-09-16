@@ -2,57 +2,63 @@ export interface GuideArticle {
   id: string;
   title: string;
   body: string;
-  place?: "manual" | "start" | "all";
+  place?: "manual" | "start" | "arshjul" | "all";
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
   {
-    id: "manual-nav",
+    id: "start-forst",
+    place: "start",
+    title: "Vad gör jag först?",
+    body: "Öppna Manualen och skriv hur ni jobbar. Noll avvikelser är bra. Det betyder att inget fel är anmält.",
+  },
+  {
+    id: "start-inbjudan",
+    place: "start",
+    title: "Hur bjuder jag in någon?",
+    body: "Gå till Inställningar. Skriv personens e-post. Klicka Skicka inbjudan. Hen får ett mejl med en länk.",
+  },
+  {
+    id: "start-arshjul",
+    place: "start",
+    title: "Vad är Årshjulet?",
+    body: "Kalendern för jobb som kommer varje år. Intern revision, skyddsrond och ledningens genomgång. Klicka Årshjul i menyn till vänster.",
+  },
+  {
+    id: "manual-vad",
     place: "manual",
     title: "Vad är Manualen?",
-    body: "Manualen är boken för hur ni jobbar. Trädet till vänster är kapitel. Mitten är papperet. Original är det som gäller. Arbetsmanual är kladden.",
+    body: "Det är boken för hur ni jobbar. Till vänster är kapitel. I mitten är papperet. Original är det som gäller. Arbetsmanual är kladden.",
   },
   {
-    id: "skapa-10",
+    id: "manual-10",
     place: "manual",
-    title: "Skapa 1.0",
-    body: "Första bladet får nummer 1.0. Numret låses. Namnet väljer du. Många tar Ledningssystemet, men det är bara ett förslag.",
+    title: "Skapa första bladet",
+    body: "Klicka Skapa 1.0. Numret låses. Namnet väljer du själv. Ledningssystemet är bara ett förslag.",
   },
   {
-    id: "editor",
-    place: "manual",
-    title: "Skriva i bladet",
-    body: "Markera text och välj typsnitt, storlek, färg och justering. Spara ofta. Öppna i Word laddar ner en fil som Word kan öppna.",
-  },
-  {
-    id: "publicera",
+    id: "manual-spara",
     place: "manual",
     title: "Spara och publicera",
-    body: "Spara ofta. Publicera när texten stämmer. Då låses en utgåva. Andra läser originalet, inte kladden.",
+    body: "Spara medan du skriver. Publicera när texten stämmer. Då kan andra läsa originalet.",
   },
   {
-    id: "remiss",
+    id: "manual-remiss",
     place: "manual",
-    title: "Remiss",
-    body: "Skicka bladet till en kollega. Hen svarar Godkänn eller Avstyrk. Du kan inte publicera medan du väntar.",
+    title: "Vad är remiss?",
+    body: "Du skickar bladet till någon i företaget. Hen svarar Godkänn eller Avstyrk. Vänta in svaret innan du publicerar.",
   },
   {
     id: "revision",
     place: "all",
     title: "Intern revision",
-    body: "Klicka Intern revision i Manualen. Då hamnar en rad i Årshjulet. Sen syns den på Start. Det är samma kalender, inte en ny modul.",
+    body: "Ett återkommande jobb. Lägg det i Årshjulet. Då syns datumet på Start. Du kan också lägga in det från ett blad i Manualen.",
   },
   {
-    id: "visning",
-    place: "start",
-    title: "Visa för en kollega",
-    body: "Gör tre saker: öppna Manualen och skriv 1.0, bjud in kollegan under Inställningar, lägg intern revision i Årshjulet. Noll avvikelser är bra. Det är inte fel.",
-  },
-  {
-    id: "start",
-    place: "start",
-    title: "Startsidan",
-    body: "Start visar det som behöver göras nu: öppna avvikelser, förslag, årshjul och remisser.",
+    id: "arshjul-tom",
+    place: "arshjul",
+    title: "Hur fyller jag årshjulet?",
+    body: "Om det är tomt: klicka Intern revision, Skyddsrond eller Ledningens genomgång. Ett klick räcker. Sen kan du byta datum.",
   },
 ];
 

@@ -35,7 +35,7 @@ export function GuidancePanel({
           </section>
         ))}
         <p className="text-xs text-muted-foreground">
-          Detta är färdiga svar från kunskapsbanken. En pratande hjälpreda kommer senare. Den ska inte hitta på.
+          Korta svar om hur du gör. Inget måste.
         </p>
       </div>
     </aside>
