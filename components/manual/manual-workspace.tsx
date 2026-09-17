@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Home, LifeBuoy, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +99,6 @@ type ViewMode = "normal" | "focus" | "full";
 type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | "remiss" | "respond" | "audit" | null;
 
 export function ManualWorkspace({
-  initialView = "normal",
   openDocumentId = null,
 }: {
   initialView?: ViewMode;
@@ -119,7 +120,6 @@ export function ManualWorkspace({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
   const [treeOpen, setTreeOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [dialog, setDialog] = useState<DialogMode>(null);
   const [dialogTarget, setDialogTarget] = useState<ManualNode | null>(null);
   const [dialogName, setDialogName] = useState("");
@@ -219,11 +219,14 @@ export function ManualWorkspace({
   const published = versions[0] ?? null;
   const edition = published?.edition ?? 0;
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
-  const hideTree = viewMode === "focus";
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const binderRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const toggleFullscreen = async () => {
+    const node = binderRef.current;
+    if (!node) return;
     if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
+    else await node.requestFullscreen();
   };
 
   useEffect(() => {
@@ -627,12 +630,27 @@ export function ManualWorkspace({
   }
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/50">
-      {hideTree ? null : (
-        <aside className="hidden w-[288px] shrink-0 border-r bg-sidebar md:flex md:flex-col">
-          <ManualTree {...treeProps} />
-        </aside>
-      )}
+    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/50" ref={binderRef}>
+      <aside
+        className={cn(
+          "hidden shrink-0 border-r bg-sidebar md:flex md:flex-col",
+          treeCollapsed ? "w-12" : "w-[288px]",
+        )}
+      >
+        {treeCollapsed ? (
+          <Button
+            aria-label="Visa innehållet"
+            className="m-2"
+            onClick={() => setTreeCollapsed(false)}
+            size="icon"
+            variant="ghost"
+          >
+            <PanelLeft />
+          </Button>
+        ) : (
+          <ManualTree onCollapse={() => setTreeCollapsed(true)} {...treeProps} />
+        )}
+      </aside>
       <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
         <DialogContent className="h-[80vh] p-0 md:hidden">
           <DialogHeader className="sr-only">
@@ -665,10 +683,33 @@ export function ManualWorkspace({
                 </Link>
               </Button>
               <div className="flex overflow-hidden rounded-lg border bg-background">
-                <Button aria-label="Minimera" className="rounded-none" onClick={() => setViewMode("focus")} size="icon" variant="ghost"><Minus /></Button>
-                <Button aria-label="Fönsterläge" className="rounded-none" onClick={() => setViewMode("normal")} size="icon" variant="ghost"><Square /></Button>
+                <Button
+                  aria-label="Lämna helskärm"
+                  className="rounded-none"
+                  onClick={() => {
+                    if (document.fullscreenElement) void document.exitFullscreen();
+                  }}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Minus />
+                </Button>
+                <Button
+                  aria-label="Visa innehållet"
+                  className="rounded-none"
+                  onClick={() => {
+                    setTreeCollapsed(false);
+                    if (document.fullscreenElement) void document.exitFullscreen();
+                  }}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Square />
+                </Button>
                 <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} className="rounded-none" onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
-                <Button aria-label="Stäng manualen" className="rounded-none" onClick={() => window.history.back()} size="icon" variant="ghost"><X /></Button>
+                <Button aria-label="Stäng manualen" className="rounded-none" asChild variant="ghost">
+                  <Link href="/"><X /></Link>
+                </Button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pb-3">
