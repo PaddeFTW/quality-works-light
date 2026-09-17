@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
-  ClipboardCheck,
   FileText,
   Lightbulb,
   Plus,
@@ -96,9 +95,9 @@ export function DashboardOverview() {
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium capitalize text-primary">{todayLabel}</p>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             {greetingName ? `Hej ${greetingName}` : "Hej"}
-          </h2>
+          </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             Det som behöver göras i ledningssystemet, idag.
           </p>
@@ -167,10 +166,10 @@ export function DashboardOverview() {
       </section>
 
       <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" value={String(stats.openDeviations)} />
-        <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" value={String(stats.openSuggestions)} />
-        <Metric href="/arshjul" icon={CalendarDays} label="Aktiviteter 30 dagar" value={String(stats.upcomingActivities.length)} />
-        <Metric href="/manual" icon={ClipboardCheck} label="Manual" value="Öppna" />
+        <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" tone="danger" value={String(stats.openDeviations)} />
+        <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" tone="warn" value={String(stats.openSuggestions)} />
+        <Metric href="/arshjul" icon={CalendarDays} label="Aktiviteter 30 dagar" tone="info" value={String(stats.upcomingActivities.length)} />
+        <Metric href="/manual" icon={FileText} label="Manualen" newTab tone="ok" value="Öppna" />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -281,23 +280,39 @@ function Metric({
   icon: Icon,
   label,
   value,
+  tone = "ok",
+  newTab,
 }: {
   href: string;
   icon: typeof TriangleAlert;
   label: string;
   value: string;
+  tone?: "ok" | "warn" | "danger" | "info";
+  newTab?: boolean;
 }) {
+  const tints = {
+    ok: "border-primary/30 bg-gradient-to-br from-secondary to-card",
+    warn: "border-warning/35 bg-gradient-to-br from-warning/10 to-card",
+    danger: "border-destructive/30 bg-gradient-to-br from-destructive/10 to-card",
+    info: "border-info/30 bg-gradient-to-br from-info/10 to-card",
+  };
+  const iconTints = {
+    ok: "bg-primary/15 text-primary",
+    warn: "bg-warning/15 text-warning",
+    danger: "bg-destructive/15 text-destructive",
+    info: "bg-info/15 text-info",
+  };
   return (
-    <Link href={href} rel={href.startsWith("/manual") ? "noopener noreferrer" : undefined} target={href.startsWith("/manual") ? "_blank" : undefined}>
-      <Card className="h-full border-primary/20 bg-gradient-to-br from-secondary/80 to-card shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg">
+    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
+      <Card className={`h-full ${tints[tone]} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
         <CardContent className="flex flex-col gap-5 p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">{label}</span>
-            <span className="rounded-md bg-primary/10 p-2 text-primary">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-foreground">{label}</span>
+            <span className={`rounded-lg p-2 ${iconTints[tone]}`}>
               <Icon className="size-4" />
             </span>
           </div>
-          <p className="text-3xl font-bold tracking-tight">{value}</p>
+          <p className="text-4xl font-bold tracking-tight">{value}</p>
         </CardContent>
       </Card>
     </Link>
@@ -325,11 +340,12 @@ function StartStep({
         : "border-warning/25 bg-gradient-to-br from-secondary/50 to-card";
   return (
     <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className={`h-full ${tint} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
-        <CardContent className="flex flex-col gap-3 p-5">
+      <Card className={`h-full border ${tint} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
+        <CardContent className="flex h-full flex-col gap-3 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Steg {step}</p>
-          <p className="text-lg font-bold">{title}</p>
+          <p className="text-xl font-bold">{title}</p>
           <p className="text-sm leading-6 text-muted-foreground">{text}</p>
+          <p className="mt-auto pt-2 text-sm font-semibold text-primary">Öppna →</p>
         </CardContent>
       </Card>
     </Link>

@@ -94,7 +94,7 @@ const NAV_TINT: Record<string, string> = {
     <aside
       aria-label="Huvudnavigation"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar/95 text-sidebar-foreground shadow-token-md backdrop-blur-xl lg:static lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-t-0",
+        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar text-sidebar-foreground lg:static lg:h-full lg:w-60 lg:flex-col lg:border-r lg:border-t-0",
         collapsed ? "lg:w-14" : "lg:w-60",
         className,
       )}
@@ -118,14 +118,25 @@ const NAV_TINT: Record<string, string> = {
 
       <nav
         className={cn(
-          "flex w-full items-center justify-around gap-1 px-2 lg:flex-1 lg:flex-col lg:justify-start lg:py-3",
+          "flex w-full items-center justify-around gap-1 px-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:justify-start lg:overflow-y-auto lg:py-3",
           collapsed ? "lg:items-center lg:gap-1 lg:px-2" : "lg:items-stretch lg:gap-1 lg:px-3",
         )}
       >
         {primary.map((item) => (
           <NavLink item={item} key={item.href} labeled={!collapsed} />
         ))}
-        <div className="hidden flex-1 lg:block" />
+        {settings ? (
+          <span className="lg:hidden">
+            <NavLink item={settings} labeled={false} />
+          </span>
+        ) : null}
+      </nav>
+      <div
+        className={cn(
+          "hidden shrink-0 border-t lg:flex lg:flex-col lg:gap-1 lg:py-2",
+          collapsed ? "lg:items-center lg:px-2" : "lg:px-3",
+        )}
+      >
         {settings ? <NavLink item={settings} labeled={!collapsed} /> : null}
         <Tip label={collapsed ? "Visa menyn" : "Dölj menyn"} side="right">
           <Button
@@ -139,7 +150,7 @@ const NAV_TINT: Record<string, string> = {
             {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
         </Tip>
-      </nav>
+      </div>
     </aside>
   );
 }
