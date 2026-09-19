@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { Check, Home, LifeBuoy, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
 
@@ -220,6 +220,8 @@ export function ManualWorkspace({
   const edition = published?.edition ?? 0;
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
   const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const [treeWidth, setTreeWidth] = useState(300);
+  const treeWidthRef = useRef(300);
   const binderRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const toggleFullscreen = async () => {
@@ -230,10 +232,30 @@ export function ManualWorkspace({
   };
 
   useEffect(() => {
-    const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    const stored = Number(window.localStorage.getItem("qw.manual.treeWidth"));
+    if (stored >= 220 && stored <= 460) {
+      setTreeWidth(stored);
+      treeWidthRef.current = stored;
+    }
   }, []);
+
+  function startTreeResize(event: ReactMouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startW = treeWidthRef.current;
+    const move = (next: MouseEvent) => {
+      const width = Math.min(460, Math.max(220, startW + next.clientX - startX));
+      treeWidthRef.current = width;
+      setTreeWidth(width);
+    };
+    const up = () => {
+      window.localStorage.setItem("qw.manual.treeWidth", String(treeWidthRef.current));
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
 
   function notice(message: string | null, tone: "ok" | "fel" = "ok") {
     setStatus(message);
@@ -630,12 +652,10 @@ export function ManualWorkspace({
   }
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/50" ref={binderRef}>
+    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/40" ref={binderRef}>
       <aside
-        className={cn(
-          "hidden shrink-0 border-r bg-sidebar md:flex md:flex-col",
-          treeCollapsed ? "w-12" : "w-[288px]",
-        )}
+        className="relative hidden shrink-0 bg-sidebar md:flex md:flex-col"
+        style={treeCollapsed ? { width: 48 } : { width: treeWidth }}
       >
         {treeCollapsed ? (
           <Button
@@ -649,6 +669,14 @@ export function ManualWorkspace({
           </Button>
         ) : (
           <ManualTree onCollapse={() => setTreeCollapsed(true)} {...treeProps} />
+        )}
+        {treeCollapsed ? null : (
+          <button
+            aria-label="Ändra bredd på innehållet"
+            className="absolute inset-y-0 right-0 z-10 w-2 cursor-col-resize bg-transparent hover:bg-primary/25"
+            onMouseDown={startTreeResize}
+            type="button"
+          />
         )}
       </aside>
       <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
@@ -829,7 +857,7 @@ export function ManualWorkspace({
                 Du läser boken i fliken Original.
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-gradient-to-b from-muted/70 to-muted/30 p-6 md:p-10">
+              <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-[radial-gradient(900px_480px_at_50%_0%,hsl(190_45%_93%),transparent)] p-6 md:p-10">
                 <div className="document-paper flex min-h-[42rem] w-full max-w-[210mm] flex-col">
                   <DocumentPaperHeader
                     companyName={session?.organizationName || settings.name}

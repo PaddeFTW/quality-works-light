@@ -44,6 +44,7 @@ import {
 
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
 import { downloadHtmlAsFile, printIfContent } from "@/lib/export-document";
+import { cn } from "@/lib/utils";
 
 function readLocalImage(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -127,7 +128,7 @@ export function ManualEditorPanel({
       UnderlineExtension,
       ImageExtension.configure({ inline: false, allowBase64: true }),
       Placeholder.configure({
-        placeholder: "Skriv hur ni faktiskt gör…",
+        placeholder: "Klicka här och skriv. Så här gör vi på jobbet…",
         emptyEditorClass: "is-editor-empty",
       }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
@@ -174,16 +175,28 @@ export function ManualEditorPanel({
   editorRef.current = editor;
 
   const [, setTick] = useState(0);
+  const [focused, setFocused] = useState(false);
   useEffect(() => {
     if (!editor) return;
     const ping = () => setTick((n) => n + 1);
+    const onFocus = () => setFocused(true);
+    const onBlur = () => setFocused(false);
     editor.on("selectionUpdate", ping);
     editor.on("transaction", ping);
+    editor.on("focus", onFocus);
+    editor.on("blur", onBlur);
     return () => {
       editor.off("selectionUpdate", ping);
       editor.off("transaction", ping);
+      editor.off("focus", onFocus);
+      editor.off("blur", onBlur);
     };
   }, [editor]);
+
+  useEffect(() => {
+    if (!editor || !editable) return;
+    editor.commands.focus("end");
+  }, [editor, editable, documentCode]);
 
   useEffect(() => {
     if (!editor) return;
@@ -213,78 +226,23 @@ export function ManualEditorPanel({
           : "Osparat";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-muted/70 to-muted/30">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <Button disabled={!editable} onClick={onSave} size="sm" variant="outline">
-          {saved ? <Check data-icon="inline-start" /> : <Save data-icon="inline-start" />}
-          {saved ? "Sparat" : "Spara"}
-        </Button>
-        <Button disabled={!editable} onClick={onPublish} size="sm">
-          <Upload data-icon="inline-start" />
-          Publicera
-        </Button>
-        <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="ghost">
-              <Paperclip data-icon="inline-start" />
-              Bilagor
-              {attachments.length > 0 ? <Badge variant="secondary">{attachments.length}</Badge> : null}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Bilagor för {documentTitle}</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="font-medium">Dokumentbilagor</p>
-                  <p className="text-sm text-muted-foreground">Filer som hör till bladet, inte till brödtexten.</p>
-                </div>
-                <Button disabled={!editable} onClick={onAddAttachment} size="sm" variant="outline">
-                  <Upload data-icon="inline-start" />
-                  Ladda upp
-                </Button>
-              </div>
-              {attachments.length === 0 ? (
-                <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
-                  <Paperclip className="size-5 text-muted-foreground" />
-                  <p className="font-medium">Inga bilagor ännu</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {attachments.map((attachment) => (
-                    <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3" key={attachment.id}>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{attachment.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {attachment.size} · {attachment.type}
-                        </p>
-                      </div>
-                      <Button onClick={() => onDownloadAttachment(attachment)} size="sm" variant="outline">
-                        Ladda ner
-                      </Button>
-                      <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">
-                        Ta bort
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-        <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
-          {statusText}
-        </span>
-      </div>
-
-      <div className="flex shrink-0 flex-wrap items-center gap-1 overflow-x-auto border-b bg-background px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(1200px_600px_at_50%_-10%,hsl(190_40%_94%),transparent)] bg-muted/40">
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-card/80 px-3 py-2">
+        <div className="mr-1 flex items-center gap-1 rounded-xl bg-muted/70 p-1">
+          <Button disabled={!editable} onClick={onSave} size="sm" variant="outline">
+            {saved ? <Check data-icon="inline-start" /> : <Save data-icon="inline-start" />}
+            {saved ? "Sparat" : "Spara"}
+          </Button>
+          <Button disabled={!editable} onClick={onPublish} size="sm">
+            <Upload data-icon="inline-start" />
+            Publicera
+          </Button>
+        </div>
         <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
         <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
         <select
           aria-label="Rubrik"
-          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const value = event.target.value;
@@ -301,7 +259,7 @@ export function ManualEditorPanel({
         </select>
         <select
           aria-label="Typsnitt"
-          className="h-8 max-w-32 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 max-w-32 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const family = event.target.value;
@@ -319,7 +277,7 @@ export function ManualEditorPanel({
         </select>
         <select
           aria-label="Textstorlek"
-          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const size = event.target.value;
@@ -344,7 +302,7 @@ export function ManualEditorPanel({
           <span className="sr-only">Textfärg</span>
           <input
             aria-label="Textfärg"
-            className="size-6 cursor-pointer rounded border bg-background"
+            className="size-6 cursor-pointer rounded-full border-0 bg-transparent"
             disabled={!editable}
             onChange={(event) => editor?.chain().focus().setColor(event.target.value).run()}
             type="color"
@@ -361,7 +319,57 @@ export function ManualEditorPanel({
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
         <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={() => imageInputRef.current?.click()} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
-        <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
+        <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost">
+              <Paperclip data-icon="inline-start" />
+              Bilagor
+              {attachments.length > 0 ? <Badge variant="secondary">{attachments.length}</Badge> : null}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Bilagor för {documentTitle}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <div>
+                  <p className="font-medium">Dokumentbilagor</p>
+                  <p className="text-sm text-muted-foreground">Filer som hör till bladet, inte till brödtexten.</p>
+                </div>
+                <Button disabled={!editable} onClick={onAddAttachment} size="sm" variant="outline">
+                  <Upload data-icon="inline-start" />
+                  Ladda upp
+                </Button>
+              </div>
+              {attachments.length === 0 ? (
+                <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center">
+                  <Paperclip className="size-5 text-muted-foreground" />
+                  <p className="font-medium">Inga bilagor ännu</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {attachments.map((attachment) => (
+                    <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3" key={attachment.id}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{attachment.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {attachment.size} · {attachment.type}
+                        </p>
+                      </div>
+                      <Button onClick={() => onDownloadAttachment(attachment)} size="sm" variant="outline">
+                        Ladda ner
+                      </Button>
+                      <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">
+                        Ta bort
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
         <Button
           aria-label="Öppna i Word"
           className={toolbarButtonClass}
@@ -382,10 +390,13 @@ export function ManualEditorPanel({
           <FileDown />
         </Button>
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
+        <span className="ml-auto text-xs font-medium text-muted-foreground" aria-live="polite">
+          {statusText}
+        </span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-6 md:p-10">
-        <div className="document-paper mx-auto min-h-[42rem] max-w-[210mm]">
+        <div className={cn("document-paper mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")}>
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
