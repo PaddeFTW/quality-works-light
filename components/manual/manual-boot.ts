@@ -72,3 +72,8 @@ export async function bootManualFromCloud(
 export function rememberLastOpened(id: string) {
   window.localStorage.setItem(LAST_OPENED_KEY, id);
 }
+
+export function readLastOpenedId() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(LAST_OPENED_KEY);
+}

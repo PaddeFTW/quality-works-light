@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  CalendarDays,
   FileText,
-  Lightbulb,
   Plus,
   TriangleAlert,
   UserPlus,
@@ -21,6 +19,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useOrgSession } from "@/components/providers/org-provider";
+import { readLastOpenedId } from "@/components/manual/manual-boot";
+import { createClient } from "@/lib/supabase/client";
 import { caseNumber, createYearActivity, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import { loadMyOpenReferrals } from "@/lib/manual/cloud";
@@ -35,14 +35,21 @@ const emptyStats: OpsStats = {
   openDeviations: 0,
   openSuggestions: 0,
   upcomingActivities: [],
+  overdueActivities: [],
   recentDeviations: [],
 };
+
+interface LastOpened {
+  id: string;
+  title: string;
+}
 
 export function DashboardOverview() {
   const { session, loading } = useOrgSession();
   const [todayLabel, setTodayLabel] = useState("");
   const [stats, setStats] = useState<OpsStats>(emptyStats);
   const [referrals, setReferrals] = useState<(ReviewRequest & { documentTitle?: string })[]>([]);
+  const [lastOpened, setLastOpened] = useState<LastOpened | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,7 +58,6 @@ export function DashboardOverview() {
         weekday: "long",
         day: "numeric",
         month: "long",
-        year: "numeric",
       }),
     );
   }, []);
@@ -70,6 +76,24 @@ export function DashboardOverview() {
     if (loading || !session?.userId) return;
     void loadMyOpenReferrals(session.userId).then(setReferrals).catch(() => setReferrals([]));
   }, [loading, session?.userId]);
+
+  useEffect(() => {
+    const id = readLastOpenedId();
+    if (!id) {
+      setLastOpened(null);
+      return;
+    }
+    const supabase = createClient();
+    void supabase
+      .from("manual_documents")
+      .select("id, title")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setLastOpened({ id: String(data.id), title: String(data.title || "Blad") });
+        else setLastOpened(null);
+      });
+  }, [session?.organizationId]);
 
   const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
@@ -90,145 +114,179 @@ export function DashboardOverview() {
     }
   }
 
+  const next = useMemo(() => {
+    if (referrals[0]) {
+      return {
+        title: "Svara på remiss",
+        body: referrals[0].documentTitle || "Ett blad väntar på ditt svar.",
+        href: `/manual?blad=${referrals[0].documentId}`,
+        cta: "Öppna bladet",
+        newTab: true,
+      };
+    }
+    if (stats.openDeviations > 0) {
+      return {
+        title: `${stats.openDeviations} avvikelse${stats.openDeviations === 1 ? "" : "r"} att ta om hand`,
+        body: "Något stämmer inte. Skriv vad som hänt och vad ni gör.",
+        href: "/avvikelse",
+        cta: "Öppna avvikelser",
+        newTab: false,
+      };
+    }
+    if (stats.overdueActivities[0]) {
+      return {
+        title: "Försenat i årshjulet",
+        body: stats.overdueActivities[0].title,
+        href: "/arshjul",
+        cta: "Öppna årshjul",
+        newTab: false,
+      };
+    }
+    if (lastOpened) {
+      return {
+        title: "Fortsätt där du slutade",
+        body: lastOpened.title,
+        href: `/manual?blad=${lastOpened.id}`,
+        cta: "Öppna bladet",
+        newTab: true,
+      };
+    }
+    if (stats.upcomingActivities.length === 0) {
+      return {
+        title: "Lägg intern revision",
+        body: "Ett klick. Då syns datumet här när det närmar sig.",
+        href: "/arshjul",
+        cta: "Öppna årshjul",
+        newTab: false,
+      };
+    }
+    return {
+      title: "Allt lugnt just nu",
+      body: "Inget som jagar er i dag. Öppna boken om du vill skriva.",
+      href: "/manual",
+      cta: "Öppna manualen",
+      newTab: true,
+    };
+  }, [referrals, stats, lastOpened]);
+
+  const jobs = [
+    stats.openDeviations > 0
+      ? { href: "/avvikelse", label: "Avvikelser att ta om hand", value: String(stats.openDeviations), tone: "danger" as const }
+      : null,
+    referrals.length > 0
+      ? { href: `/manual?blad=${referrals[0].documentId}`, label: "Remiss att svara på", value: String(referrals.length), tone: "warn" as const, newTab: true }
+      : null,
+    stats.overdueActivities.length > 0
+      ? { href: "/arshjul", label: "Försenade jobb", value: String(stats.overdueActivities.length), tone: "danger" as const }
+      : null,
+    stats.upcomingActivities.length > 0
+      ? { href: "/arshjul", label: "Jobb inom 30 dagar", value: String(stats.upcomingActivities.length), tone: "info" as const }
+      : null,
+  ].filter((item) => item !== null);
+
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium capitalize text-primary">{todayLabel}</p>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-sm font-medium capitalize text-primary">
             {greetingName ? `Hej ${greetingName}` : "Hej"}
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Det som behöver göras i ledningssystemet, idag.
+            {todayLabel ? ` · ${todayLabel}` : ""}
           </p>
+          <h1 className="text-2xl font-bold tracking-tight">Att göra idag</h1>
         </div>
         <Button asChild>
-          <Link data-tour="oppen-manual" href="/manual" rel="noopener noreferrer" target="_blank">
-            <Plus data-icon="inline-start" />
-            Öppna manual
+          <Link data-tour="oppen-manual" href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>
+            {next.cta}
           </Link>
         </Button>
       </section>
 
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
 
-      {referrals.length > 0 ? (
+      <Card className="border-primary/25 bg-gradient-to-br from-secondary to-card shadow-token-md">
+        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Nästa steg</p>
+            <p className="mt-1 text-lg font-bold">{next.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{next.body}</p>
+          </div>
+          <Button asChild>
+            <Link href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>
+              {next.cta}
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {jobs.length > 0 ? (
+        <ul className="grid gap-3 md:grid-cols-2">
+          {jobs.map((job) => (
+            <li key={job.label}>
+              <Link
+                className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-token-sm transition-token hover:-translate-y-0.5 hover:shadow-token-md"
+                href={job.href}
+                rel={job.newTab ? "noopener noreferrer" : undefined}
+                target={job.newTab ? "_blank" : undefined}
+              >
+                <span className="font-semibold">{job.label}</span>
+                <Badge variant={job.tone === "danger" ? "destructive" : "secondary"}>{job.value}</Badge>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">Inget som måste göras just nu. Noll avvikelser är bra.</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href="/manual" rel="noopener noreferrer" target="_blank">
+            <FileText data-icon="inline-start" />
+            Manual
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/avvikelse">
+            <TriangleAlert data-icon="inline-start" />
+            Lämna avvikelse
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/forslag">
+            <Plus data-icon="inline-start" />
+            Nytt förslag
+          </Link>
+        </Button>
+        <Button asChild data-tour="bjud-in" size="sm" variant="outline">
+          <Link href="/installningar">
+            <UserPlus data-icon="inline-start" />
+            Bjud in
+          </Link>
+        </Button>
+      </div>
+
+      <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Remiss att svara på</CardTitle>
-            <CardDescription>Läs utkastet och säg om det stämmer.</CardDescription>
+            <CardTitle>Senast i boken</CardTitle>
+            <CardDescription>Fortsätt där du slutade.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="flex flex-col gap-2">
-              {referrals.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent"
-                    href={`/manual?blad=${item.documentId}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <span className="min-w-0">
-                      <span className="font-medium">{item.documentTitle}</span>
-                      {item.dueAt ? (
-                        <span className="ml-2 text-xs text-muted-foreground">senast {item.dueAt}</span>
-                      ) : null}
-                    </span>
-                    <Badge>Öppen</Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <section aria-label="Börja här" className="grid gap-4 md:grid-cols-3">
-        <StartStep
-          href="/manual"
-          newTab
-          step="1"
-          text="Öppna boken. Skapa 1.0. Skriv hur ni faktiskt gör."
-          title="Manualen"
-        />
-        <StartStep
-          href="/installningar"
-          step="2"
-          text="Skicka mejl till en kollega. Hen klickar och går med."
-          title="Bjud in"
-        />
-        <StartStep
-          href="/arshjul"
-          step="3"
-          text="Lägg intern revision i kalendern. Den syns här på Start."
-          title="Årshjulet"
-        />
-      </section>
-
-      <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" tone="danger" value={String(stats.openDeviations)} />
-        <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" tone="warn" value={String(stats.openSuggestions)} />
-        <Metric href="/arshjul" icon={CalendarDays} label="Aktiviteter 30 dagar" tone="info" value={String(stats.upcomingActivities.length)} />
-        <Metric href="/manual" icon={FileText} label="Manualen" newTab tone="ok" value="Öppna" />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-base font-semibold">Snabbåtgärder</h3>
-        <div className="flex flex-wrap gap-3">
-          <Button asChild variant="outline">
-            <Link href="/manual" rel="noopener noreferrer" target="_blank">
-              <FileText data-icon="inline-start" />
-              Manual
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/avvikelse">
-              <TriangleAlert data-icon="inline-start" />
-              Lämna avvikelse
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/forslag">
-              <Plus data-icon="inline-start" />
-              Nytt förslag
-            </Link>
-          </Button>
-          <Button asChild data-tour="bjud-in" variant="outline">
-            <Link href="/installningar">
-              <UserPlus data-icon="inline-start" />
-              Bjud in kollega
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Senaste avvikelser</CardTitle>
-            <CardDescription>Det som nyligen lämnats in.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.recentDeviations.length === 0 ? (
-              <p className="px-2 py-6 text-sm text-muted-foreground">
-                Inga avvikelser ännu. När någon lämnar en syns den här.
-              </p>
+            {lastOpened ? (
+              <Link
+                className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
+                href={`/manual?blad=${lastOpened.id}`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <FileText className="size-4 text-primary" />
+                  {lastOpened.title}
+                </span>
+                <span className="text-sm font-semibold text-primary">Öppna</span>
+              </Link>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {stats.recentDeviations.map((item) => (
-                  <li key={item.id}>
-                    <Link className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent" href="/avvikelse">
-                      <span className="min-w-0">
-                        <span className="mr-2 font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</span>
-                        <span className="font-medium">{item.title}</span>
-                      </span>
-                      <Badge variant={item.status === "closed" ? "secondary" : "outline"}>
-                        {item.status === "closed" ? "Stängd" : item.status === "in_progress" ? "Pågår" : "Öppen"}
-                      </Badge>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-muted-foreground">Inget blad öppnat än. Skapa 1.0 i Manualen.</p>
             )}
           </CardContent>
         </Card>
@@ -239,21 +297,24 @@ export function DashboardOverview() {
             <CardDescription>Från årshjulet.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {stats.upcomingActivities.length === 0 ? (
-              <div className="flex flex-col gap-3 px-1 py-2">
-                <p className="text-sm text-muted-foreground">Inget inlagt än. Ett klick räcker:</p>
-                <div className="flex flex-col gap-2">
-                  {YEAR_PRESETS.map((preset) => (
-                    <Button
-                      key={preset.kind}
-                      onClick={() => void addPreset(preset)}
-                      type="button"
-                      variant="outline"
-                    >
-                      {preset.title}
-                    </Button>
-                  ))}
-                </div>
+            {stats.overdueActivities.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {stats.overdueActivities.map((item) => (
+                  <li className="flex items-center justify-between gap-3 text-sm" key={item.id}>
+                    <span className="font-medium">{item.title}</span>
+                    <Badge variant="destructive">Försenad</Badge>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {stats.upcomingActivities.length === 0 && stats.overdueActivities.length === 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">Inget inlagt. Ett klick räcker:</p>
+                {YEAR_PRESETS.map((preset) => (
+                  <Button key={preset.kind} onClick={() => void addPreset(preset)} type="button" variant="outline">
+                    {preset.title}
+                  </Button>
+                ))}
               </div>
             ) : (
               <ul className="flex flex-col gap-2">
@@ -271,83 +332,34 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Avvikelser</CardTitle>
+          <CardDescription>Det som nyligen lämnats in.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stats.recentDeviations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Inga avvikelser. Det är bra.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {stats.recentDeviations.map((item) => (
+                <li key={item.id}>
+                  <Link className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent" href="/avvikelse">
+                    <span className="min-w-0">
+                      <span className="mr-2 font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</span>
+                      <span className="font-medium">{item.title}</span>
+                    </span>
+                    <Badge variant={item.status === "closed" ? "secondary" : "outline"}>
+                      {item.status === "closed" ? "Stängd" : item.status === "in_progress" ? "Pågår" : "Öppen"}
+                    </Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
-  );
-}
-
-function Metric({
-  href,
-  icon: Icon,
-  label,
-  value,
-  tone = "ok",
-  newTab,
-}: {
-  href: string;
-  icon: typeof TriangleAlert;
-  label: string;
-  value: string;
-  tone?: "ok" | "warn" | "danger" | "info";
-  newTab?: boolean;
-}) {
-  const tints = {
-    ok: "border-primary/30 bg-gradient-to-br from-secondary to-card",
-    warn: "border-warning/35 bg-gradient-to-br from-warning/10 to-card",
-    danger: "border-destructive/30 bg-gradient-to-br from-destructive/10 to-card",
-    info: "border-info/30 bg-gradient-to-br from-info/10 to-card",
-  };
-  const iconTints = {
-    ok: "bg-primary/15 text-primary",
-    warn: "bg-warning/15 text-warning",
-    danger: "bg-destructive/15 text-destructive",
-    info: "bg-info/15 text-info",
-  };
-  return (
-    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className={`h-full ${tints[tone]} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
-        <CardContent className="flex flex-col gap-5 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-foreground">{label}</span>
-            <span className={`rounded-lg p-2 ${iconTints[tone]}`}>
-              <Icon className="size-4" />
-            </span>
-          </div>
-          <p className="text-4xl font-bold tracking-tight">{value}</p>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-function StartStep({
-  href,
-  title,
-  text,
-  step,
-  newTab,
-}: {
-  href: string;
-  title: string;
-  text: string;
-  step: string;
-  newTab?: boolean;
-}) {
-  const tint =
-    step === "1"
-      ? "border-primary/30 bg-gradient-to-br from-secondary to-card"
-      : step === "2"
-        ? "border-info/25 bg-gradient-to-br from-accent to-card"
-        : "border-warning/25 bg-gradient-to-br from-secondary/50 to-card";
-  return (
-    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className={`h-full border ${tint} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
-        <CardContent className="flex h-full flex-col gap-3 p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Steg {step}</p>
-          <p className="text-xl font-bold">{title}</p>
-          <p className="text-sm leading-6 text-muted-foreground">{text}</p>
-          <p className="mt-auto pt-2 text-sm font-semibold text-primary">Öppna →</p>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
