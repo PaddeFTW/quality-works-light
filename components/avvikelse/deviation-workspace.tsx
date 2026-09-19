@@ -5,6 +5,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
+import { UpgradeCard } from "@/components/billing/upgrade-card";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   updateDeviation,
 } from "@/lib/ops/persist";
 import type { Deviation, DeviationStatus, Severity } from "@/lib/ops/types";
+import { canPlan } from "@/lib/billing/plans";
 
 const STATUS: Record<DeviationStatus, string> = {
   open: "Öppen",
@@ -122,6 +124,14 @@ export function DeviationWorkspace() {
     } catch (error) {
       setStatus(missingTableMessage(error));
     }
+  }
+
+  if (!canPlan(session?.plan, "deviations")) {
+    return (
+      <DashboardLayout description="När något inte stämmer." navigation={navigation} title="Avvikelsehantering">
+        <UpgradeCard feature="deviations" text="Avvikelser ingår i Standard." />
+      </DashboardLayout>
+    );
   }
 
   return (

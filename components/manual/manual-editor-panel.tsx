@@ -78,6 +78,7 @@ interface ManualEditorPanelProps {
   saved: boolean;
   saveStatus: "sparar" | "sparad" | "osparad" | "fel";
   editable?: boolean;
+  canExport?: boolean;
   attachments: ManualAttachment[];
   onAddAttachment: () => void;
   onUploadImage?: (file: File) => Promise<string | null>;
@@ -98,6 +99,7 @@ export function ManualEditorPanel({
   saved,
   saveStatus,
   editable = true,
+  canExport = false,
   attachments,
   onAddAttachment,
   onUploadImage,
@@ -370,25 +372,27 @@ export function ManualEditorPanel({
             </div>
           </DialogContent>
         </Dialog>
-        <Button
-          aria-label="Öppna i Word"
-          className={toolbarButtonClass}
-          onClick={() =>
-            downloadHtmlAsFile(
-              `${documentCode} ${documentTitle}.doc`,
-              `${documentCode} ${documentTitle}`,
-              companyName,
-              value,
-              "Arbetsmanual – utkast",
-            )
-          }
-          size="sm"
-          title="Öppna i Word"
-          type="button"
-          variant="ghost"
-        >
-          <FileDown />
-        </Button>
+        {canExport ? (
+          <Button
+            aria-label="Öppna i Word"
+            className={toolbarButtonClass}
+            onClick={() =>
+              downloadHtmlAsFile(
+                `${documentCode} ${documentTitle}.doc`,
+                `${documentCode} ${documentTitle}`,
+                companyName,
+                value,
+                "Arbetsmanual – utkast",
+              )
+            }
+            size="sm"
+            title="Öppna i Word"
+            type="button"
+            variant="ghost"
+          >
+            <FileDown />
+          </Button>
+        ) : null}
         <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
         <span className="ml-auto text-xs font-medium text-muted-foreground" aria-live="polite">
           {statusText}

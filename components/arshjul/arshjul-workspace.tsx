@@ -5,6 +5,7 @@ import { CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
+import { UpgradeCard } from "@/components/billing/upgrade-card";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/ops/persist";
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import type { ActivityStatus, YearActivity } from "@/lib/ops/types";
+import { canPlan } from "@/lib/billing/plans";
 
 const MONTHS = [
   "Januari", "Februari", "Mars", "April", "Maj", "Juni",
@@ -147,6 +149,14 @@ export function ArshjulWorkspace() {
     } catch (error) {
       setStatus(missingTableMessage(error));
     }
+  }
+
+  if (!canPlan(session?.plan, "yearWheel")) {
+    return (
+      <DashboardLayout description="Årets återkommande jobb." navigation={navigation} title="Årshjul">
+        <UpgradeCard feature="yearWheel" text="Årshjulet ingår i Small." />
+      </DashboardLayout>
+    );
   }
 
   return (

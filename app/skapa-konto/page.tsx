@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SignupForm } from "@/components/auth/signup-form";
 
@@ -9,6 +11,11 @@ export default function SkapaKontoPage() {
       title="Skapa konto"
     >
       <SignupForm />
+      <p className="text-center text-sm text-muted-foreground">
+        <Link className="font-semibold text-primary hover:underline" href="/priser">
+          Se priser
+        </Link>
+      </p>
     </AuthShell>
   );
 }
