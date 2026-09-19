@@ -43,6 +43,7 @@ import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { GuidanceHint } from "@/components/common/guidance-hint";
 import { GuidancePanel } from "@/components/common/guidance-panel";
+import { PageTour } from "@/components/tour/page-tour";
 import { Tip } from "@/components/ui/tooltip";
 import { FIRST_DOCUMENT_HINT, SUBSECTION_HINT } from "@/lib/guidance";
 import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
@@ -659,6 +660,7 @@ export function ManualWorkspace({
     <div className="flex h-screen min-h-0 overflow-hidden bg-muted/40" ref={binderRef}>
       <aside
         className="relative hidden shrink-0 bg-sidebar md:flex md:flex-col"
+        data-tour="trad"
         style={treeCollapsed ? { width: 48 } : { width: treeWidth }}
       >
         {treeCollapsed ? (
@@ -773,6 +775,7 @@ export function ManualWorkspace({
                 <Tip label="Hjälp">
                   <Button
                     aria-label="Hjälp"
+                    id="tour-home"
                     onClick={() => setTipsOpen((open) => !open)}
                     size="icon"
                     variant={tipsOpen ? "default" : "ghost"}
@@ -945,6 +948,7 @@ export function ManualWorkspace({
           place="manual"
         />
       ) : null}
+      <PageTour />
       </div>
 
       <Dialog onOpenChange={(open) => !open && setDialog(null)} open={Boolean(dialog)}>

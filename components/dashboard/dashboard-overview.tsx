@@ -102,8 +102,8 @@ export function DashboardOverview() {
             Det som behöver göras i ledningssystemet, idag.
           </p>
         </div>
-        <Button asChild className="bg-primary text-primary-foreground shadow-token-md">
-          <Link href="/manual" rel="noopener noreferrer" target="_blank">
+        <Button asChild>
+          <Link data-tour="oppen-manual" href="/manual" rel="noopener noreferrer" target="_blank">
             <Plus data-icon="inline-start" />
             Öppna manual
           </Link>
@@ -193,7 +193,7 @@ export function DashboardOverview() {
               Nytt förslag
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild data-tour="bjud-in" variant="outline">
             <Link href="/installningar">
               <UserPlus data-icon="inline-start" />
               Bjud in kollega
@@ -248,7 +248,7 @@ export function DashboardOverview() {
                       key={preset.kind}
                       onClick={() => void addPreset(preset)}
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                     >
                       {preset.title}
                     </Button>

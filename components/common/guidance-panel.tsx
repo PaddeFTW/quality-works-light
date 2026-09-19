@@ -4,6 +4,7 @@ import { LifeBuoy, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { articlesFor, type GuideArticle } from "@/lib/knowledge/guide";
+import { startTourEvent } from "@/lib/tours";
 
 export function GuidancePanel({
   place,
@@ -28,6 +29,17 @@ export function GuidancePanel({
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4 text-sm">
         <p className="leading-6 text-muted-foreground">{intro}</p>
+        <Button
+          onClick={() => {
+            onClose();
+            startTourEvent();
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Visa rundtur
+        </Button>
         {articles.map((article) => (
           <section key={article.id}>
             <h3 className="font-medium">{article.title}</h3>
