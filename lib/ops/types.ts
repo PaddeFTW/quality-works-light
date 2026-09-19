@@ -45,5 +45,6 @@ export interface OpsStats {
   openDeviations: number;
   openSuggestions: number;
   upcomingActivities: YearActivity[];
+  overdueActivities: YearActivity[];
   recentDeviations: Deviation[];
 }
