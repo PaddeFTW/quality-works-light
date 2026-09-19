@@ -7,6 +7,7 @@ import { AccountMenu } from "@/components/layout/account-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Separator } from "@/components/ui/separator";
+import { planOf } from "@/lib/billing/plans";
 
 interface TopbarProps {
   title?: string;
@@ -35,7 +36,10 @@ export function Topbar({
       <div className="flex items-center justify-between gap-4 px-6 py-3">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-bold">{heading}</h2>
-          <p className="truncate text-xs text-muted-foreground">{sub}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {sub}
+            {session?.plan ? ` · ${planOf(session.plan).name}` : ""}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {actions ? <div className="flex items-center gap-2">{actions}</div> : null}

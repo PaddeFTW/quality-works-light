@@ -61,6 +61,7 @@ import {
   persistSettings,
 } from "@/lib/manual/persist";
 import { createYearActivity, missingTableMessage } from "@/lib/ops/persist";
+import { canPlan } from "@/lib/billing/plans";
 import { cloudReadMessage } from "@/lib/manual/cloud";
 import { latestReferralFor, openReferralFor } from "@/lib/manual/referral";
 import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
@@ -144,6 +145,9 @@ export function ManualWorkspace({
   const [auditOwner, setAuditOwner] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canEdit = session?.role !== "viewer";
+  const canExport = canPlan(session?.plan, "export");
+  const canAudit = canPlan(session?.plan, "audit");
+  const canRemiss = canPlan(session?.plan, "remiss");
 
   useEffect(() => {
     if (orgLoading) return;
@@ -755,10 +759,10 @@ export function ManualWorkspace({
                     <Button disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
                       Spara
                     </Button>
-                    <Button disabled={!canEdit} onClick={openAudit} size="sm" variant="ghost">
+                    <Button disabled={!canEdit || !canAudit} onClick={openAudit} size="sm" variant="ghost">
                       Intern revision
                     </Button>
-                    <Button disabled={!canEdit} onClick={openRemiss} size="sm" variant="ghost">
+                    <Button disabled={!canEdit || !canRemiss} onClick={openRemiss} size="sm" variant="ghost">
                       Remiss
                     </Button>
                     <Button disabled={!canEdit} onClick={openPublish} size="sm">
@@ -825,6 +829,7 @@ export function ManualWorkspace({
                 documentCode={documentCode}
                 documentTitle={documentTitle}
                 editable={canEdit}
+                canExport={canExport}
                 edition={edition}
                 issuer={settings.issuer}
                 onAddAttachment={() => fileInputRef.current?.click()}

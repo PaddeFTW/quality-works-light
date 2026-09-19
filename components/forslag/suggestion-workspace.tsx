@@ -5,6 +5,7 @@ import { Lightbulb, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
+import { UpgradeCard } from "@/components/billing/upgrade-card";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   updateSuggestion,
 } from "@/lib/ops/persist";
 import type { Suggestion, SuggestionStatus } from "@/lib/ops/types";
+import { canPlan } from "@/lib/billing/plans";
 
 const STATUS: Record<SuggestionStatus, string> = {
   new: "Ny",
@@ -106,6 +108,14 @@ export function SuggestionWorkspace() {
     } catch (error) {
       setStatus(missingTableMessage(error));
     }
+  }
+
+  if (!canPlan(session?.plan, "suggestions")) {
+    return (
+      <DashboardLayout description="En idé som gör arbetet bättre." navigation={navigation} title="Förbättringsförslag">
+        <UpgradeCard feature="suggestions" text="Förslag ingår i Small." />
+      </DashboardLayout>
+    );
   }
 
   return (

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import type { AppRole } from "@/lib/features";
+import type { PlanId } from "@/lib/billing/plans";
 
 export interface OrgSession {
   userId: string;
@@ -14,6 +15,7 @@ export interface OrgSession {
   organizationName: string;
   role: AppRole;
   manualId: string | null;
+  plan: PlanId;
 }
 
 interface OrgContextValue {
@@ -60,6 +62,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         organizationName: "",
         role: "viewer",
         manualId: null,
+        plan: "gratis",
       });
       setLoading(false);
       return;
@@ -76,6 +79,12 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       .limit(1)
       .maybeSingle();
 
+    let plan: PlanId = "standard";
+    const { data: orgExtra } = await supabase.from("organizations").select("plan").eq("id", organizationId).maybeSingle();
+    if (orgExtra && typeof (orgExtra as { plan?: string }).plan === "string") {
+      plan = (orgExtra as { plan: PlanId }).plan;
+    }
+
     setSession({
       userId: user.id,
       email: user.email ?? "",
@@ -84,6 +93,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       organizationName: orgRow?.name ?? "Företag",
       role: (membership.role as AppRole) || "viewer",
       manualId: manual?.id ?? null,
+      plan,
     });
     setLoading(false);
   }

@@ -14,6 +14,9 @@ export default function LoginPage() {
         <Link className="hover:underline" href="/glomt-losenord">
           Glömt lösenord
         </Link>
+        <Link className="hover:underline" href="/priser">
+          Priser
+        </Link>
       </p>
     </AuthShell>
   );
