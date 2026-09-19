@@ -24,7 +24,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <div className="inline-flex overflow-visible rounded-md border">
+    <div className="inline-flex overflow-hidden rounded-xl border bg-muted/40 p-0.5">
       {modes.map((mode) => {
         const Icon = mode.icon;
         const active = theme === mode.id;

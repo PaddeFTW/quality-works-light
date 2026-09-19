@@ -80,6 +80,8 @@
   --ring: hsl(190.4 70% 40%);
   --sidebar: hsl(210 16% 9%);
   --sidebar-foreground: hsl(0 0% 98%);
+  --surface: hsl(210 16% 11%);
+  --surface-elevated: hsl(210 16% 13%);
   --paper: hsl(0 0% 100%);
   --paper-foreground: hsl(210 24% 16%);
   --paper-muted: hsl(210 10% 38%);
@@ -94,42 +96,44 @@
   --card-foreground: hsl(0 0% 0%);
   --popover: hsl(0 0% 100%);
   --popover-foreground: hsl(0 0% 0%);
-  --primary: hsl(0 0% 0%);
+  --primary: hsl(190.4 100% 16%);
   --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(0 0% 92%);
+  --secondary: hsl(0 0% 94%);
   --secondary-foreground: hsl(0 0% 0%);
-  --muted: hsl(0 0% 92%);
-  --muted-foreground: hsl(0 0% 20%);
-  --accent: hsl(0 0% 90%);
+  --muted: hsl(0 0% 94%);
+  --muted-foreground: hsl(0 0% 18%);
+  --accent: hsl(0 0% 92%);
   --accent-foreground: hsl(0 0% 0%);
   --border: hsl(0 0% 0%);
   --input: hsl(0 0% 0%);
-  --ring: hsl(0 0% 0%);
+  --ring: hsl(190.4 100% 16%);
   --sidebar: hsl(0 0% 100%);
   --sidebar-foreground: hsl(0 0% 0%);
+  --surface-elevated: hsl(0 0% 100%);
 }
 
 .contrast-dark {
   color-scheme: dark;
   --background: hsl(0 0% 0%);
   --foreground: hsl(0 0% 100%);
-  --card: hsl(0 0% 0%);
+  --card: hsl(0 0% 7%);
   --card-foreground: hsl(0 0% 100%);
-  --popover: hsl(0 0% 0%);
+  --popover: hsl(0 0% 7%);
   --popover-foreground: hsl(0 0% 100%);
-  --primary: hsl(0 0% 100%);
-  --primary-foreground: hsl(0 0% 0%);
-  --secondary: hsl(0 0% 12%);
+  --primary: hsl(186 90% 38%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(0 0% 14%);
   --secondary-foreground: hsl(0 0% 100%);
-  --muted: hsl(0 0% 12%);
-  --muted-foreground: hsl(0 0% 85%);
+  --muted: hsl(0 0% 14%);
+  --muted-foreground: hsl(0 0% 88%);
   --accent: hsl(0 0% 16%);
   --accent-foreground: hsl(0 0% 100%);
   --border: hsl(0 0% 100%);
   --input: hsl(0 0% 100%);
-  --ring: hsl(0 0% 100%);
+  --ring: hsl(186 90% 50%);
   --sidebar: hsl(0 0% 0%);
   --sidebar-foreground: hsl(0 0% 100%);
+  --surface-elevated: hsl(0 0% 8%);
   --paper: hsl(0 0% 100%);
   --paper-foreground: hsl(0 0% 0%);
 }

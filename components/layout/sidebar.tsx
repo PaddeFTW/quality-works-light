@@ -64,7 +64,7 @@ const NAV_TINT: Record<string, string> = {
 
   const linkClass = (item: NavItem, labeled: boolean) =>
     cn(
-      "flex items-center rounded-lg text-muted-foreground shadow-none transition-token hover:bg-accent hover:text-accent-foreground",
+      "flex items-center rounded-xl text-muted-foreground shadow-none transition-token hover:bg-accent hover:text-accent-foreground",
       labeled ? "h-10 w-full gap-3 px-3 text-sm font-semibold" : "size-10 justify-center",
       isActive(item) && "bg-primary text-primary-foreground shadow-token-sm hover:bg-primary hover:text-primary-foreground",
     );
@@ -72,7 +72,7 @@ const NAV_TINT: Record<string, string> = {
   function NavLink({ item, labeled }: { item: NavItem; labeled: boolean }) {
     const newTab = item.href === "/manual";
     return (
-      <Tip label={newTab ? `${item.title} (ny flik)` : item.title} side="right">
+      <Tip className={labeled ? "w-full" : undefined} label={newTab ? `${item.title} (ny flik)` : item.title} side="right">
         <Link
           aria-current={isActive(item) ? "page" : undefined}
           aria-label={item.title}
@@ -94,15 +94,15 @@ const NAV_TINT: Record<string, string> = {
     <aside
       aria-label="Huvudnavigation"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar text-sidebar-foreground lg:static lg:h-full lg:w-60 lg:flex-col lg:border-r lg:border-t-0",
-        collapsed ? "lg:w-14" : "lg:w-60",
+        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar text-sidebar-foreground lg:static lg:h-full lg:flex-col lg:rounded-2xl lg:border lg:border-t lg:bg-card lg:shadow-token-sm",
+        collapsed ? "lg:w-16" : "lg:w-60",
         className,
       )}
     >
       <div
         className={cn(
-          "hidden border-b lg:flex",
-          collapsed ? "h-14 items-center justify-center" : "h-16 items-center gap-3 px-4",
+          "hidden lg:flex",
+          collapsed ? "h-14 items-center justify-center" : "items-center gap-3 px-4 py-4",
         )}
       >
         <BrandMark markClassName="size-8" />
@@ -133,7 +133,7 @@ const NAV_TINT: Record<string, string> = {
       </nav>
       <div
         className={cn(
-          "hidden shrink-0 border-t lg:flex lg:flex-col lg:gap-1 lg:py-2",
+          "hidden shrink-0 lg:flex lg:flex-col lg:gap-1 lg:py-2",
           collapsed ? "lg:items-center lg:px-2" : "lg:px-3",
         )}
       >
