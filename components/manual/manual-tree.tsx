@@ -107,12 +107,12 @@ export function ManualTree({
       <li key={node.id}>
         <div
           className={cn(
-            "group flex w-full items-center border-l-2 pr-1 text-sm",
+            "group mx-1 flex w-[calc(100%-0.5rem)] items-center rounded-lg pr-1 text-sm transition-token",
             isSelected
-              ? "border-l-primary bg-primary/10 font-medium text-primary"
+              ? "bg-primary text-primary-foreground shadow-token-sm"
               : lastOpenedId === node.id
-                ? "border-l-transparent bg-accent/60 text-foreground"
-                : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                ? "bg-accent text-foreground"
+                : "text-foreground hover:bg-accent hover:text-accent-foreground",
           )}
           onContextMenu={(event: MouseEvent) => {
             event.preventDefault();
@@ -135,7 +135,7 @@ export function ManualTree({
           )}
           <button
             aria-current={isSelected ? "page" : undefined}
-            className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+            className="flex min-w-0 flex-1 items-center gap-1.5 py-2 text-left"
             onClick={() => onSelect(node)}
             onDoubleClick={() => {
               if (hasChildren) toggle(node.id);
@@ -144,18 +144,18 @@ export function ManualTree({
             type="button"
           >
             {publishedIds.includes(node.id) ? (
-              <FileCheck className="size-4 shrink-0 text-emerald-600" />
+              <FileCheck className={cn("size-4 shrink-0", isSelected ? "text-primary-foreground" : "text-emerald-600")} />
             ) : (
-              <FileText className="size-4 shrink-0" />
+              <FileText className="size-4 shrink-0 opacity-80" />
             )}
             <span className="truncate">
-              <span className="mr-2 font-mono text-xs text-muted-foreground">{number}</span>
+              <span className={cn("mr-2 font-mono text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{number}</span>
               {node.title}
             </span>
           </button>
           <DropdownMenu onOpenChange={(open) => setMenuId(open ? node.id : null)} open={menuId === node.id}>
             <DropdownMenuTrigger asChild>
-              <Button className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" size="icon" variant="ghost">
+              <Button className={cn("size-7", isSelected ? "text-primary-foreground hover:bg-primary/80" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100")} size="icon" variant="ghost">
                 <MoreHorizontal className="size-4" />
                 <span className="sr-only">Åtgärder för {node.title}</span>
               </Button>
