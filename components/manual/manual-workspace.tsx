@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import Link from "next/link";
 import { ArrowLeft, Check, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { play } from "@/lib/sound";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -288,21 +288,26 @@ export function ManualWorkspace({
     setDialogParent(parentId ?? "root");
   }
 
-  async function handleSave() {
+  async function handleSave(fromUser = false) {
     if (!selectedId) return;
     setSaveStatus("sparar");
     if (cloud) {
       try {
         await persistDraft(selectedId, drafts[selectedId] ?? draft);
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Kunde inte spara");
+      } catch {
+        setStatus("Kunde inte spara. Försök igen.");
         setSaveStatus("fel");
+        if (fromUser) play("error");
         return;
       }
     }
     setSavedId(selectedId);
     setDirtyIds((current) => current.filter((item) => item !== selectedId));
     setSaveStatus("sparad");
+    if (fromUser) {
+      play("save");
+      notice("Sparad.");
+    }
   }
 
   useEffect(() => {
@@ -455,8 +460,9 @@ export function ManualWorkspace({
       return;
     }
     if (!changeNote.trim()) {
-      setStatus("Skriv vad som ändrades. Annars går det inte att publicera.");
+      setStatus("Skriv vad som har ändrats innan du publicerar.");
       setStatusTone("fel");
+      play("error");
       return;
     }
     const nextEdition = (versions[0]?.edition ?? 0) + 1;
@@ -481,7 +487,8 @@ export function ManualWorkspace({
           ],
         }));
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Publicering misslyckades");
+        setStatus(error instanceof Error ? error.message : "Kunde inte spara. Försök igen.");
+        play("error");
         return;
       }
     } else {
@@ -519,7 +526,8 @@ export function ManualWorkspace({
     );
     setDialog(null);
     setChangeNote("");
-    notice("Publicerat. Originalet är uppdaterat. Du kan skriva vidare.", "ok");
+    play("publish");
+    notice(`Utgåva ${nextEdition} är publicerad.`, "ok");
   }
 
   function restoreEdition(editionNumber: number) {
@@ -538,7 +546,8 @@ export function ManualWorkspace({
     const kind = "document" as const;
     const title = dialogName.trim();
     if (!title) {
-      notice("Skriv ett namn, eller använd förslaget.", "fel");
+      notice("Skriv ett namn.", "fel");
+      play("error");
       return;
     }
     let id = `${kind}-${Date.now()}`;
@@ -741,10 +750,10 @@ export function ManualWorkspace({
             <div className="ml-auto flex items-center gap-1.5">
               {selectedIsDocument ? (
                 <>
-                  <Button data-tour="spara" disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
+                  <Button data-tour="spara" disabled={!canEdit} onClick={() => void handleSave(true)} size="sm" variant="outline">
                     Spara
                   </Button>
-                  <Button disabled={!canEdit} onClick={openPublish} size="sm">
+                  <Button disabled={!canEdit || countPlainText(draft) === 0} onClick={openPublish} size="sm">
                     Publicera
                   </Button>
                   <DropdownMenu>
@@ -858,7 +867,7 @@ export function ManualWorkspace({
                   if (cloud) void persistDeleteAttachment(id, attachment?.storagePath).catch((error) => setStatus(error instanceof Error ? error.message : "Kunde inte ta bort bilagan"));
                   setAttachments((current) => ({ ...current, [selectedId ?? ""]: (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id) }));
                 }}
-                onSave={() => void handleSave()}
+                onSave={() => void handleSave(true)}
                 saveStatus={saveStatus}
                 saved={savedId === selectedId && !isDirty}
                 value={draft}
@@ -963,7 +972,7 @@ export function ManualWorkspace({
                 : dialog === "rename"
                   ? "Byt namn"
                   : dialog === "publish"
-                    ? "Publicera dokumentet"
+                    ? "Publicera utgåva?"
                     : dialog === "revise"
                       ? "Information om dokumentet som håller på att revideras"
                       : dialog === "remiss"
@@ -985,6 +994,7 @@ export function ManualWorkspace({
             </p>
           ) : dialog === "publish" ? (
             <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Arbetsmanualen blir original och låses.</p>
               <div className="space-y-2">
                 <Label htmlFor="approved-at">Godkänt datum</Label>
                 <Input id="approved-at" onChange={(e) => setApprovedAt(e.target.value)} type="date" value={approvedAt} />
@@ -1108,7 +1118,7 @@ export function ManualWorkspace({
             {dialog === "delete" ? <Button onClick={() => void confirmDelete()} variant="destructive">Ta bort</Button> : null}
             {dialog === "rename" ? <Button onClick={() => void confirmRename()}>Spara</Button> : null}
             {dialog === "create-doc" ? <Button onClick={() => void confirmCreate()}>Skapa</Button> : null}
-            {dialog === "publish" ? <Button onClick={() => void confirmPublish()}>Publicera</Button> : null}
+            {dialog === "publish" ? <Button disabled={!changeNote.trim()} onClick={() => void confirmPublish()}>Publicera</Button> : null}
             {dialog === "revise" ? <Button onClick={() => void confirmRevise()}>Spara</Button> : null}
             {dialog === "remiss" ? <Button disabled={!remissTo} onClick={() => void confirmRemiss()}>Skicka</Button> : null}
             {dialog === "respond" ? (

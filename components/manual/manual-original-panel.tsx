@@ -56,9 +56,7 @@ export function ManualOriginalPanel({
           />
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-10 py-16 text-center">
             <FileLock2 className="size-6 text-paper-muted" />
-            <p className="max-w-sm text-sm leading-7 text-paper-muted">
-              Inget original än. Publicera från Arbetsmanual när texten stämmer.
-            </p>
+            <p className="max-w-sm text-sm leading-7 text-paper-muted">Inget publicerat dokument ännu.</p>
           </div>
         </div>
       </div>

@@ -5,7 +5,6 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
-import { playSoft } from "@/lib/sound";
 import { Tip } from "@/components/ui/tooltip";
 
 const buttonVariants = cva(
@@ -14,7 +13,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground! shadow-token-md hover:-translate-y-px hover:bg-primary/90",
+          "bg-primary text-primary-foreground! shadow-token-md hover:bg-primary/90 active:translate-y-px",
         secondary:
           "border border-primary/15 bg-secondary text-secondary-foreground shadow-token-xs hover:-translate-y-px hover:bg-accent",
         outline:
@@ -52,10 +51,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const button = (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
-        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-          playSoft();
-          onClick?.(event);
-        }}
+        onClick={onClick}
         ref={ref}
         {...props}
       />

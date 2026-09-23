@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { playSoft, setSoundOn, soundOn } from "@/lib/sound";
+import { play, setSoundOn, soundOn } from "@/lib/sound";
 
 export function SoundToggle() {
-  const [on, setOn] = useState(true);
+  const [on, setOn] = useState(false);
 
   useEffect(() => {
     setOn(soundOn());
@@ -19,13 +19,13 @@ export function SoundToggle() {
         const next = !on;
         setSoundOn(next);
         setOn(next);
-        if (next) playSoft();
+        if (next) play("save");
       }}
       type="button"
       variant={on ? "secondary" : "outline"}
     >
       {on ? <Volume2 data-icon="inline-start" /> : <VolumeX data-icon="inline-start" />}
-      {on ? "Knappljud på" : "Knappljud av"}
+      {on ? "Ljud i programmet på" : "Ljud i programmet av"}
     </Button>
   );
 }

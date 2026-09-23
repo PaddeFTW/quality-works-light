@@ -305,7 +305,7 @@ export function DashboardOverview() {
         </CardHeader>
         <CardContent>
           {tasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Inget som måste göras just nu. Noll avvikelser är bra.</p>
+            <p className="text-sm text-muted-foreground">Inget att göra just nu. När ett jobb blir dags syns det här.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {tasks.map((task) => (

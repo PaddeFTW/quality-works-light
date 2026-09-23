@@ -6,6 +6,7 @@ import { CalendarDays, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
 import { UpgradeCard } from "@/components/billing/upgrade-card";
+import { play } from "@/lib/sound";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -125,8 +126,10 @@ export function ArshjulWorkspace() {
       setItems((current) => [...current, row].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
       setStatus(null);
       setHint(explain(preset.kind));
+      play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -144,8 +147,10 @@ export function ArshjulWorkspace() {
       setCreateOpen(false);
       setTitle("");
       setOwnerName("");
+      play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -161,8 +166,10 @@ export function ArshjulWorkspace() {
       });
       setItems((current) => current.map((item) => (item.id === selected.id ? selected : item)).sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
       setSelected(null);
+      if (selected.status === "done") play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
