@@ -11,6 +11,9 @@ export const defaultManualTree: ManualNode[] = [];
 export const manualTree = defaultManualTree;
 export const defaultDocumentContent = "<p></p>";
 
+export const routineTemplate =
+  "<h2>Syfte</h2><p>Varför vi gör det här.</p><h2>Vem</h2><p>Vem som gör det.</p><h2>Så gör vi</h2><p>Steg för steg.</p>";
+
 export function findNodeById(nodes: ManualNode[], id: string): ManualNode | undefined {
   for (const node of nodes) {
     if (node.id === id) return node;

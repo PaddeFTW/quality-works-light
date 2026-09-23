@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
-import { Check, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   defaultDocumentContent,
+  routineTemplate,
   findNodeById,
   getNodeNumber,
   countPlainText,
@@ -148,6 +149,8 @@ export function ManualWorkspace({
   const [remissMessage, setRemissMessage] = useState("Stämmer detta med hur ni jobbar?");
   const [remissResponse, setRemissResponse] = useState("");
   const [publishAnyway, setPublishAnyway] = useState(false);
+  const [changeNote, setChangeNote] = useState("");
+  const [useRoutine, setUseRoutine] = useState(false);
   const [auditAt, setAuditAt] = useState("");
   const [auditOwner, setAuditOwner] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -451,13 +454,18 @@ export function ManualWorkspace({
       setStatus("Remissen är avstyrkt. Kryssa i Publicera ändå.");
       return;
     }
+    if (!changeNote.trim()) {
+      setStatus("Skriv vad som ändrades. Annars går det inte att publicera.");
+      setStatusTone("fel");
+      return;
+    }
     const nextEdition = (versions[0]?.edition ?? 0) + 1;
     const publishedLabel = approvedAt
       ? new Date(`${approvedAt}T12:00:00`).toLocaleDateString("sv-SE")
       : new Date().toLocaleDateString("sv-SE");
     if (cloud && session) {
       try {
-        const row = await persistPublish(selectedId, draft, nextEdition, session.userId);
+        const row = await persistPublish(selectedId, draft, nextEdition, session.userId, changeNote.trim());
         setVersionsByDoc((current) => ({
           ...current,
           [selectedId]: [
@@ -467,6 +475,7 @@ export function ManualWorkspace({
               content: row.content_html,
               publishedAt: publishedLabel,
               publishedByName: approvedBy,
+              changeNote: changeNote.trim(),
             },
             ...(current[selectedId] ?? []),
           ],
@@ -509,6 +518,7 @@ export function ManualWorkspace({
       ),
     );
     setDialog(null);
+    setChangeNote("");
     notice("Publicerat. Originalet är uppdaterat. Du kan skriva vidare.", "ok");
   }
 
@@ -542,12 +552,13 @@ export function ManualWorkspace({
     }
     const node: ManualNode = { id, title, kind, children: [] };
     setTree((current) => insertNode(current, parentId, node));
-    setDrafts((current) => ({ ...current, [id]: defaultDocumentContent }));
+    setDrafts((current) => ({ ...current, [id]: useRoutine ? routineTemplate : defaultDocumentContent }));
     setSelectedId(id);
     setLastOpenedId(id);
     rememberLastOpened(id);
     setActiveTab("work");
     setDialog(null);
+    setUseRoutine(false);
   }
 
   async function confirmRename() {
@@ -770,9 +781,9 @@ export function ManualWorkspace({
                   <LifeBuoy />
                 </Button>
               </Tip>
-              <Button aria-label="Stäng manualen" asChild size="icon" variant="ghost">
+              <Button aria-label="Till Start" asChild size="icon" variant="ghost">
                 <Link href="/">
-                  <X />
+                  <ArrowLeft />
                 </Link>
               </Button>
             </div>
@@ -906,7 +917,7 @@ export function ManualWorkspace({
               <span>{saveStatus === "sparar" ? "Sparar…" : saveStatus === "sparad" ? "Sparad" : saveStatus === "fel" ? "Kunde inte spara" : "Osparat"}</span>
               <span>{countPlainText(draft)} tecken</span>
               <span>{canEdit ? "Arbetsmanual – du kan ändra" : "Läsa"}</span>
-              <span>{edition > 0 ? `Utgåva ${edition}` : "Ingen utgåva"}</span>
+              <span>{edition > 0 ? `Utgåva ${edition}` : "Utkast"}</span>
               {edition > 0 ? (
                 <span className="ml-auto">
                   <Button
@@ -981,6 +992,10 @@ export function ManualWorkspace({
               <div className="space-y-2">
                 <Label htmlFor="approved-by">Godkänd av</Label>
                 <Input id="approved-by" onChange={(e) => setApprovedBy(e.target.value)} value={approvedBy} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="change-note">Vad ändrades</Label>
+                <Textarea id="change-note" onChange={(event) => setChangeNote(event.target.value)} placeholder="Till exempel ny rutin för skyddsronder" value={changeNote} />
               </div>
               {latestReferral?.status === "rejected" ? (
                 <label className="flex items-center gap-2 text-sm">
@@ -1080,6 +1095,10 @@ export function ManualWorkspace({
                     }
                   />
                   <p className="text-xs text-muted-foreground">Numret låses vid skapande. Namnet väljer du själv.</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input checked={useRoutine} onChange={(event) => setUseRoutine(event.target.checked)} type="checkbox" />
+                    Börja med en rutin: syfte, vem, så gör vi
+                  </label>
                 </>
               ) : null}
             </div>
