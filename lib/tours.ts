@@ -50,8 +50,8 @@ const TOURS: Tour[] = [
   {
     id: "kompetens",
     steps: [
-      { title: "Personal", body: "Här är personerna i företaget." },
-      { title: "Bjud in", body: "Skriv e-post. Hen får en länk." },
+      { title: "Vem kan vad", body: "Raderna är personer. Kolumnerna är kompetenser.", target: "[data-tour='matris']" },
+      { title: "Tre val", body: "Saknas, Utbildas eller Kan. Kan betyder att personen får göra jobbet." },
     ],
   },
   {

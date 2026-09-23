@@ -27,9 +27,9 @@ export function ModuleShell({
 }: ModuleShellProps) {
   return (
     <DashboardLayout description={description} navigation={navigation} title={title}>
-      <Link className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-token hover:text-foreground" href="/manual">
+      <Link className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-token hover:text-foreground" href="/">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Tillbaka till {title}
+        Tillbaka till Start
       </Link>
       {children}
       {comingSoonPoints && comingSoonPoints.length > 0 ? (
