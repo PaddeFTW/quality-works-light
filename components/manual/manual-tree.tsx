@@ -16,7 +16,7 @@ interface ManualTreeProps {
   publishedIds?: string[];
   onSelect: (node: ManualNode) => void;
   onRename: (node: ManualNode) => void;
-  onHide: (node: ManualNode) => void;
+  onDelete: (node: ManualNode) => void;
   onNewDocument: (parentId: string | null) => void;
   onCollapse?: () => void;
 }
@@ -50,19 +50,18 @@ export function ManualTree({
   publishedIds = [],
   onSelect,
   onRename,
-  onHide,
+  onDelete,
   onNewDocument,
   onCollapse,
 }: ManualTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [hidden, setHidden] = useState<string[]>([]);
   const [menuId, setMenuId] = useState<string | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleNodes = useMemo(() => filterNodes(nodes, normalizedQuery), [nodes, normalizedQuery]);
   const flat = useMemo(
-    () => flatten(visibleNodes, collapsed, Boolean(normalizedQuery)).filter((node) => !hidden.includes(node.id)),
-    [visibleNodes, collapsed, normalizedQuery, hidden],
+    () => flatten(visibleNodes, collapsed, Boolean(normalizedQuery)),
+    [visibleNodes, collapsed, normalizedQuery],
   );
 
   function toggle(id: string) {
@@ -98,7 +97,6 @@ export function ManualTree({
   }
 
   function renderNode(node: ManualNode, depth: number, path: number[]) {
-    if (hidden.includes(node.id)) return null;
     const isOpen = normalizedQuery ? true : !collapsed.includes(node.id);
     const isSelected = node.id === selectedId;
     const hasChildren = (node.children?.length ?? 0) > 0;
@@ -164,12 +162,9 @@ export function ManualTree({
               <DropdownMenuItem onClick={() => onNewDocument(node.id)}>Nytt underavsnitt</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(node)}>Byt namn</DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => {
-                  setHidden((current) => [...current, node.id]);
-                  onHide(node);
-                }}
+                onClick={() => onDelete(node)}
               >
-                Dölj
+                Ta bort
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

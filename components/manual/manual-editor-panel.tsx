@@ -130,7 +130,7 @@ export function ManualEditorPanel({
       UnderlineExtension,
       ImageExtension.configure({ inline: false, allowBase64: true }),
       Placeholder.configure({
-        placeholder: "Klicka här och skriv. Så här gör vi på jobbet…",
+        placeholder: "Skriv här. Så här gör vi på jobbet.",
         emptyEditorClass: "is-editor-empty",
       }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
@@ -196,20 +196,16 @@ export function ManualEditorPanel({
   }, [editor]);
 
   useEffect(() => {
-    if (!editor || !editable) return;
-    editor.commands.focus("end");
-  }, [editor, editable, documentCode]);
+    editor?.setEditable(editable);
+  }, [editor, editable]);
 
   useEffect(() => {
     if (!editor) return;
     if (value === lastEmitted.current) return;
+    if (editor.isFocused) return;
     lastEmitted.current = value;
     editor.commands.setContent(value || "<p></p>", { emitUpdate: false });
   }, [editor, value]);
-
-  useEffect(() => {
-    editor?.setEditable(editable);
-  }, [editor, editable]);
 
   const insertLink = () => {
     if (!editor) return;

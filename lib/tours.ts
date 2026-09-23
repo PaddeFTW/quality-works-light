@@ -13,7 +13,7 @@ const TOURS: Tour[] = [
   {
     id: "start",
     steps: [
-      { title: "Det här är Start", body: "Här ser du vad som behöver göras i dag." },
+      { title: "Det här är Start", body: "Här ser du vad du ska göra nu.", target: "[data-tour='idag']" },
       { title: "Öppna boken", body: "Klicka Öppna manual. Det är hjärtat i programmet.", target: "[data-tour='oppen-manual']" },
       { title: "Bjud in", body: "När du vill: Inställningar, skriv e-post, skicka.", target: "[data-tour='bjud-in']" },
     ],
