@@ -56,7 +56,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "dashboard", href: "/", enabled: true, minRole: "viewer", viewerAccess: "read" },
   { key: "manual", href: "/manual", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "swot", href: "/swot", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "mal", href: "/mal", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "mal", href: "/mal", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "arshjul", href: "/arshjul", enabled: true, minRole: "viewer", viewerAccess: "read" },
   { key: "kompetens", href: "/kompetens", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "kund", href: "/kund", enabled: false, minRole: "editor", viewerAccess: "read" },

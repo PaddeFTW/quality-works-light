@@ -19,6 +19,7 @@ interface TopbarProps {
 const PAGE_TITLE: Record<string, string> = {
   "/": "Start",
   "/arshjul": "Årshjul",
+  "/mal": "Mål",
   "/kompetens": "Personal",
   "/lagar": "Lagar",
   "/avvikelse": "Avvikelser",
