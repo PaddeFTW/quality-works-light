@@ -23,7 +23,6 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Check,
   FileDown,
   Highlighter,
   ImagePlus,
@@ -34,7 +33,6 @@ import {
   Paperclip,
   Printer,
   Redo2,
-  Save,
   Strikethrough,
   Table2,
   Underline,
@@ -96,7 +94,6 @@ export function ManualEditorPanel({
   onChange,
   onSave,
   onPublish,
-  saved,
   saveStatus,
   editable = true,
   canExport = false,
@@ -225,17 +222,7 @@ export function ManualEditorPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(1200px_600px_at_50%_-10%,hsl(190_40%_94%),transparent)] bg-muted/40">
-      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-card/80 px-3 py-2">
-        <div className="mr-1 flex items-center gap-1 rounded-xl bg-muted/70 p-1">
-          <Button disabled={!editable} onClick={onSave} size="sm" variant="outline">
-            {saved ? <Check data-icon="inline-start" /> : <Save data-icon="inline-start" />}
-            {saved ? "Sparat" : "Spara"}
-          </Button>
-          <Button disabled={!editable} onClick={onPublish} size="sm">
-            <Upload data-icon="inline-start" />
-            Publicera
-          </Button>
-        </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-card px-3 py-2">
         <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
         <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
         <select
@@ -395,7 +382,7 @@ export function ManualEditorPanel({
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-6 md:p-10">
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8">
         <div className={cn("document-paper mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")}>
           <DocumentPaperHeader
             companyName={companyName}

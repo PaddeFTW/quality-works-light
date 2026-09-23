@@ -66,7 +66,7 @@ const NAV_TINT: Record<string, string> = {
     cn(
       "flex items-center rounded-xl text-muted-foreground shadow-none transition-token hover:bg-accent hover:text-accent-foreground",
       labeled ? "h-10 w-full gap-3 px-3 text-sm font-semibold" : "size-10 justify-center",
-      isActive(item) && "bg-primary text-primary-foreground shadow-token-sm hover:bg-primary hover:text-primary-foreground",
+      isActive(item) && "bg-primary text-primary-foreground! shadow-token-sm hover:bg-primary hover:text-primary-foreground",
     );
 
   function NavLink({ item, labeled }: { item: NavItem; labeled: boolean }) {
@@ -81,7 +81,7 @@ const NAV_TINT: Record<string, string> = {
           rel={newTab ? "noopener noreferrer" : undefined}
           target={newTab ? "_blank" : undefined}
         >
-          <span className={cn("inline-flex", isActive(item) ? "text-primary-foreground" : NAV_TINT[item.href] || "text-primary")}>
+          <span className={cn("inline-flex shrink-0", isActive(item) ? "text-primary-foreground!" : NAV_TINT[item.href] || "text-primary")}>
             {item.icon}
           </span>
           {labeled ? <span className="truncate">{item.title}</span> : <span className="sr-only">{item.title}</span>}
@@ -94,7 +94,7 @@ const NAV_TINT: Record<string, string> = {
     <aside
       aria-label="Huvudnavigation"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex h-14 border-t bg-sidebar text-sidebar-foreground lg:static lg:h-full lg:flex-col lg:rounded-2xl lg:border lg:border-t lg:bg-card lg:shadow-token-sm",
+        "fixed inset-x-0 bottom-0 z-40 flex h-14 overflow-hidden border-t bg-sidebar text-sidebar-foreground lg:static lg:h-full lg:flex-col lg:rounded-2xl lg:border lg:border-t lg:bg-card lg:shadow-token-sm",
         collapsed ? "lg:w-16" : "lg:w-60",
         className,
       )}
@@ -118,7 +118,7 @@ const NAV_TINT: Record<string, string> = {
 
       <nav
         className={cn(
-          "flex w-full items-center justify-around gap-1 px-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:justify-start lg:overflow-y-auto lg:py-3",
+          "flex w-full min-w-0 items-center justify-around gap-1 overflow-x-hidden px-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:justify-start lg:overflow-y-auto lg:py-3",
           collapsed ? "lg:items-center lg:gap-1 lg:px-2" : "lg:items-stretch lg:gap-1 lg:px-3",
         )}
       >
