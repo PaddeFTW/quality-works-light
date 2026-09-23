@@ -20,6 +20,7 @@ function placeFromPath(path: string): GuideArticle["place"] {
   if (path.startsWith("/arshjul")) return "arshjul";
   if (path.startsWith("/kompetens")) return "kompetens";
   if (path.startsWith("/lagar")) return "lagar";
+  if (path.startsWith("/miljoaspekter")) return "miljo";
   if (path.startsWith("/mal")) return "mal";
   return "start";
 }

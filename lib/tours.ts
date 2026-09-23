@@ -63,6 +63,13 @@ const TOURS: Tour[] = [
     ],
   },
   {
+    id: "miljo",
+    steps: [
+      { title: "Aspekterna", body: "Till vänster är det som påverkar miljön.", target: "[data-tour='miljolista']" },
+      { title: "Poängen", body: "1 är liten påverkan. 5 är störst. Spara.", target: "[data-tour='miljoform']" },
+    ],
+  },
+  {
     id: "lagar",
     steps: [
       { title: "Laglistan", body: "Till vänster är lagarna, samlade efter område.", target: "[data-tour='laglista']" },
@@ -86,6 +93,7 @@ export function tourForPath(path: string): Tour | null {
   if (path.startsWith("/forslag")) return TOURS[4];
   if (path.startsWith("/kompetens")) return TOURS[5];
   if (path.startsWith("/mal")) return TOURS.find((item) => item.id === "mal") ?? null;
+  if (path.startsWith("/miljoaspekter")) return TOURS.find((item) => item.id === "miljo") ?? null;
   if (path.startsWith("/lagar")) return TOURS.find((item) => item.id === "lagar") ?? null;
   if (path.startsWith("/installningar")) return TOURS.find((item) => item.id === "installningar") ?? null;
   return null;

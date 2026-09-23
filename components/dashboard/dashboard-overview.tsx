@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FileText, Plus, TriangleAlert, UserPlus } from "lucide-react";
+import { CalendarRange, FileText, Lightbulb, Plus, ShieldCheck, TriangleAlert, UserPlus } from "lucide-react";
+
+import { MiniBars } from "@/components/common/mini-bars";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,6 @@ import { caseNumber, createYearActivity, formatSvDate, loadOpsStats, missingTabl
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import { loadMyOpenReferrals } from "@/lib/manual/cloud";
 import { loadCompetence } from "@/lib/kompetens/persist";
-import { cn } from "@/lib/utils";
 import type { OpsStats } from "@/lib/ops/types";
 import type { ReviewRequest } from "@/types/domain";
 
@@ -258,28 +259,32 @@ export function DashboardOverview() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Läget</p>
+          <ShieldCheck className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Läget</p>
           <p className="mt-2 text-2xl font-bold">{late > 0 ? late : "Ok"}</p>
           <Badge className="mt-2" variant={late > 0 ? "destructive" : soon > 0 ? "warning" : "success"}>
             {late > 0 ? "Försenat" : soon > 0 ? "På gång" : "Enligt plan"}
           </Badge>
         </Link>
         <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Årshjul i år</p>
+          <CalendarRange className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Årshjul i år</p>
           <p className="mt-2 text-2xl font-bold">
             {stats.yearDone}/{stats.yearTotal || 0}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">{stats.yearTotal ? `${yearLeft} kvar` : "Inget inlagt"}</p>
         </Link>
         <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/avvikelse">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avvikelser</p>
+          <TriangleAlert className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avvikelser</p>
           <p className="mt-2 text-2xl font-bold">{stats.openDeviations}</p>
           <Badge className="mt-2" variant={stats.openDeviations > 0 ? "warning" : "success"}>
             {stats.openDeviations > 0 ? "Öppna" : "Inga öppna"}
           </Badge>
         </Link>
         <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/forslag">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Förslag</p>
+          <Lightbulb className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Förslag</p>
           <p className="mt-2 text-2xl font-bold">{stats.openSuggestions}</p>
           <p className="mt-2 text-sm text-muted-foreground">{stats.openSuggestions ? "Väntar på svar" : "Inget nytt"}</p>
         </Link>
@@ -319,23 +324,13 @@ export function DashboardOverview() {
       <Card>
         <CardHeader>
           <CardTitle>Året</CardTitle>
-          <CardDescription>En prick betyder att något är inlagt den månaden.</CardDescription>
+          <CardDescription>Stapeln visar hur många jobb som ligger varje månad.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
-            {MONTHS.map((name, index) => (
-              <div
-                className={cn(
-                  "rounded-lg px-1 py-2 text-center text-[11px]",
-                  index === monthIndex ? "bg-primary font-bold text-primary-foreground" : "bg-secondary text-secondary-foreground",
-                )}
-                key={name}
-              >
-                {name}
-                <span className="mt-1 block text-[10px]">{stats.monthCounts[index] || "·"}</span>
-              </div>
-            ))}
-          </div>
+          <MiniBars
+            empty="Inget inlagt ännu. Ett klick räcker."
+            items={MONTHS.map((name, index) => ({ label: name, value: stats.monthCounts[index] ?? 0, current: index === monthIndex }))}
+          />
           {stats.yearTotal === 0 ? (
             <div className="flex flex-wrap gap-2">
               {YEAR_PRESETS.map((preset) => (
