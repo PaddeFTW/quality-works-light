@@ -730,7 +730,7 @@ export function ManualWorkspace({
             <div className="ml-auto flex items-center gap-1.5">
               {selectedIsDocument ? (
                 <>
-                  <Button disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
+                  <Button data-tour="spara" disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
                     Spara
                   </Button>
                   <Button disabled={!canEdit} onClick={openPublish} size="sm">

@@ -198,47 +198,37 @@ export function ManualTree({
             value={query}
           />
         </div>
-        {nodes.length ? (
-          <div className="flex gap-2">
-            <Button onClick={() => onNewDocument(null)} size="sm" variant="outline">
-              Nytt dokument
-            </Button>
-            <Button onClick={() => setCollapsed([])} size="sm" type="button" variant="ghost">
-              Visa alla
-            </Button>
-            <Button
-              onClick={() => {
-                const ids: string[] = [];
-                const walk = (list: ManualNode[]) => {
-                  for (const node of list) {
-                    if (node.children?.length) {
-                      ids.push(node.id);
-                      walk(node.children);
-                    }
-                  }
-                };
-                walk(nodes);
-                setCollapsed(ids);
-              }}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              Fäll ihop
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-2">
+          <Button data-tour="nytt-kapitel" onClick={() => onNewDocument(null)} size="sm">
+            {nodes.length ? "Nytt kapitel" : "Skapa 1.0"}
+          </Button>
+          <Button
+            data-tour="underavsnitt"
+            disabled={!selectedId}
+            onClick={() => {
+              if (selectedId) onNewDocument(selectedId);
+            }}
+            size="sm"
+            title={selectedId ? "Lägger ett blad under det du har valt" : "Klicka ett kapitel först"}
+            type="button"
+            variant="outline"
+          >
+            Nytt underavsnitt
+          </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
+            Nytt kapitel blir 1.0 och 2.0. Nytt underavsnitt blir 1.1 under det kapitel du har klickat på. Tre prickar är bara extra.
+          </p>
+        </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <nav aria-label="Manualens dokumentträd" className="px-2 py-4">
           {visibleNodes.length ? (
             <ul>{visibleNodes.map((node, index) => renderNode(node, 0, [index + 1]))}</ul>
           ) : (
-            <div className="flex flex-col gap-4 px-2 py-8 text-sm">
+            <div className="flex flex-col gap-3 px-2 py-6 text-sm">
               <p className="leading-6 text-muted-foreground">
-                Tom pärm. Första bladet blir 1.0. Namnet väljer du.
+                Tom pärm. Klicka Skapa 1.0 här ovan.
               </p>
-              <Button onClick={() => onNewDocument(null)}>Skapa 1.0</Button>
             </div>
           )}
         </nav>

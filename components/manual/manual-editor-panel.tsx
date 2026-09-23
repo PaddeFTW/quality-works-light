@@ -383,7 +383,7 @@ export function ManualEditorPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8">
-        <div className={cn("document-paper mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")}>
+        <div className={cn("document-paper mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")} data-tour="papper">
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
