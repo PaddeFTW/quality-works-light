@@ -2,7 +2,7 @@ export interface GuideArticle {
   id: string;
   title: string;
   body: string;
-  place?: "manual" | "start" | "arshjul" | "all";
+  place?: "manual" | "start" | "arshjul" | "kompetens" | "all";
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
@@ -65,6 +65,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     place: "all",
     title: "Intern revision",
     body: "Ett återkommande jobb. Lägg det i Årshjulet. Då syns datumet på Start. Du kan också lägga in det från ett blad i Manualen.",
+  },
+  {
+    id: "kompetens-matris",
+    place: "kompetens",
+    title: "Hur fyller jag i matrisen?",
+    body: "Lägg till en kompetens, till exempel Truckkort. Välj Saknas, Utbildas eller Kan för varje person. Kan betyder att personen får göra jobbet.",
   },
   {
     id: "arshjul-tom",

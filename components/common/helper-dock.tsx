@@ -18,6 +18,7 @@ import { startTourEvent, tourForPath } from "@/lib/tours";
 function placeFromPath(path: string): GuideArticle["place"] {
   if (path.startsWith("/manual")) return "manual";
   if (path.startsWith("/arshjul")) return "arshjul";
+  if (path.startsWith("/kompetens")) return "kompetens";
   return "start";
 }
 
