@@ -192,7 +192,7 @@ export function DashboardOverview() {
             {greetingName ? `Hej ${greetingName}` : "Hej"}
             {todayLabel ? ` · ${todayLabel}` : ""}
           </p>
-          <h1 className="text-2xl font-bold tracking-tight">Att göra idag</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-tour="idag">Att göra idag</h1>
         </div>
         <Button asChild>
           <Link data-tour="oppen-manual" href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>

@@ -316,16 +316,15 @@ export function ManualWorkspace({
     if (!selectedId || !selectedIsDocument) return;
     const plain = countPlainText(draft);
     if (!plain) {
-      setStatus("Inget att publicera.");
+      setStatus("Skriv texten först. Sedan kan du publicera.");
       return;
     }
     if (openReferral) {
       setStatus(`Väntar på ${openReferral.reviewerName || "remiss"}. Publicera när svaret kommit.`);
       return;
     }
-    if (edition > 0 && !revisionStarted[selectedId]) {
-      openRevise();
-      return;
+    if (edition > 0 && selectedId && !revisionStarted[selectedId]) {
+      setRevisionStarted((current) => ({ ...current, [selectedId]: true }));
     }
     setPublishAnyway(false);
     setApprovedBy(settings.approver || settings.issuer || "Administratör");
@@ -503,8 +502,8 @@ export function ManualWorkspace({
           : item,
       ),
     );
-    setActiveTab("original");
     setDialog(null);
+    notice("Publicerat. Originalet är uppdaterat. Du kan skriva vidare.", "ok");
   }
 
   function restoreEdition(editionNumber: number) {
@@ -638,7 +637,10 @@ export function ManualWorkspace({
       .filter(([, list]) => list.length > 0)
       .map(([id]) => id),
     onNewDocument: openCreate,
-    onHide: () => undefined,
+    onDelete: (node: ManualNode) => {
+      setDialogTarget(node);
+      setDialog("delete");
+    },
     onRename: (node: ManualNode) => {
       setDialogTarget(node);
       setDialogName(node.title);
@@ -718,11 +720,9 @@ export function ManualWorkspace({
               </Button>
               <div className="flex overflow-hidden rounded-lg border bg-background">
                 <Button
-                  aria-label="Lämna helskärm"
+                  aria-label="Dölj innehållet"
                   className="rounded-none"
-                  onClick={() => {
-                    if (document.fullscreenElement) void document.exitFullscreen();
-                  }}
+                  onClick={() => setTreeCollapsed(true)}
                   size="icon"
                   variant="ghost"
                 >
@@ -827,6 +827,7 @@ export function ManualWorkspace({
             ) : null}
             {selectedIsDocument && canSeeDraft ? (
               <ManualEditorPanel
+                key={selectedId}
                 attachments={attachments[selectedId ?? ""] ?? []}
                 companyName={session?.organizationName || settings.name}
                 documentCode={documentCode}
@@ -978,7 +979,7 @@ export function ManualWorkspace({
           </DialogHeader>
           {dialog === "delete" ? (
             <p className="text-sm text-muted-foreground">
-              Ta bort {documentCode} {dialogTarget?.title}?
+              Ta bort {dialogTarget?.title}? Det går inte att ångra.
             </p>
           ) : dialog === "publish" ? (
             <div className="space-y-3">
