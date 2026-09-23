@@ -47,4 +47,7 @@ export interface OpsStats {
   upcomingActivities: YearActivity[];
   overdueActivities: YearActivity[];
   recentDeviations: Deviation[];
+  yearTotal: number;
+  yearDone: number;
+  monthCounts: number[];
 }
