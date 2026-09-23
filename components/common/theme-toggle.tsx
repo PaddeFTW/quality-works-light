@@ -1,6 +1,6 @@
 "use client";
 
-import { Contrast, Moon, SunMedium } from "lucide-react";
+import { Moon, SunMedium } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { useMounted } from "@/hooks/use-mounted";
@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 const modes = [
   { id: "light", label: "Ljust", icon: SunMedium },
   { id: "dark", label: "Mörkt", icon: Moon },
-  { id: "contrast", label: "Kontrast", icon: Contrast },
-  { id: "contrast-dark", label: "Kontrast mörk", icon: Contrast },
 ] as const;
 
 export function ThemeToggle() {
@@ -20,7 +18,7 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   if (!mounted) {
-    return <div className="h-9 w-[9.5rem] rounded-md border bg-background" />;
+    return <div className="h-9 w-[4.5rem] rounded-md border bg-background" />;
   }
 
   return (
