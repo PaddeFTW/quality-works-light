@@ -22,6 +22,7 @@ const PAGE_TITLE: Record<string, string> = {
   "/mal": "Mål",
   "/kompetens": "Personal",
   "/lagar": "Lagar",
+  "/miljoaspekter": "Miljöaspekter",
   "/avvikelse": "Avvikelser",
   "/forslag": "Förslag",
   "/installningar": "Inställningar",

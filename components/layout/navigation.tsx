@@ -107,7 +107,7 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kompetens", "/lagar"] as const;
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kompetens", "/lagar", "/miljoaspekter"] as const;
 
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 

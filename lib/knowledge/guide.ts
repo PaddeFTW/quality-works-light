@@ -2,7 +2,7 @@ export interface GuideArticle {
   id: string;
   title: string;
   body: string;
-  place?: "manual" | "start" | "arshjul" | "kompetens" | "lagar" | "mal" | "all";
+  place?: "manual" | "start" | "arshjul" | "kompetens" | "lagar" | "mal" | "miljo" | "all";
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
@@ -77,6 +77,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     place: "mal",
     title: "Hur skriver jag ett mål?",
     body: "Skriv vad ni vill bli bättre på. Skriv hur ni ser att det går. Skriv vem som håller i det. Spara.",
+  },
+  {
+    id: "miljo-hur",
+    place: "miljo",
+    title: "Hur fyller jag i en miljöaspekt?",
+    body: "Skriv vad som påverkar miljön. Välj område. Sätt en siffra från 1 till 5. Skriv vad ni gör åt det. Spara.",
   },
   {
     id: "lagar-hur",
