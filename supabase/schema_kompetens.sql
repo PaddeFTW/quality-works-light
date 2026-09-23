@@ -24,6 +24,10 @@ create table if not exists public.competence_levels (
   competence_id uuid not null references public.competences (id) on delete cascade,
   person_key text not null,
   level text not null default 'missing',
+  note text not null default '',
+  due_on date,
+  signed_name text,
+  signed_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (competence_id, person_key)
 );

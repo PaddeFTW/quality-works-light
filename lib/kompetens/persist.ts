@@ -16,6 +16,10 @@ export interface LevelCell {
   competenceId: string;
   personKey: string;
   level: CompetenceLevel;
+  note: string;
+  dueOn: string;
+  signedName: string;
+  signedAt: string;
 }
 
 export async function loadCompetence(organizationId: string) {
@@ -23,7 +27,7 @@ export async function loadCompetence(organizationId: string) {
   const [skills, people, levels] = await Promise.all([
     supabase.from("competences").select("id, name").eq("organization_id", organizationId).order("created_at"),
     supabase.from("competence_people").select("person_key, name").eq("organization_id", organizationId).order("name"),
-    supabase.from("competence_levels").select("competence_id, person_key, level").eq("organization_id", organizationId),
+    supabase.from("competence_levels").select("competence_id, person_key, level, note, due_on, signed_name, signed_at").eq("organization_id", organizationId),
   ]);
   if (skills.error) throw skills.error;
   if (people.error) throw people.error;
@@ -38,6 +42,10 @@ export async function loadCompetence(organizationId: string) {
       competenceId: String(row.competence_id),
       personKey: String(row.person_key),
       level: row.level as CompetenceLevel,
+      note: String(row.note ?? ""),
+      dueOn: row.due_on ? String(row.due_on) : "",
+      signedName: String(row.signed_name ?? ""),
+      signedAt: String(row.signed_at ?? ""),
     })) as LevelCell[],
   };
 }
@@ -86,6 +94,10 @@ export async function setLevel(params: {
   competenceId: string;
   personKey: string;
   level: CompetenceLevel | "";
+  note?: string;
+  dueOn?: string;
+  signedName?: string;
+  signedAt?: string;
 }) {
   const supabase = createClient();
   if (!params.level) {
@@ -103,6 +115,10 @@ export async function setLevel(params: {
       competence_id: params.competenceId,
       person_key: params.personKey,
       level: params.level,
+      note: params.note ?? "",
+      due_on: params.dueOn || null,
+      signed_name: params.signedName || null,
+      signed_at: params.signedAt || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "competence_id,person_key" },
@@ -112,6 +128,9 @@ export async function setLevel(params: {
 
 export function competenceTableMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
+  if (/column/i.test(text)) {
+    return "Utbildning saknas i databasen. Kör supabase/schema_kompetens_utbildning.sql i Supabase.";
+  }
   if (/could not find the table|schema cache|does not exist/i.test(text)) {
     return "Kompetens-tabellerna saknas. Kör supabase/schema_kompetens.sql i Supabase.";
   }

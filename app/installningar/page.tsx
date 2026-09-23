@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { ModuleShell } from "@/components/common/module-shell";
+import { SoundToggle } from "@/components/common/sound-toggle";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
@@ -178,9 +179,10 @@ export default function InstallningarPage() {
 
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
           <h3 className="text-base font-bold">Utseende</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Ljust, mörkt eller hög kontrast.</p>
-          <div className="mt-4">
+          <p className="mt-1 text-sm text-muted-foreground">Ljust eller mörkt. Knappljudet är svagt. Du kan stänga av det.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <ThemeToggle />
+            <SoundToggle />
           </div>
         </section>
 

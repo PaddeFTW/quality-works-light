@@ -5,6 +5,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { playSoft } from "@/lib/sound";
 import { Tip } from "@/components/ui/tooltip";
 
 const buttonVariants = cva(
@@ -43,13 +44,21 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, title, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, title, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const tip =
       title ||
       (typeof props["aria-label"] === "string" ? props["aria-label"] : undefined);
     const button = (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+          playSoft();
+          onClick?.(event);
+        }}
+        ref={ref}
+        {...props}
+      />
     );
     if (size === "icon" && tip) {
       return <Tip label={tip}>{button}</Tip>;
