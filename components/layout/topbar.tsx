@@ -20,6 +20,7 @@ const PAGE_TITLE: Record<string, string> = {
   "/": "Start",
   "/arshjul": "Årshjul",
   "/kompetens": "Personal",
+  "/lagar": "Lagar",
   "/avvikelse": "Avvikelser",
   "/forslag": "Förslag",
   "/installningar": "Inställningar",
