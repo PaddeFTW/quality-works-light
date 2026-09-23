@@ -187,12 +187,35 @@ body {
   }
 
   .document-paper {
+    position: relative;
     background: var(--paper);
     color: var(--paper-foreground);
     border: 1px solid transparent;
     border-radius: 0.5rem;
     box-shadow: var(--paper-shadow);
     transition: box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .document-paper.is-draft::after,
+  .document-paper.is-current::after {
+    position: absolute;
+    top: 6.5rem;
+    right: 1.5rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    pointer-events: none;
+    transform: rotate(-8deg);
+  }
+
+  .document-paper.is-draft::after {
+    content: "UTKAST";
+    color: oklch(0.55 0.16 25 / 0.22);
+  }
+
+  .document-paper.is-current::after {
+    content: "GÄLLANDE";
+    color: oklch(0.45 0.12 155 / 0.28);
   }
 
   .document-paper.is-writing {

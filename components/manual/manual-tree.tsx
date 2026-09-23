@@ -149,6 +149,9 @@ export function ManualTree({
             <span className="truncate">
               <span className={cn("mr-2 font-mono text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{number}</span>
               {node.title}
+              <span className={cn("ml-2 text-[10px] uppercase tracking-wide", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                {publishedIds.includes(node.id) ? "Gällande" : "Utkast"}
+              </span>
             </span>
           </button>
           <DropdownMenu onOpenChange={(open) => setMenuId(open ? node.id : null)} open={menuId === node.id}>
@@ -216,7 +219,7 @@ export function ManualTree({
             Nytt underavsnitt
           </Button>
           <p className="text-xs leading-5 text-muted-foreground">
-            Nytt kapitel blir 1.0 och 2.0. Nytt underavsnitt blir 1.1 under det kapitel du har klickat på. Tre prickar är bara extra.
+            Kapitel blir 1.0 och 2.0. Underavsnitt läggs under det kapitel du har klickat på.
           </p>
         </div>
       </div>

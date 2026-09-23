@@ -28,7 +28,7 @@ export function DocumentPaperHeader({
         </div>
         <div className="shrink-0 rounded-xl bg-muted/50 px-3 py-2 text-right text-xs leading-5 text-paper-muted">
           <p className="font-mono text-paper-foreground">{documentCode || "—"}</p>
-          <p>{edition > 0 ? `Utgåva ${edition}` : "Ingen utgåva"}</p>
+          <p>{edition > 0 ? `Utgåva ${edition}` : "Inte publicerad"}</p>
         </div>
       </div>
       <div className="h-px bg-gradient-to-r from-transparent via-paper-border to-transparent" />

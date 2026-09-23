@@ -383,14 +383,14 @@ export function ManualEditorPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8">
-        <div className={cn("document-paper mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")} data-tour="papper">
+        <div className={cn("document-paper is-draft mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")} data-tour="papper">
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
             documentTitle={documentTitle}
             edition={edition}
             issuer={issuer}
-            statusLabel="Arbetsmanual – du kan ändra"
+            statusLabel={edition > 0 ? `Utkast. Gällande är utgåva ${edition}` : "Utkast. Inte publicerad"}
           />
           <div
             onClick={() => editor?.commands.focus()}

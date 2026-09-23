@@ -52,7 +52,7 @@ export function ManualOriginalPanel({
             documentTitle={documentTitle}
             edition={edition}
             issuer={issuer}
-            statusLabel="Original – gällande version, låst"
+            statusLabel="Inget original än"
           />
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-10 py-16 text-center">
             <FileLock2 className="size-6 text-paper-muted" />
@@ -106,6 +106,7 @@ export function ManualOriginalPanel({
                     type="button"
                   >
                     {version.publishedAt}
+                    {version.changeNote ? ` · ${version.changeNote}` : ""}
                   </button>
                   {onRestore ? (
                     <button
@@ -128,14 +129,14 @@ export function ManualOriginalPanel({
             ) : null}
           </div>
         ) : null}
-        <article className="document-paper overflow-hidden">
+        <article className="document-paper is-current overflow-hidden">
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
             documentTitle={documentTitle}
             edition={visibleEdition}
             issuer={issuer}
-            statusLabel="Original – gällande version, låst"
+            statusLabel="Gällande"
           />
           <div
             className="manual-tiptap-editor px-6 pb-10 pt-2 font-serif text-base leading-8"
