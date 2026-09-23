@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
-import { Check, Home, LifeBuoy, Maximize, Minimize, Minus, PanelLeft, Plus, Square, X } from "lucide-react";
+import { Check, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   defaultDocumentContent,
   findNodeById,
@@ -661,7 +667,7 @@ export function ManualWorkspace({
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-muted/40" ref={binderRef}>
       <aside
-        className="relative hidden shrink-0 bg-sidebar md:flex md:flex-col"
+        className="relative flex shrink-0 flex-col bg-sidebar"
         data-tour="trad"
         style={treeCollapsed ? { width: 48 } : { width: treeWidth }}
       >
@@ -700,107 +706,92 @@ export function ManualWorkspace({
       <div className="flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
-          <div className="flex flex-col gap-2 border-b bg-card/90 px-4 pt-3 shadow-token-xs sm:px-5">
-            <div className="flex items-center gap-2 pb-1">
-              <Button aria-label="Visa innehållsförteckning" className="md:hidden" onClick={() => setTreeOpen(true)} size="icon" variant="ghost">
-                <PanelLeft />
+          <div className="flex flex-wrap items-center gap-2 border-b bg-card px-3 py-2">
+            <Button
+              aria-label={treeCollapsed ? "Visa innehållet" : "Dölj innehållet"}
+              onClick={() => setTreeCollapsed((open) => !open)}
+              size="icon"
+              variant="ghost"
+            >
+              <PanelLeft />
+            </Button>
+            <span className="min-w-0 max-w-sm flex-1 truncate text-sm font-semibold">
+              {selectedIsDocument
+                ? `${documentCode} ${documentTitle}`
+                : tree.length
+                  ? "Välj ett blad till vänster"
+                  : settings.name || "Manualen"}
+            </span>
+            <TabsList variant="line">
+              <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
+              <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
+              <TabsTrigger value="original">Original</TabsTrigger>
+            </TabsList>
+            <div className="ml-auto flex items-center gap-1.5">
+              {selectedIsDocument ? (
+                <>
+                  <Button disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
+                    Spara
+                  </Button>
+                  <Button disabled={!canEdit} onClick={openPublish} size="sm">
+                    Publicera
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-label="Fler åtgärder" size="icon" variant="ghost">
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem disabled={!canEdit || edition === 0} onClick={openRevise}>
+                        Revidera
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled={!canEdit || !canAudit} onClick={openAudit}>
+                        Intern revision
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled={!canEdit || !canRemiss} onClick={openRemiss}>
+                        Remiss
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : null}
+              <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">
+                {isFullscreen ? <Minimize /> : <Maximize />}
               </Button>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                {selectedIsDocument
-                  ? `${documentCode} ${documentTitle}`
-                  : tree.length
-                    ? "Välj ett blad till vänster"
-                    : settings.name || "Manualen"}
-              </span>
-              <Button asChild size="sm" variant="ghost">
+              <Tip label="Hjälp">
+                <Button
+                  aria-label="Hjälp"
+                  id="tour-home"
+                  onClick={() => setTipsOpen((open) => !open)}
+                  size="icon"
+                  variant={tipsOpen ? "default" : "ghost"}
+                >
+                  <LifeBuoy />
+                </Button>
+              </Tip>
+              <Button aria-label="Stäng manualen" asChild size="icon" variant="ghost">
                 <Link href="/">
-                  <Home data-icon="inline-start" />
-                  Start
+                  <X />
                 </Link>
               </Button>
-              <div className="flex overflow-hidden rounded-lg border bg-background">
-                <Button
-                  aria-label="Dölj innehållet"
-                  className="rounded-none"
-                  onClick={() => setTreeCollapsed(true)}
-                  size="icon"
-                  variant="ghost"
-                >
-                  <Minus />
-                </Button>
-                <Button
-                  aria-label="Visa innehållet"
-                  className="rounded-none"
-                  onClick={() => {
-                    setTreeCollapsed(false);
-                    if (document.fullscreenElement) void document.exitFullscreen();
-                  }}
-                  size="icon"
-                  variant="ghost"
-                >
-                  <Square />
-                </Button>
-                <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} className="rounded-none" onClick={() => void toggleFullscreen()} size="icon" variant="ghost">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
-                <Button aria-label="Stäng manualen" className="rounded-none" asChild variant="ghost">
-                  <Link href="/"><X /></Link>
-                </Button>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 pb-3">
-              <TabsList variant="line">
-                <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
-                <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
-                <TabsTrigger value="original">Original</TabsTrigger>
-              </TabsList>
-              <div className="ml-auto flex items-center gap-1.5">
-                {selectedIsDocument ? (
-                  <>
-                    <Button disabled={!canEdit || edition === 0} onClick={openRevise} size="sm" variant="ghost">
-                      Revidera
-                    </Button>
-                    <Button disabled={!canEdit} onClick={() => void handleSave()} size="sm" variant="outline">
-                      Spara
-                    </Button>
-                    <Button disabled={!canEdit || !canAudit} onClick={openAudit} size="sm" variant="ghost">
-                      Intern revision
-                    </Button>
-                    <Button disabled={!canEdit || !canRemiss} onClick={openRemiss} size="sm" variant="ghost">
-                      Remiss
-                    </Button>
-                    <Button disabled={!canEdit} onClick={openPublish} size="sm">
-                      Publicera
-                    </Button>
-                  </>
-                ) : null}
-                <Tip label="Hjälp">
-                  <Button
-                    aria-label="Hjälp"
-                    id="tour-home"
-                    onClick={() => setTipsOpen((open) => !open)}
-                    size="icon"
-                    variant={tipsOpen ? "default" : "ghost"}
-                  >
-                    <LifeBuoy />
-                  </Button>
-                </Tip>
-              </div>
-              {status ? (
-                <span className={statusTone === "fel" ? "w-full text-xs text-destructive" : "w-full text-xs text-muted-foreground"}>
-                  {status}
-                  {(status.includes("molnet") || status.includes("Databasen") || status.includes("Kunde inte läsa")) ? (
-                    <button className="ml-2 underline" onClick={() => window.location.reload()} type="button">
-                      Försök igen
-                    </button>
-                  ) : null}
-                  {status === "Lagd i årshjulet." ? (
-                    <Link className="ml-2 font-semibold text-primary underline" href="/arshjul">
-                      Öppna årshjul
-                    </Link>
-                  ) : null}
-                </span>
-              ) : null}
             </div>
           </div>
+          {status ? (
+            <p className={statusTone === "fel" ? "border-b px-4 py-1.5 text-xs text-destructive" : "border-b px-4 py-1.5 text-xs text-muted-foreground"}>
+              {status}
+              {(status.includes("molnet") || status.includes("Databasen") || status.includes("Kunde inte läsa")) ? (
+                <button className="ml-2 underline" onClick={() => window.location.reload()} type="button">
+                  Försök igen
+                </button>
+              ) : null}
+              {status === "Lagd i årshjulet." ? (
+                <Link className="ml-2 font-semibold underline" href="/arshjul">
+                  Öppna årshjul
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
           <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
             <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
           </TabsContent>
