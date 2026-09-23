@@ -21,44 +21,45 @@ const TOURS: Tour[] = [
   {
     id: "manual",
     steps: [
-      { title: "Innehållet", body: "Till vänster är kapitlen. Klicka ett blad.", target: "[data-tour='trad']" },
-      { title: "Papperet", body: "I mitten skriver du. Klicka och börja.", target: "[data-tour='papper']" },
-      { title: "Spara", body: "Spara ofta. Publicera när texten stämmer." },
+      { title: "Nytt kapitel", body: "Den här knappen skapar 1.0, sedan 2.0. Du behöver inte leta i menyn.", target: "[data-tour='nytt-kapitel']" },
+      { title: "Nytt underavsnitt", body: "Klicka först ett kapitel. Sedan den här knappen. Då blir det 1.1 under det kapitlet.", target: "[data-tour='underavsnitt']" },
+      { title: "Skriv här", body: "Papperet i mitten är där texten ska stå.", target: "[data-tour='papper']" },
+      { title: "Spara", body: "Spara medan du skriver. Publicera när texten stämmer.", target: "[data-tour='spara']" },
     ],
   },
   {
     id: "arshjul",
     steps: [
-      { title: "Årshjulet", body: "Här ligger jobb som kommer varje år." },
-      { title: "Ett klick", body: "Tomt? Klicka Intern revision. Klart." },
+      { title: "Årshjulet", body: "Här ligger jobb som kommer varje år.", target: "[data-tour='sidhuvud']" },
+      { title: "Ett klick", body: "Klicka Intern revision. Då läggs den in.", target: "[data-tour='preset']" },
     ],
   },
   {
     id: "avvikelse",
     steps: [
-      { title: "Avvikelse", body: "När något inte stämmer, lämna det här." },
-      { title: "Noll är bra", body: "Tom lista betyder att inget fel är anmält." },
+      { title: "Avvikelse", body: "När något inte stämmer, lämna det här.", target: "[data-tour='sidhuvud']" },
+      { title: "Noll är bra", body: "Tom lista betyder att inget fel är anmält.", target: "[data-tour='sidhuvud']" },
     ],
   },
   {
     id: "forslag",
     steps: [
-      { title: "Förslag", body: "En idé som gör jobbet bättre." },
-      { title: "Alla får lämna", body: "Admin tar vidare eller säger nej." },
+      { title: "Förslag", body: "En idé som gör jobbet bättre.", target: "[data-tour='sidhuvud']" },
+      { title: "Alla får lämna", body: "Admin tar vidare eller säger nej.", target: "[data-tour='sidhuvud']" },
     ],
   },
   {
     id: "kompetens",
     steps: [
       { title: "Vem kan vad", body: "Raderna är personer. Kolumnerna är kompetenser.", target: "[data-tour='matris']" },
-      { title: "Tre val", body: "Saknas, Utbildas eller Kan. Kan betyder att personen får göra jobbet." },
+      { title: "Tre val", body: "I rutan väljer du Saknas, Utbildas eller Kan.", target: "[data-tour='matris']" },
     ],
   },
   {
     id: "installningar",
     steps: [
-      { title: "Inställningar", body: "Namn, tema, personer och paket." },
-      { title: "Paket", body: "Gratis räcker för Manualen. Betala när ni behöver mer." },
+      { title: "Inställningar", body: "Namn, tema, personer och paket sitter här.", target: "[data-tour='sidhuvud']" },
+      { title: "Paket", body: "Gratis räcker för Manualen. Betala när ni behöver mer.", target: "[data-tour='sidhuvud']" },
     ],
   },
 ];
@@ -75,7 +76,7 @@ export function tourForPath(path: string): Tour | null {
 }
 
 export function tourStorageKey(id: string) {
-  return `qw.tour.${id}`;
+  return `qw.tour.v2.${id}`;
 }
 
 export function startTourEvent() {

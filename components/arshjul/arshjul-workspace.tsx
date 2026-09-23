@@ -205,8 +205,9 @@ export function ArshjulWorkspace() {
         <div className="flex flex-wrap gap-2">
           {YEAR_PRESETS.map((preset) => (
             <Button
-              key={preset.kind}
+              data-tour={preset.kind === "revision" ? "preset" : undefined}
               disabled={items.some((item) => item.kind === preset.kind)}
+              key={preset.kind}
               onClick={() => void addPreset(preset)}
               type="button"
               variant="secondary"
