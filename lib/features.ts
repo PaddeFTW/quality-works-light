@@ -61,7 +61,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "kompetens", href: "/kompetens", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "kund", href: "/kund", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "leverantor", href: "/leverantor", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "lagar", href: "/lagar", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "lagar", href: "/lagar", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "miljoaspekter", href: "/miljoaspekter", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "kontroller", href: "/kontroller", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "avvikelse", href: "/avvikelse", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
