@@ -2,28 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  FileText,
-  Plus,
-  TriangleAlert,
-  UserPlus,
-} from "lucide-react";
+import { FileText, Plus, TriangleAlert, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { readLastOpenedId } from "@/components/manual/manual-boot";
 import { createClient } from "@/lib/supabase/client";
 import { caseNumber, createYearActivity, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import { loadMyOpenReferrals } from "@/lib/manual/cloud";
+import { loadCompetence } from "@/lib/kompetens/persist";
+import { cn } from "@/lib/utils";
 import type { OpsStats } from "@/lib/ops/types";
 import type { ReviewRequest } from "@/types/domain";
 
@@ -31,12 +22,34 @@ function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] || fullName;
 }
 
+function readableTitle(title: string) {
+  const text = title.trim();
+  if (!text || /^\d{6,}$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst blad";
+  return text;
+}
+
+function whenLabel(date: string, todayKey: string) {
+  if (!todayKey) return formatSvDate(date);
+  const days = Math.round((new Date(date).getTime() - new Date(todayKey).getTime()) / 86400000);
+  if (Number.isNaN(days)) return formatSvDate(date);
+  if (days < -1) return `Försenad ${Math.abs(days)} dagar`;
+  if (days === -1) return "Försenad sedan i går";
+  if (days === 0) return "I dag";
+  if (days === 1) return "I morgon";
+  return formatSvDate(date);
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+
 const emptyStats: OpsStats = {
   openDeviations: 0,
   openSuggestions: 0,
   upcomingActivities: [],
   overdueActivities: [],
   recentDeviations: [],
+  yearTotal: 0,
+  yearDone: 0,
+  monthCounts: Array.from({ length: 12 }, () => 0),
 };
 
 interface LastOpened {
@@ -51,6 +64,8 @@ export function DashboardOverview() {
   const [referrals, setReferrals] = useState<(ReviewRequest & { documentTitle?: string })[]>([]);
   const [lastOpened, setLastOpened] = useState<LastOpened | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [todayKey, setTodayKey] = useState("");
+  const [training, setTraining] = useState<{ waiting: number; known: number } | null>(null);
 
   useEffect(() => {
     setTodayLabel(
@@ -60,6 +75,7 @@ export function DashboardOverview() {
         month: "long",
       }),
     );
+    setTodayKey(new Date().toISOString().slice(0, 10));
   }, []);
 
   useEffect(() => {
@@ -90,10 +106,21 @@ export function DashboardOverview() {
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.id) setLastOpened({ id: String(data.id), title: String(data.title || "Blad") });
+        if (data?.id) setLastOpened({ id: String(data.id), title: readableTitle(String(data.title || "")) });
         else setLastOpened(null);
       });
   }, [session?.organizationId]);
+
+  useEffect(() => {
+    if (loading || !session?.organizationId) return;
+    void loadCompetence(session.organizationId)
+      .then((data) => {
+        const waiting = data.levels.filter((cell) => cell.level === "missing" || cell.level === "training").length;
+        const known = data.levels.filter((cell) => cell.level === "ok").length;
+        setTraining(waiting + known > 0 ? { waiting, known } : null);
+      })
+      .catch(() => setTraining(null));
+  }, [loading, session?.organizationId]);
 
   const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
@@ -169,30 +196,56 @@ export function DashboardOverview() {
     };
   }, [referrals, stats, lastOpened]);
 
-  const jobs = [
-    stats.openDeviations > 0
-      ? { href: "/avvikelse", label: "Avvikelser att ta om hand", value: String(stats.openDeviations), tone: "danger" as const }
-      : null,
-    referrals.length > 0
-      ? { href: `/manual?blad=${referrals[0].documentId}`, label: "Remiss att svara på", value: String(referrals.length), tone: "warn" as const, newTab: true }
-      : null,
-    stats.overdueActivities.length > 0
-      ? { href: "/arshjul", label: "Försenade jobb", value: String(stats.overdueActivities.length), tone: "danger" as const }
-      : null,
-    stats.upcomingActivities.length > 0
-      ? { href: "/arshjul", label: "Jobb inom 30 dagar", value: String(stats.upcomingActivities.length), tone: "info" as const }
-      : null,
-  ].filter((item) => item !== null);
+  const tasks = [
+    ...referrals.map((item) => ({
+      id: `remiss-${item.documentId}`,
+      title: "Svara på remiss",
+      meta: readableTitle(item.documentTitle || ""),
+      href: `/manual?blad=${item.documentId}`,
+      newTab: true,
+      when: "Väntar på dig",
+      tone: "warning" as const,
+    })),
+    ...stats.overdueActivities.map((item) => ({
+      id: item.id,
+      title: item.title,
+      meta: "Årshjulet",
+      href: "/arshjul",
+      newTab: false,
+      when: whenLabel(item.plannedOn, todayKey),
+      tone: "destructive" as const,
+    })),
+    ...stats.upcomingActivities
+      .filter((item) => !stats.overdueActivities.some((late) => late.id === item.id))
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        meta: "Årshjulet",
+        href: "/arshjul",
+        newTab: false,
+        when: whenLabel(item.plannedOn, todayKey),
+        tone: "secondary" as const,
+      })),
+  ].slice(0, 5);
+
+  const late = stats.overdueActivities.length;
+  const soon = stats.upcomingActivities.length;
+  const pulse = late > 0 ? `${late} försenat` : soon > 0 ? `${soon} de närmaste 30 dagarna` : "Enligt plan";
+  const monthIndex = todayKey ? Number(todayKey.slice(5, 7)) - 1 : -1;
+  const yearLeft = Math.max(0, stats.yearTotal - stats.yearDone);
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-medium capitalize text-primary">
             {greetingName ? `Hej ${greetingName}` : "Hej"}
             {todayLabel ? ` · ${todayLabel}` : ""}
           </p>
-          <h1 className="text-2xl font-bold tracking-tight" data-tour="idag">Att göra idag</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-tour="idag">
+            Att göra idag
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{pulse}</p>
         </div>
         <Button asChild>
           <Link data-tour="oppen-manual" href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>
@@ -203,73 +256,106 @@ export function DashboardOverview() {
 
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
 
-      <Card className="border-primary/25 bg-gradient-to-br from-secondary to-card shadow-token-md">
-        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Nästa steg</p>
-            <p className="mt-1 text-lg font-bold">{next.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{next.body}</p>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Läget</p>
+          <p className="mt-2 text-2xl font-bold">{late > 0 ? late : "Ok"}</p>
+          <Badge className="mt-2" variant={late > 0 ? "destructive" : soon > 0 ? "warning" : "success"}>
+            {late > 0 ? "Försenat" : soon > 0 ? "På gång" : "Enligt plan"}
+          </Badge>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Årshjul i år</p>
+          <p className="mt-2 text-2xl font-bold">
+            {stats.yearDone}/{stats.yearTotal || 0}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{stats.yearTotal ? `${yearLeft} kvar` : "Inget inlagt"}</p>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/avvikelse">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avvikelser</p>
+          <p className="mt-2 text-2xl font-bold">{stats.openDeviations}</p>
+          <Badge className="mt-2" variant={stats.openDeviations > 0 ? "warning" : "success"}>
+            {stats.openDeviations > 0 ? "Öppna" : "Inga öppna"}
+          </Badge>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/forslag">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Förslag</p>
+          <p className="mt-2 text-2xl font-bold">{stats.openSuggestions}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{stats.openSuggestions ? "Väntar på svar" : "Inget nytt"}</p>
+        </Link>
+      </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Att göra</CardTitle>
+          <CardDescription>Bara det som är försenat eller nära. Samma jobb visas en gång.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Inget som måste göras just nu. Noll avvikelser är bra.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {tasks.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
+                    href={task.href}
+                    rel={task.newTab ? "noopener noreferrer" : undefined}
+                    target={task.newTab ? "_blank" : undefined}
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{task.title}</span>
+                      <span className="block text-xs text-muted-foreground">{task.meta}</span>
+                    </span>
+                    <Badge variant={task.tone}>{task.when}</Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Året</CardTitle>
+          <CardDescription>En prick betyder att något är inlagt den månaden.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
+            {MONTHS.map((name, index) => (
+              <div
+                className={cn(
+                  "rounded-lg px-1 py-2 text-center text-[11px]",
+                  index === monthIndex ? "bg-primary font-bold text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                )}
+                key={name}
+              >
+                {name}
+                <span className="mt-1 block text-[10px]">{stats.monthCounts[index] || "·"}</span>
+              </div>
+            ))}
           </div>
-          <Button asChild>
-            <Link href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>
-              {next.cta}
-            </Link>
+          {stats.yearTotal === 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {YEAR_PRESETS.map((preset) => (
+                <Button key={preset.kind} onClick={() => void addPreset(preset)} size="sm" type="button" variant="outline">
+                  {preset.title}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          <Button asChild className="w-full sm:w-auto" variant="outline">
+            <Link href="/arshjul">Öppna årshjul</Link>
           </Button>
         </CardContent>
       </Card>
 
-      {jobs.length > 0 ? (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {jobs.map((job) => (
-            <li key={job.label}>
-              <Link
-                className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-token-sm transition-token hover:-translate-y-0.5 hover:shadow-token-md"
-                href={job.href}
-                rel={job.newTab ? "noopener noreferrer" : undefined}
-                target={job.newTab ? "_blank" : undefined}
-              >
-                <span className="font-semibold">{job.label}</span>
-                <Badge variant={job.tone === "danger" ? "destructive" : "secondary"}>{job.value}</Badge>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">Inget som måste göras just nu. Noll avvikelser är bra.</p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild size="sm" variant="outline">
-          <Link href="/manual" rel="noopener noreferrer" target="_blank">
-            <FileText data-icon="inline-start" />
-            Manual
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/avvikelse">
-            <TriangleAlert data-icon="inline-start" />
-            Lämna avvikelse
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/forslag">
-            <Plus data-icon="inline-start" />
-            Nytt förslag
-          </Link>
-        </Button>
-        <Button asChild data-tour="bjud-in" size="sm" variant="outline">
-          <Link href="/installningar">
-            <UserPlus data-icon="inline-start" />
-            Bjud in
-          </Link>
-        </Button>
-      </div>
-
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Senast i boken</CardTitle>
-            <CardDescription>Fortsätt där du slutade.</CardDescription>
+            <CardTitle>Fortsätt där du slutade</CardTitle>
+            <CardDescription>Senaste bladet i manualen.</CardDescription>
           </CardHeader>
           <CardContent>
             {lastOpened ? (
@@ -293,73 +379,67 @@ export function DashboardOverview() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Kommande 30 dagar</CardTitle>
-            <CardDescription>Från årshjulet.</CardDescription>
+            <CardTitle>Avvikelser</CardTitle>
+            <CardDescription>{stats.openDeviations === 0 ? "Inga öppna. Det är bra." : "Det som nyligen lämnats in."}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {stats.overdueActivities.length > 0 ? (
-              <ul className="flex flex-col gap-2">
-                {stats.overdueActivities.map((item) => (
-                  <li className="flex items-center justify-between gap-3 text-sm" key={item.id}>
-                    <span className="font-medium">{item.title}</span>
-                    <Badge variant="destructive">Försenad</Badge>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {stats.upcomingActivities.length === 0 && stats.overdueActivities.length === 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground">Inget inlagt. Ett klick räcker:</p>
-                {YEAR_PRESETS.map((preset) => (
-                  <Button key={preset.kind} onClick={() => void addPreset(preset)} type="button" variant="outline">
-                    {preset.title}
-                  </Button>
-                ))}
-              </div>
+            {stats.recentDeviations.length === 0 ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href="/avvikelse">Lämna avvikelse</Link>
+              </Button>
             ) : (
               <ul className="flex flex-col gap-2">
-                {stats.upcomingActivities.map((item) => (
-                  <li className="flex items-center justify-between gap-3 text-sm" key={item.id}>
-                    <span className="font-medium">{item.title}</span>
-                    <span className="text-muted-foreground">{formatSvDate(item.plannedOn)}</span>
+                {stats.recentDeviations.map((item) => (
+                  <li key={item.id}>
+                    <Link className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent" href="/avvikelse">
+                      <span className="min-w-0">
+                        <span className="mr-2 font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</span>
+                        <span className="font-medium">{item.title}</span>
+                      </span>
+                      <Badge variant={item.status === "closed" ? "secondary" : "outline"}>
+                        {item.status === "closed" ? "Stängd" : item.status === "in_progress" ? "Pågår" : "Öppen"}
+                      </Badge>
+                    </Link>
                   </li>
                 ))}
               </ul>
             )}
-            <Button asChild className="mt-2 w-full" variant="outline">
-              <Link href="/arshjul">Öppna årshjul</Link>
-            </Button>
           </CardContent>
         </Card>
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Avvikelser</CardTitle>
-          <CardDescription>Det som nyligen lämnats in.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {stats.recentDeviations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Inga avvikelser. Det är bra.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {stats.recentDeviations.map((item) => (
-                <li key={item.id}>
-                  <Link className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent" href="/avvikelse">
-                    <span className="min-w-0">
-                      <span className="mr-2 font-mono text-xs text-muted-foreground">{caseNumber("A", item.number)}</span>
-                      <span className="font-medium">{item.title}</span>
-                    </span>
-                    <Badge variant={item.status === "closed" ? "secondary" : "outline"}>
-                      {item.status === "closed" ? "Stängd" : item.status === "in_progress" ? "Pågår" : "Öppen"}
-                    </Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {training ? (
+        <Link className="rounded-2xl border bg-card px-4 py-3 text-sm shadow-token-sm" href="/kompetens">
+          Kompetens: {training.known} kan · {training.waiting} ska lära sig
+        </Link>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href="/manual" rel="noopener noreferrer" target="_blank">
+            <FileText data-icon="inline-start" />
+            Manual
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/avvikelse">
+            <TriangleAlert data-icon="inline-start" />
+            Lämna avvikelse
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/forslag">
+            <Plus data-icon="inline-start" />
+            Nytt förslag
+          </Link>
+        </Button>
+        <Button asChild data-tour="bjud-in" size="sm" variant="outline">
+          <Link href="/kompetens">
+            <UserPlus data-icon="inline-start" />
+            Bjud in personal
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
