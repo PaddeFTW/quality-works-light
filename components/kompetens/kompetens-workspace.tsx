@@ -122,18 +122,66 @@ export function KompetensWorkspace() {
   async function onLevel(competenceId: string, personKey: string, level: CompetenceLevel | "") {
     if (!session?.organizationId) return;
     const previous = levels;
+    const currentCell = levels.find((cell) => cell.competenceId === competenceId && cell.personKey === personKey);
+    const nextCell = {
+      competenceId,
+      personKey,
+      level: level || "missing",
+      note: currentCell?.note ?? "",
+      dueOn: currentCell?.dueOn ?? "",
+      signedName: level === "ok" ? currentCell?.signedName ?? "" : "",
+      signedAt: level === "ok" ? currentCell?.signedAt ?? "" : "",
+    };
     setLevels((current) => {
       const rest = current.filter((cell) => !(cell.competenceId === competenceId && cell.personKey === personKey));
-      return level ? [...rest, { competenceId, personKey, level }] : rest;
+      return level ? [...rest, nextCell] : rest;
     });
     try {
-      await setLevel({ organizationId: session.organizationId, competenceId, personKey, level });
+      await setLevel({
+        organizationId: session.organizationId,
+        competenceId,
+        personKey,
+        level,
+        note: nextCell.note,
+        dueOn: nextCell.dueOn,
+        signedName: nextCell.signedName,
+        signedAt: nextCell.signedAt,
+      });
       setError(null);
     } catch (err) {
       setLevels(previous);
       setError(competenceTableMessage(err));
     }
   }
+
+  async function onTraining(cell: LevelCell, patch: Partial<LevelCell>) {
+    if (!session?.organizationId) return;
+    const next = { ...cell, ...patch };
+    setLevels((current) => current.map((item) => (item.competenceId === cell.competenceId && item.personKey === cell.personKey ? next : item)));
+    try {
+      await setLevel({
+        organizationId: session.organizationId,
+        competenceId: next.competenceId,
+        personKey: next.personKey,
+        level: next.level,
+        note: next.note,
+        dueOn: next.dueOn,
+        signedName: next.signedName,
+        signedAt: next.signedAt,
+      });
+      setError(null);
+    } catch (err) {
+      setError(competenceTableMessage(err));
+    }
+  }
+
+  function sign(cell: LevelCell) {
+    const name = session?.fullName || "Admin";
+    void onTraining(cell, { level: "ok", signedName: name, signedAt: new Date().toISOString() });
+  }
+
+  const gaps = levels.filter((cell) => cell.level === "missing" || cell.level === "training");
+  const signed = levels.filter((cell) => cell.level === "ok" && cell.signedName);
 
   return (
     <div className="flex flex-col gap-6">
@@ -292,6 +340,74 @@ export function KompetensWorkspace() {
         </table>
         {skills.length === 0 ? (
           <p className="px-4 py-4 text-sm text-muted-foreground">Ingen kompetens ännu. Lägg till den första ovan.</p>
+        ) : null}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-base font-bold">Utbildning</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Här hamnar den som saknar något, eller håller på att lära sig. Skriv vad personen ska lära sig. När det är klart signerar du. Då står det Kan i matrisen.
+          </p>
+        </div>
+        {gaps.length === 0 ? (
+          <p className="rounded-2xl border bg-card px-4 py-5 text-sm text-muted-foreground shadow-token-sm">
+            Ingen utbildning väntar. Välj Saknas eller Utbildas i matrisen.
+          </p>
+        ) : (
+          gaps.map((cell) => {
+            const person = people.find((item) => item.key === cell.personKey);
+            const skill = skills.find((item) => item.id === cell.competenceId);
+            return (
+              <article className="rounded-2xl border bg-card p-4 shadow-token-sm" key={`${cell.personKey}-${cell.competenceId}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold">{person?.name || "Person"} · {skill?.name || "Kompetens"}</h3>
+                  <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold">
+                    {cell.level === "training" ? "Utbildas" : "Saknas"}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-[1fr_11rem]">
+                  <Input
+                    aria-label="Vad ska personen lära sig"
+                    disabled={!canEdit}
+                    onBlur={(event) => void onTraining(cell, { note: event.target.value })}
+                    onChange={(event) => {
+                      const note = event.target.value;
+                      setLevels((current) => current.map((item) => (item.competenceId === cell.competenceId && item.personKey === cell.personKey ? { ...item, note } : item)));
+                    }}
+                    placeholder="Till exempel truckkort, kurs hos Åkeri AB"
+                    value={cell.note}
+                  />
+                  <Input
+                    aria-label="Klar senast"
+                    disabled={!canEdit}
+                    onChange={(event) => void onTraining(cell, { dueOn: event.target.value })}
+                    type="date"
+                    value={cell.dueOn}
+                  />
+                </div>
+                {canEdit ? (
+                  <Button className="mt-3" onClick={() => sign(cell)} size="sm" type="button">
+                    Signera: personen kan
+                  </Button>
+                ) : null}
+              </article>
+            );
+          })
+        )}
+        {signed.length ? (
+          <ul className="flex flex-col gap-2">
+            {signed.map((cell) => {
+              const person = people.find((item) => item.key === cell.personKey);
+              const skill = skills.find((item) => item.id === cell.competenceId);
+              const when = cell.signedAt ? new Date(cell.signedAt).toLocaleDateString("sv-SE") : "";
+              return (
+                <li className="text-sm text-muted-foreground" key={`signed-${cell.personKey}-${cell.competenceId}`}>
+                  {cell.signedName} skrev under {when} att {person?.name || "personen"} kan {skill?.name || "det här"}.
+                </li>
+              );
+            })}
+          </ul>
         ) : null}
       </section>
     </div>

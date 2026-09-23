@@ -70,7 +70,7 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     id: "kompetens-matris",
     place: "kompetens",
     title: "Hur fyller jag i matrisen?",
-    body: "Lägg till en kompetens, till exempel Truckkort. Välj Saknas, Utbildas eller Kan för varje person. Kan betyder att personen får göra jobbet.",
+    body: "Lägg till en kompetens, till exempel Truckkort. Välj Saknas, Utbildas eller Kan. Saknas och Utbildas syns under Utbildning. När personen kan, klicka Signera.",
   },
   {
     id: "arshjul-tom",

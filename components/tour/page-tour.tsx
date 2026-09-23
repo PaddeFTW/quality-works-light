@@ -31,7 +31,12 @@ export function PageTour() {
     }
     setStep(0);
     const seen = window.localStorage.getItem(tourStorageKey(tour.id));
-    setPhase(seen ? "off" : "run");
+    if (seen) {
+      setPhase("off");
+      return;
+    }
+    window.localStorage.setItem(tourStorageKey(tour.id), "seen");
+    setPhase("run");
   }, [path, tour]);
 
   useEffect(() => {

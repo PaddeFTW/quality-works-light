@@ -57,11 +57,25 @@ const STATUS: Record<ActivityStatus, string> = {
   skipped: "Inställd",
 };
 
+function explain(kind: string) {
+  if (kind === "revision") {
+    return "Intern revision är inlagd i årshjulet. Det är dagen då ni själva kollar att ni jobbar som manualen säger. Frågor och svar kommer senare, som en egen del. Nu räcker det att datumet finns.";
+  }
+  if (kind === "skyddsrond") {
+    return "Skyddsrond är inlagd. Det är dagen då ni går runt och tittar på arbetsmiljön.";
+  }
+  if (kind === "ledning") {
+    return "Ledningens genomgång är inlagd. Det är dagen då ni tittar på hur året har gått.";
+  }
+  return null;
+}
+
 export function ArshjulWorkspace() {
   const { session, loading } = useOrgSession();
   const year = new Date().getFullYear();
   const [items, setItems] = useState<YearActivity[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<YearActivity | null>(null);
   const [title, setTitle] = useState("");
@@ -110,6 +124,7 @@ export function ArshjulWorkspace() {
       });
       setItems((current) => [...current, row].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
       setStatus(null);
+      setHint(explain(preset.kind));
     } catch (error) {
       setStatus(missingTableMessage(error));
     }
@@ -174,6 +189,7 @@ export function ArshjulWorkspace() {
       }
     >
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
+      {hint ? <p className="max-w-2xl rounded-2xl border bg-card px-4 py-3 text-sm leading-6 shadow-token-sm">{hint}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
