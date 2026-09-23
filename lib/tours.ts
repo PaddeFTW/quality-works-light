@@ -56,6 +56,13 @@ const TOURS: Tour[] = [
     ],
   },
   {
+    id: "mal",
+    steps: [
+      { title: "Målen", body: "Till vänster är målen, samlade efter område.", target: "[data-tour='mallista']" },
+      { title: "Ett mål i taget", body: "Skriv hur ni ser att det går, och vem som håller i det.", target: "[data-tour='malform']" },
+    ],
+  },
+  {
     id: "lagar",
     steps: [
       { title: "Laglistan", body: "Till vänster är lagarna, samlade efter område.", target: "[data-tour='laglista']" },
@@ -78,6 +85,7 @@ export function tourForPath(path: string): Tour | null {
   if (path.startsWith("/avvikelse")) return TOURS[3];
   if (path.startsWith("/forslag")) return TOURS[4];
   if (path.startsWith("/kompetens")) return TOURS[5];
+  if (path.startsWith("/mal")) return TOURS.find((item) => item.id === "mal") ?? null;
   if (path.startsWith("/lagar")) return TOURS.find((item) => item.id === "lagar") ?? null;
   if (path.startsWith("/installningar")) return TOURS.find((item) => item.id === "installningar") ?? null;
   return null;

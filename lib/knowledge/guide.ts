@@ -2,7 +2,7 @@ export interface GuideArticle {
   id: string;
   title: string;
   body: string;
-  place?: "manual" | "start" | "arshjul" | "kompetens" | "lagar" | "all";
+  place?: "manual" | "start" | "arshjul" | "kompetens" | "lagar" | "mal" | "all";
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
@@ -71,6 +71,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     place: "kompetens",
     title: "Hur fyller jag i matrisen?",
     body: "Lägg till en kompetens, till exempel Truckkort. Välj Saknas, Utbildas eller Kan. Saknas och Utbildas syns under Utbildning. När personen kan, klicka Signera.",
+  },
+  {
+    id: "mal-hur",
+    place: "mal",
+    title: "Hur skriver jag ett mål?",
+    body: "Skriv vad ni vill bli bättre på. Skriv hur ni ser att det går. Skriv vem som håller i det. Spara.",
   },
   {
     id: "lagar-hur",
