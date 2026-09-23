@@ -734,7 +734,7 @@ export function ManualWorkspace({
                   : settings.name || "Manualen"}
             </span>
             <TabsList variant="line">
-              <TabsTrigger value="settings">Grundinställningar</TabsTrigger>
+              <TabsTrigger value="settings">Uppgifter</TabsTrigger>
               <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
               <TabsTrigger value="original">Original</TabsTrigger>
             </TabsList>

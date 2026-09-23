@@ -127,7 +127,7 @@ export function ManualEditorPanel({
       UnderlineExtension,
       ImageExtension.configure({ inline: false, allowBase64: true }),
       Placeholder.configure({
-        placeholder: "Skriv här. Så här gör vi på jobbet.",
+        placeholder: "Skriv hur ni gör.",
         emptyEditorClass: "is-editor-empty",
       }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
@@ -390,7 +390,7 @@ export function ManualEditorPanel({
             documentTitle={documentTitle}
             edition={edition}
             issuer={issuer}
-            statusLabel={edition > 0 ? `Utkast. Gällande är utgåva ${edition}` : "Utkast. Inte publicerad"}
+            statusLabel="Arbetsmanual – du kan ändra"
           />
           <div
             onClick={() => editor?.commands.focus()}

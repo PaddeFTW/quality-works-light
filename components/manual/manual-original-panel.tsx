@@ -136,7 +136,7 @@ export function ManualOriginalPanel({
             documentTitle={documentTitle}
             edition={visibleEdition}
             issuer={issuer}
-            statusLabel="Gällande"
+            statusLabel={visibleEdition > 0 ? `Original · utgåva ${visibleEdition} · låst` : "Original · låst"}
           />
           <div
             className="manual-tiptap-editor px-6 pb-10 pt-2 font-serif text-base leading-8"
