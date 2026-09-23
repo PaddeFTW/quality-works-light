@@ -6,6 +6,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
 import { UpgradeCard } from "@/components/billing/upgrade-card";
+import { play } from "@/lib/sound";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export function DeviationWorkspace() {
   const { session, loading } = useOrgSession();
   const [items, setItems] = useState<Deviation[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<Deviation | null>(null);
   const [title, setTitle] = useState("");
@@ -105,15 +107,19 @@ export function DeviationWorkspace() {
       setDescription("");
       setCategory("kvalitet");
       setSeverity("medium");
+      setDone("Avvikelsen är sparad.");
+      play("send");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
   async function handleUpdate() {
     if (!selected) return;
     if (selected.status === "closed" && !selected.action.trim()) {
-      setStatus("Skriv åtgärden innan du stänger.");
+      setStatus("Skriv vad ni gjorde innan du stänger.");
+      play("error");
       return;
     }
     try {
@@ -125,8 +131,11 @@ export function DeviationWorkspace() {
       });
       setItems((current) => current.map((item) => (item.id === selected.id ? selected : item)));
       setSelected(null);
+      setDone("Sparad.");
+      play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -150,6 +159,7 @@ export function DeviationWorkspace() {
         </Button>
       }
     >
+      {done ? <p className="text-sm text-muted-foreground">{done}</p> : null}
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -183,9 +193,7 @@ export function DeviationWorkspace() {
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <p className="font-medium">Inga avvikelser ännu</p>
-              <p className="max-w-md text-sm text-muted-foreground">
-                När något inte stämmer: skriv vad som hänt. Ni följer upp och stänger när det är åtgärdat.
-              </p>
+              <p className="max-w-md text-sm text-muted-foreground">När något inte stämmer: skriv vad som hänt.</p>
               <Button onClick={() => setCreateOpen(true)}>Lämna avvikelse</Button>
             </div>
           ) : (

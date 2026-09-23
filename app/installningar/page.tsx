@@ -179,7 +179,7 @@ export default function InstallningarPage() {
 
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
           <h3 className="text-base font-bold">Utseende</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Ljust eller mörkt. Knappljudet är svagt. Du kan stänga av det.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Ljust eller mörkt. Korta ljud när något sparas, skickas eller publiceras.</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <ThemeToggle />
             <SoundToggle />

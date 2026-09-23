@@ -212,7 +212,7 @@ export function ManualTree({
               if (selectedId) onNewDocument(selectedId);
             }}
             size="sm"
-            title={selectedId ? "Lägger ett blad under det du har valt" : "Klicka ett kapitel först"}
+            title={selectedId ? "Lägger ett blad under det du har valt" : "Markera ett kapitel först."}
             type="button"
             variant="outline"
           >
@@ -230,7 +230,7 @@ export function ManualTree({
           ) : (
             <div className="flex flex-col gap-3 px-2 py-6 text-sm">
               <p className="leading-6 text-muted-foreground">
-                Tom pärm. Klicka Skapa 1.0 här ovan.
+                Manualen är tom. Skapa första kapitlet. Numret låses vid skapande.
               </p>
             </div>
           )}
