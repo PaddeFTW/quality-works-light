@@ -56,6 +56,13 @@ const TOURS: Tour[] = [
     ],
   },
   {
+    id: "lagar",
+    steps: [
+      { title: "Laglistan", body: "Till vänster är lagarna, samlade efter område.", target: "[data-tour='laglista']" },
+      { title: "En lag i taget", body: "Till höger skriver du vad lagen betyder för er, hur ni följer den, och länken.", target: "[data-tour='lagform']" },
+    ],
+  },
+  {
     id: "installningar",
     steps: [
       { title: "Inställningar", body: "Namn, tema, personer och paket sitter här.", target: "[data-tour='sidhuvud']" },
@@ -71,7 +78,8 @@ export function tourForPath(path: string): Tour | null {
   if (path.startsWith("/avvikelse")) return TOURS[3];
   if (path.startsWith("/forslag")) return TOURS[4];
   if (path.startsWith("/kompetens")) return TOURS[5];
-  if (path.startsWith("/installningar")) return TOURS[6];
+  if (path.startsWith("/lagar")) return TOURS.find((item) => item.id === "lagar") ?? null;
+  if (path.startsWith("/installningar")) return TOURS.find((item) => item.id === "installningar") ?? null;
   return null;
 }
 

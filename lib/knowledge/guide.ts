@@ -2,7 +2,7 @@ export interface GuideArticle {
   id: string;
   title: string;
   body: string;
-  place?: "manual" | "start" | "arshjul" | "kompetens" | "all";
+  place?: "manual" | "start" | "arshjul" | "kompetens" | "lagar" | "all";
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
@@ -71,6 +71,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     place: "kompetens",
     title: "Hur fyller jag i matrisen?",
     body: "Lägg till en kompetens, till exempel Truckkort. Välj Saknas, Utbildas eller Kan. Saknas och Utbildas syns under Utbildning. När personen kan, klicka Signera.",
+  },
+  {
+    id: "lagar-hur",
+    place: "lagar",
+    title: "Hur fyller jag i en lag?",
+    body: "Välj lagen till vänster. Skriv vad den betyder för er, hur ni följer den, och klistra in länken. Spara.",
   },
   {
     id: "arshjul-tom",
