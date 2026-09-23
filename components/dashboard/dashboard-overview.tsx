@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarRange, FileText, Lightbulb, Plus, ShieldCheck, TriangleAlert, UserPlus } from "lucide-react";
+import { CalendarRange, FileText, Lightbulb, Plus, ShieldCheck, TriangleAlert } from "lucide-react";
 
 import { MiniBars } from "@/components/common/mini-bars";
 
@@ -25,7 +25,7 @@ function firstName(fullName: string) {
 
 function readableTitle(title: string) {
   const text = title.trim();
-  if (!text || /^\d{6,}$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst blad";
+  if (!text || /^\d+$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst blad";
   return text;
 }
 
@@ -157,7 +157,7 @@ export function DashboardOverview() {
         title: `${stats.openDeviations} avvikelse${stats.openDeviations === 1 ? "" : "r"} att ta om hand`,
         body: "Något stämmer inte. Skriv vad som hänt och vad ni gör.",
         href: "/avvikelse",
-        cta: "Öppna avvikelser",
+        cta: "Öppna nästa jobb",
         newTab: false,
       };
     }
@@ -166,7 +166,7 @@ export function DashboardOverview() {
         title: "Försenat i årshjulet",
         body: stats.overdueActivities[0].title,
         href: "/arshjul",
-        cta: "Öppna årshjul",
+        cta: "Öppna nästa jobb",
         newTab: false,
       };
     }
@@ -184,7 +184,7 @@ export function DashboardOverview() {
         title: "Lägg intern revision",
         body: "Ett klick. Då syns datumet här när det närmar sig.",
         href: "/arshjul",
-        cta: "Öppna årshjul",
+        cta: "Öppna nästa jobb",
         newTab: false,
       };
     }
@@ -192,7 +192,7 @@ export function DashboardOverview() {
       title: "Allt lugnt just nu",
       body: "Inget som jagar er i dag. Öppna boken om du vill skriva.",
       href: "/manual",
-      cta: "Öppna manualen",
+      cta: "Öppna boken",
       newTab: true,
     };
   }, [referrals, stats, lastOpened]);
@@ -231,7 +231,15 @@ export function DashboardOverview() {
 
   const late = stats.overdueActivities.length;
   const soon = stats.upcomingActivities.length;
-  const pulse = late > 0 ? `${late} försenat` : soon > 0 ? `${soon} de närmaste 30 dagarna` : "Enligt plan";
+  const pulse = [
+    late === 1 ? "1 jobb är försenat" : late > 1 ? `${late} jobb är försenade` : "Inget jobb är försenat",
+    soon === 1 ? "1 jobb inom 30 dagar" : soon > 1 ? `${soon} jobb inom 30 dagar` : "Inget jobb inom 30 dagar",
+    stats.openDeviations === 0
+      ? "Inga öppna avvikelser"
+      : stats.openDeviations === 1
+        ? "1 öppen avvikelse"
+        : `${stats.openDeviations} öppna avvikelser`,
+  ].join(". ") + ".";
   const monthIndex = todayKey ? Number(todayKey.slice(5, 7)) - 1 : -1;
   const yearLeft = Math.max(0, stats.yearTotal - stats.yearDone);
 
@@ -312,6 +320,7 @@ export function DashboardOverview() {
                       <span className="block font-semibold">{task.title}</span>
                       <span className="block text-xs text-muted-foreground">{task.meta}</span>
                     </span>
+                    <span className="text-sm font-semibold">Öppna</span>
                     <Badge variant={task.tone}>{task.when}</Badge>
                   </Link>
                 </li>
@@ -328,7 +337,7 @@ export function DashboardOverview() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <MiniBars
-            empty="Inget inlagt ännu. Ett klick räcker."
+            empty="Årshjulet är tomt. Lägg in årets jobb."
             items={MONTHS.map((name, index) => ({ label: name, value: stats.monthCounts[index] ?? 0, current: index === monthIndex }))}
           />
           {stats.yearTotal === 0 ? (
@@ -350,7 +359,7 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Fortsätt där du slutade</CardTitle>
-            <CardDescription>Senaste bladet i manualen.</CardDescription>
+            <CardDescription>Senaste bladet i boken.</CardDescription>
           </CardHeader>
           <CardContent>
             {lastOpened ? (
@@ -413,7 +422,7 @@ export function DashboardOverview() {
         <Button asChild size="sm" variant="outline">
           <Link href="/manual" rel="noopener noreferrer" target="_blank">
             <FileText data-icon="inline-start" />
-            Manual
+            Öppna boken
           </Link>
         </Button>
         <Button asChild size="sm" variant="outline">
@@ -426,12 +435,6 @@ export function DashboardOverview() {
           <Link href="/forslag">
             <Plus data-icon="inline-start" />
             Nytt förslag
-          </Link>
-        </Button>
-        <Button asChild data-tour="bjud-in" size="sm" variant="outline">
-          <Link href="/kompetens">
-            <UserPlus data-icon="inline-start" />
-            Bjud in personal
           </Link>
         </Button>
       </div>

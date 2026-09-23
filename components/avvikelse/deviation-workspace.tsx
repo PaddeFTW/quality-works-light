@@ -112,6 +112,10 @@ export function DeviationWorkspace() {
 
   async function handleUpdate() {
     if (!selected) return;
+    if (selected.status === "closed" && !selected.action.trim()) {
+      setStatus("Skriv åtgärden innan du stänger.");
+      return;
+    }
     try {
       await updateDeviation(selected.id, {
         status: selected.status,
