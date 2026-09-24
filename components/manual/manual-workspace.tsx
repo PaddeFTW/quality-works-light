@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,7 +120,8 @@ export function ManualWorkspace({
   const [tree, setTree] = useState<ManualNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lastOpenedId, setLastOpenedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("work");
+  const [mode, setMode] = useState<"read" | "edit">("read");
+  const [tasksOpen, setTasksOpen] = useState(false);
   const [settings, setSettings] = useState<ManualSettings>(initialSettings);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [dirtyIds, setDirtyIds] = useState<string[]>([]);
@@ -527,6 +528,7 @@ export function ManualWorkspace({
     setDialog(null);
     setChangeNote("");
     play("publish");
+    setMode("read");
     notice(`Utgåva ${nextEdition} är publicerad.`, "ok");
   }
 
@@ -538,7 +540,7 @@ export function ManualWorkspace({
     setDrafts((current) => ({ ...current, [selectedId]: version.content }));
     markDirty(selectedId);
     setRevisionStarted((current) => ({ ...current, [selectedId]: true }));
-    setActiveTab("work");
+    setMode("edit");
   }
 
   async function confirmCreate() {
@@ -565,7 +567,7 @@ export function ManualWorkspace({
     setSelectedId(id);
     setLastOpenedId(id);
     rememberLastOpened(id);
-    setActiveTab("work");
+    setMode("edit");
     setDialog(null);
     setUseRoutine(false);
   }
@@ -645,7 +647,7 @@ export function ManualWorkspace({
 
   function handleSelect(node: ManualNode) {
     if (selectedId && dirtyIds.includes(selectedId) && node.id !== selectedId) {
-      if (!window.confirm("Du har osparade ändringar. Byt dokument ändå?")) return;
+      if (!window.confirm("Du har osparad text. Vill du byta blad ändå?")) return;
     }
     setSelectedId(node.id);
     if (node.kind === "document") {
@@ -653,7 +655,6 @@ export function ManualWorkspace({
       rememberLastOpened(node.id);
     }
     setTreeOpen(false);
-    if (node.kind === "document" && activeTab === "settings") setActiveTab("work");
   }
 
   const treeProps = {
@@ -725,7 +726,7 @@ export function ManualWorkspace({
 
       <div className="flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
-        <Tabs className="flex min-h-0 flex-1 flex-col gap-0" onValueChange={setActiveTab} value={activeTab}>
+        <Tabs className="flex min-h-0 flex-1 flex-col gap-0" value={mode === "read" ? "original" : "work"}>
           <div className="flex flex-wrap items-center gap-2 border-b bg-card px-3 py-2">
             <Button
               aria-label={treeCollapsed ? "Visa innehållet" : "Dölj innehållet"}
@@ -742,13 +743,18 @@ export function ManualWorkspace({
                   ? "Välj ett blad till vänster"
                   : settings.name || "Manualen"}
             </span>
-            <TabsList variant="line">
-              <TabsTrigger value="settings">Uppgifter</TabsTrigger>
-              <TabsTrigger value="work">Arbetsmanual</TabsTrigger>
-              <TabsTrigger value="original">Original</TabsTrigger>
-            </TabsList>
+            <div className="flex rounded-lg border bg-muted/40 p-0.5">
+              <Button onClick={() => setMode("read")} size="sm" type="button" variant={mode === "read" ? "default" : "ghost"}>
+                Läs
+              </Button>
+              {canEdit ? (
+                <Button onClick={() => setMode("edit")} size="sm" type="button" variant={mode === "edit" ? "default" : "ghost"}>
+                  Ändra
+                </Button>
+              ) : null}
+            </div>
             <div className="ml-auto flex items-center gap-1.5">
-              {selectedIsDocument ? (
+              {selectedIsDocument && mode === "edit" ? (
                 <>
                   <Button data-tour="spara" disabled={!canEdit} onClick={() => void handleSave(true)} size="sm" variant="outline">
                     Spara
@@ -775,6 +781,15 @@ export function ManualWorkspace({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </>
+              ) : selectedIsDocument ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/avvikelse">Lämna avvikelse</Link>
+                </Button>
+              ) : null}
+              {canEdit ? (
+                <Button onClick={() => setTasksOpen((open) => !open)} size="sm" type="button" variant={tasksOpen ? "secondary" : "ghost"}>
+                  Uppgifter
+                </Button>
               ) : null}
               <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">
                 {isFullscreen ? <Minimize /> : <Maximize />}
@@ -812,9 +827,6 @@ export function ManualWorkspace({
               ) : null}
             </p>
           ) : null}
-          <TabsContent className="flex min-h-0 flex-col overflow-auto" value="settings">
-            <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
-          </TabsContent>
           <TabsContent className="flex min-h-0 flex-col" value="work">
             {selectedIsDocument && (openReferral || latestReferral?.status === "rejected") ? (
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-4 py-2 text-sm">
@@ -921,34 +933,40 @@ export function ManualWorkspace({
           </TabsContent>
         </Tabs>
         <footer className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t bg-card/90 px-5 py-2 text-xs text-muted-foreground">
-          {selectedIsDocument ? (
+          {mode === "edit" && selectedIsDocument ? (
             <>
               <span>{saveStatus === "sparar" ? "Sparar…" : saveStatus === "sparad" ? "Sparad" : saveStatus === "fel" ? "Kunde inte spara" : "Osparat"}</span>
-              <span>{countPlainText(draft)} tecken</span>
-              <span>{canEdit ? "Arbetsmanual – du kan ändra" : "Läsa"}</span>
+              <span>Arbetsmanual – du kan ändra</span>
               <span>{edition > 0 ? `Utgåva ${edition}` : "Utkast"}</span>
-              {edition > 0 ? (
-                <span className="ml-auto">
-                  <Button
-                    disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
-                    onClick={() => {
-                      if (!selectedId) return;
-                      setAcknowledgedIds((current) => [...current, selectedId]);
-                      if (cloud && session) void persistAck(selectedId, session.userId, edition);
-                    }}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {selectedId && acknowledgedIds.includes(selectedId) ? <><Check /> Kvitterad</> : "Kvittera"}
-                  </Button>
-                </span>
-              ) : null}
             </>
+          ) : selectedIsDocument ? (
+            <span>{edition > 0 ? `Original · utgåva ${edition} · låst` : "Inget publicerat dokument ännu."}</span>
           ) : (
-            <span>Pärmen är tom. Skapa 1.0 när du är redo.</span>
+            <span>Manualen är tom. Skapa första kapitlet.</span>
           )}
+          {edition > 0 && selectedIsDocument ? (
+            <span className="ml-auto">
+              <Button
+                disabled={!published || !selectedId || acknowledgedIds.includes(selectedId)}
+                onClick={() => {
+                  if (!selectedId) return;
+                  setAcknowledgedIds((current) => [...current, selectedId]);
+                  if (cloud && session) void persistAck(selectedId, session.userId, edition);
+                }}
+                size="sm"
+                variant="outline"
+              >
+                {selectedId && acknowledgedIds.includes(selectedId) ? <><Check /> Kvitterad</> : "Kvittera"}
+              </Button>
+            </span>
+          ) : null}
         </footer>
       </div>
+      {tasksOpen && canEdit ? (
+        <aside className="w-full shrink-0 overflow-auto border-t bg-card lg:w-80 lg:border-l lg:border-t-0">
+          <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
+        </aside>
+      ) : null}
       {tipsOpen ? (
         <GuidancePanel
           intro={

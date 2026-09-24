@@ -150,7 +150,7 @@ export function ManualTree({
               <span className={cn("mr-2 font-mono text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{number}</span>
               {node.title}
               <span className={cn("ml-2 text-[10px] uppercase tracking-wide", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                {publishedIds.includes(node.id) ? "Gällande" : "Utkast"}
+                {publishedIds.includes(node.id) ? "Original" : "Utkast"}
               </span>
             </span>
           </button>
