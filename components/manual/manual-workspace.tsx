@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, ExternalLink, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 
 import { play } from "@/lib/sound";
 
@@ -696,18 +696,10 @@ export function ManualWorkspace({
         data-tour="trad"
         style={treeCollapsed ? { width: 48 } : { width: treeWidth }}
       >
-        {treeCollapsed ? (
-          <Button
-            aria-label="Visa innehållet"
-            className="m-2"
-            onClick={() => setTreeCollapsed(false)}
-            size="icon"
-            variant="ghost"
-          >
-            <PanelLeft />
-          </Button>
-        ) : (
-          <ManualTree onCollapse={() => setTreeCollapsed(true)} {...treeProps} />
+        {treeCollapsed ? <div className="min-h-0 flex-1" /> : (
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ManualTree {...treeProps} />
+          </div>
         )}
         {treeCollapsed ? null : (
           <button
@@ -717,6 +709,17 @@ export function ManualWorkspace({
             type="button"
           />
         )}
+        <div className="flex shrink-0 justify-center border-t py-2">
+          <Button
+            aria-label={treeCollapsed ? "Visa innehållet" : "Dölj innehållet"}
+            onClick={() => setTreeCollapsed((open) => !open)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            {treeCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          </Button>
+        </div>
       </aside>
       <Dialog onOpenChange={setTreeOpen} open={treeOpen}>
         <DialogContent className="h-[80vh] p-0 md:hidden">
@@ -732,14 +735,6 @@ export function ManualWorkspace({
       <div className="flex min-w-0 flex-1 flex-col">
         <Tabs className="flex min-h-0 flex-1 flex-col gap-0" value={mode === "read" ? "original" : "work"}>
           <div className="flex flex-wrap items-center gap-2 border-b bg-card px-3 py-2">
-            <Button
-              aria-label={treeCollapsed ? "Visa innehållet" : "Dölj innehållet"}
-              onClick={() => setTreeCollapsed((open) => !open)}
-              size="icon"
-              variant="ghost"
-            >
-              <PanelLeft />
-            </Button>
             <span className="min-w-0 max-w-sm flex-1 truncate text-sm font-semibold">
               {selectedIsDocument
                 ? `${documentCode} ${documentTitle}`
