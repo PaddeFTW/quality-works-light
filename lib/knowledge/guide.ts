@@ -40,12 +40,12 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     id: "manual-vad",
     place: "manual",
     title: "Vad är Manualen?",
-    body: "Det är boken för hur ni jobbar. Till vänster är kapitel. I mitten är papperet. Original är det som gäller. Arbetsmanual är kladden.",
+    body: "Manualen är texten för hur ni jobbar. Till vänster är dokumenten. I mitten är papperet. Original är det som gäller. Arbetsmanual är det du skriver.",
   },
   {
     id: "manual-10",
     place: "manual",
-    title: "Skapa första bladet",
+    title: "Skapa första dokumentet",
     body: "Klicka Skapa 1.0. Numret låses. Namnet väljer du själv. Ledningssystemet är bara ett förslag.",
   },
   {
@@ -58,13 +58,13 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     id: "manual-remiss",
     place: "manual",
     title: "Vad är remiss?",
-    body: "Du skickar bladet till någon i företaget. Hen svarar Godkänn eller Avstyrk. Vänta in svaret innan du publicerar.",
+    body: "Du skickar dokumentet till någon i företaget. Hen svarar Godkänn eller Avstyrk. Vänta in svaret innan du publicerar.",
   },
   {
     id: "revision",
     place: "all",
     title: "Intern revision",
-    body: "Ett återkommande jobb. Lägg det i Årshjulet. Då syns datumet på Start. Du kan också lägga in det från ett blad i Manualen.",
+    body: "Ett återkommande jobb. Lägg det i Årshjulet. Då syns datumet på Start. Du kan också lägga in det från ett dokument i Manualen.",
   },
   {
     id: "kompetens-matris",
