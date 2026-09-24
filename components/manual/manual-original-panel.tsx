@@ -68,7 +68,7 @@ export function ManualOriginalPanel({
       <div className="mx-auto flex w-full max-w-[210mm] flex-col gap-5 px-6 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-semibold">Original – gällande version, låst</p>
+            <p className="font-semibold">Original – låst</p>
             <p className="text-xs text-muted-foreground">
               {visibleDate ? `Godkänt ${visibleDate}` : "Gällande utgåva"}
             </p>
