@@ -25,7 +25,7 @@ function firstName(fullName: string) {
 
 function readableTitle(title: string) {
   const text = title.trim();
-  if (!text || /^\d+$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst blad";
+  if (!text || /^\d+$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst dokument";
   return text;
 }
 
@@ -146,9 +146,9 @@ export function DashboardOverview() {
     if (referrals[0]) {
       return {
         title: "Svara på remiss",
-        body: referrals[0].documentTitle || "Ett blad väntar på ditt svar.",
+        body: referrals[0].documentTitle || "Ett dokument väntar på ditt svar.",
         href: `/manual?blad=${referrals[0].documentId}`,
-        cta: "Öppna bladet",
+        cta: "Öppna dokumentet",
         newTab: false,
       };
     }
@@ -157,7 +157,7 @@ export function DashboardOverview() {
         title: `${stats.openDeviations} avvikelse${stats.openDeviations === 1 ? "" : "r"} att ta om hand`,
         body: "Något stämmer inte. Skriv vad som hänt och vad ni gör.",
         href: "/avvikelse",
-        cta: "Öppna nästa jobb",
+        cta: "Öppna avvikelser",
         newTab: false,
       };
     }
@@ -166,7 +166,7 @@ export function DashboardOverview() {
         title: "Försenat i årshjulet",
         body: stats.overdueActivities[0].title,
         href: "/arshjul",
-        cta: "Öppna nästa jobb",
+        cta: "Öppna årshjulet",
         newTab: false,
       };
     }
@@ -175,7 +175,7 @@ export function DashboardOverview() {
         title: "Fortsätt där du slutade",
         body: lastOpened.title,
         href: `/manual?blad=${lastOpened.id}`,
-        cta: "Öppna bladet",
+        cta: "Öppna dokumentet",
         newTab: false,
       };
     }
@@ -184,21 +184,23 @@ export function DashboardOverview() {
         title: "Lägg intern revision",
         body: "Ett klick. Då syns datumet här när det närmar sig.",
         href: "/arshjul",
-        cta: "Öppna nästa jobb",
+        cta: "Öppna årshjulet",
         newTab: false,
       };
     }
     return {
       title: "Allt lugnt just nu",
-      body: "Inget som jagar er i dag. Öppna boken om du vill skriva.",
+      body: "Inget som jagar er i dag. Öppna manualen om du vill skriva.",
       href: "/manual",
-      cta: "Öppna boken",
+      cta: "Öppna manualen",
       newTab: false,
     };
   }, [referrals, stats, lastOpened]);
 
   const tasks = [
-    ...referrals.map((item) => ({
+    ...referrals
+      .filter((item) => next.href !== `/manual?blad=${item.documentId}`)
+      .map((item) => ({
       id: `remiss-${item.documentId}`,
       title: "Svara på remiss",
       meta: readableTitle(item.documentTitle || ""),
@@ -207,7 +209,9 @@ export function DashboardOverview() {
       when: "Väntar på dig",
       tone: "warning" as const,
     })),
-    ...stats.overdueActivities.map((item) => ({
+    ...stats.overdueActivities
+      .filter((item) => !(next.href === "/arshjul" && item.id === stats.overdueActivities[0]?.id && next.body === item.title))
+      .map((item) => ({
       id: item.id,
       title: item.title,
       meta: "Årshjulet",
@@ -359,10 +363,10 @@ export function DashboardOverview() {
         <Card>
           <CardHeader>
             <CardTitle>Fortsätt där du slutade</CardTitle>
-            <CardDescription>Senaste bladet i boken.</CardDescription>
+            <CardDescription>Senaste dokumentet i manualen.</CardDescription>
           </CardHeader>
           <CardContent>
-            {lastOpened ? (
+            {lastOpened && next.href !== `/manual?blad=${lastOpened.id}` ? (
               <Link
                 className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
                 href={`/manual?blad=${lastOpened.id}`}
@@ -374,7 +378,9 @@ export function DashboardOverview() {
                 <span className="text-sm font-semibold text-primary">Öppna</span>
               </Link>
             ) : (
-              <p className="text-sm text-muted-foreground">Inget blad öppnat än. Skapa 1.0 i Manualen.</p>
+              <p className="text-sm text-muted-foreground">
+                {lastOpened ? "Det dokumentet ligger redan under Att göra idag." : "Inget dokument öppnat än. Skapa 1.0 i Manualen."}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -420,7 +426,7 @@ export function DashboardOverview() {
         <Button asChild size="sm" variant="outline">
           <Link href="/manual">
             <FileText data-icon="inline-start" />
-            Öppna boken
+            Öppna manualen
           </Link>
         </Button>
         <Button asChild size="sm" variant="outline">
