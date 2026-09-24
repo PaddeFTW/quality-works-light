@@ -148,7 +148,7 @@ export function ManualTree({
               <span className={cn("mr-2 font-mono text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{number}</span>
               {node.title}
               <span className={cn("ml-2 text-[10px] uppercase tracking-wide", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                {publishedIds.includes(node.id) ? "Original" : "Utkast"}
+                {publishedIds.includes(node.id) ? "Original" : "Arbetsmanual"}
               </span>
             </span>
           </button>
@@ -160,7 +160,7 @@ export function ManualTree({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onNewDocument(node.id)}>Nytt underavsnitt</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNewDocument(node.id)}>Nytt underdokument</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(node)}>Byt namn</DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDelete(node)}
@@ -179,7 +179,7 @@ export function ManualTree({
     <div className="flex h-full min-h-0 flex-col bg-sidebar" onKeyDown={onKeyDown} tabIndex={0}>
       <div className="flex flex-col gap-3 border-b px-4 py-5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Pärm</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Manual</p>
           <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
         </div>
         <div className="relative">
@@ -194,7 +194,7 @@ export function ManualTree({
         </div>
         <div className="flex flex-col gap-2">
           <Button data-tour="nytt-kapitel" onClick={() => onNewDocument(null)} size="sm">
-            {nodes.length ? "Nytt kapitel" : "Skapa 1.0"}
+            {nodes.length ? "Nytt dokument" : "Skapa 1.0"}
           </Button>
           <Button
             data-tour="underavsnitt"
@@ -203,14 +203,14 @@ export function ManualTree({
               if (selectedId) onNewDocument(selectedId);
             }}
             size="sm"
-            title={selectedId ? "Lägger ett blad under det du har valt" : "Markera ett kapitel först."}
+            title={selectedId ? "Lägger ett dokument under det du har valt" : "Markera ett dokument först."}
             type="button"
             variant="outline"
           >
-            Nytt underavsnitt
+            Nytt underdokument
           </Button>
           <p className="text-xs leading-5 text-muted-foreground">
-            Kapitel blir 1.0 och 2.0. Underavsnitt läggs under det kapitel du har klickat på.
+            Dokument blir 1.0 och 2.0. Ett underdokument läggs under det dokument du har klickat på.
           </p>
         </div>
       </div>
@@ -221,7 +221,7 @@ export function ManualTree({
           ) : (
             <div className="flex flex-col gap-3 px-2 py-6 text-sm">
               <p className="leading-6 text-muted-foreground">
-                Manualen är tom. Skapa första kapitlet. Numret låses vid skapande.
+                Manualen är tom. Skapa 1.0. Numret låses vid skapande.
               </p>
             </div>
           )}
