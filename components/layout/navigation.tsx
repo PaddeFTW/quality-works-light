@@ -39,7 +39,7 @@ export const navigationGroups: NavGroup[] = [
         icon: <Users className="size-4" />,
       },
       {
-        title: "Kundtillfredsställelse",
+        title: "Kunder",
         href: "/kund",
         icon: <Smile className="size-4" />,
       },
@@ -107,7 +107,7 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kompetens", "/lagar", "/miljoaspekter"] as const;
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kund", "/kompetens", "/lagar", "/miljoaspekter"] as const;
 
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 
