@@ -18,7 +18,7 @@ export const EXAMPLE_CHECKS: { prompt: string; hint: string }[] = [
   { prompt: "Finns allt som standarden kräver med i ledningssystemet?", hint: "Jämför med ISO 9001 och ISO 14001." },
   { prompt: "Kan ni förklara hur ni styr dokumenten?", hint: "" },
   { prompt: "Har den som läser rätt utgåva?", hint: "" },
-  { prompt: "Är det ordning på blanketter även utanför boken?", hint: "" },
+  { prompt: "Är det ordning på blanketter även utanför manualen?", hint: "" },
   { prompt: "Använder alla aktuella blanketter?", hint: "" },
   { prompt: "Är det lätt att hitta mallar och checklistor?", hint: "" },
   { prompt: "Är listan över ifyllda dokument aktuell?", hint: "Inte ett krav i standarden, men bra att ha." },

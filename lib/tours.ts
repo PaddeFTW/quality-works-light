@@ -14,15 +14,15 @@ const TOURS: Tour[] = [
     id: "start",
     steps: [
       { title: "Det här är Start", body: "Här ser du vad du ska göra nu.", target: "[data-tour='idag']" },
-      { title: "Öppna boken", body: "Knappen tar dig till nästa jobb, eller till boken.", target: "[data-tour='oppen-manual']" },
+      { title: "Öppna manualen", body: "Knappen tar dig till nästa jobb, eller till manualen.", target: "[data-tour='oppen-manual']" },
       { title: "Året", body: "Staplarna är årets jobb. Öppna årshjul när du vill se dagen.", target: "[data-tour='idag']" },
     ],
   },
   {
     id: "manual",
     steps: [
-      { title: "Nytt kapitel", body: "Den här knappen skapar 1.0, sedan 2.0. Du behöver inte leta i menyn.", target: "[data-tour='nytt-kapitel']" },
-      { title: "Nytt underavsnitt", body: "Klicka först ett kapitel. Sedan den här knappen. Då blir det 1.1 under det kapitlet.", target: "[data-tour='underavsnitt']" },
+      { title: "Nytt dokument", body: "Den här knappen skapar 1.0, sedan 2.0. Du behöver inte leta i menyn.", target: "[data-tour='nytt-kapitel']" },
+      { title: "Nytt underdokument", body: "Klicka först ett dokument. Sedan den här knappen. Då blir det 1.1 under det dokumentet.", target: "[data-tour='underavsnitt']" },
       { title: "Papperet", body: "Skriv hur ni gör. Publicera när det stämmer.", target: "[data-tour='papper']" },
       { title: "Spara", body: "Spara medan du skriver. Publicera när texten stämmer.", target: "[data-tour='spara']" },
     ],

@@ -23,7 +23,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "Styrning",
     items: [
-      { title: "Dashboard", href: "/", icon: <LayoutDashboard className="size-4" /> },
+      { title: "Start", href: "/", icon: <LayoutDashboard className="size-4" /> },
       { title: "Manual", href: "/manual", icon: <BookOpen className="size-4" /> },
       { title: "SWOT", href: "/swot", icon: <Grid2x2 className="size-4" /> },
       { title: "Mål", href: "/mal", icon: <Target className="size-4" /> },

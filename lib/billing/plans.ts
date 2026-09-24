@@ -28,7 +28,7 @@ export const PLANS: Plan[] = [
     name: "Gratis",
     price: "0 kr",
     period: "för alltid",
-    blurb: "Börja med boken. Ingen risk.",
+    blurb: "Börja med manualen. Ingen risk.",
     seats: 1,
     features: {
       manual: true,
@@ -47,7 +47,7 @@ export const PLANS: Plan[] = [
     name: "Small",
     price: "1 490 kr",
     period: "/år",
-    blurb: "Boken plus årshjul och tre personer.",
+    blurb: "Manualen plus årshjul och tre personer.",
     seats: 3,
     features: {
       manual: true,
