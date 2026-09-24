@@ -649,7 +649,7 @@ export function ManualWorkspace({
 
   function handleSelect(node: ManualNode) {
     if (selectedId && dirtyIds.includes(selectedId) && node.id !== selectedId) {
-      if (!window.confirm("Du har osparad text. Vill du byta blad ändå?")) return;
+      if (!window.confirm("Du har osparad text. Vill du byta dokument ändå?")) return;
     }
     setSelectedId(node.id);
     if (node.kind === "document") {
@@ -739,7 +739,7 @@ export function ManualWorkspace({
               {selectedIsDocument
                 ? `${documentCode} ${documentTitle}`
                 : tree.length
-                  ? "Välj ett blad till vänster"
+                  ? "Välj ett dokument till vänster"
                   : settings.name || "Manualen"}
             </span>
             <div className="flex rounded-lg border bg-muted/40 p-0.5">
@@ -894,10 +894,10 @@ export function ManualWorkspace({
               />
             ) : selectedIsDocument ? (
               <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-                Du läser boken i fliken Original.
+                Du läser originalet.
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-[radial-gradient(900px_480px_at_50%_0%,hsl(190_45%_93%),transparent)] p-6 md:p-10">
+              <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-muted/30 p-6 md:p-10">
                 <div className="document-paper flex min-h-[42rem] w-full max-w-[210mm] flex-col">
                   <DocumentPaperHeader
                     companyName={session?.organizationName || settings.name}
@@ -905,13 +905,13 @@ export function ManualWorkspace({
                     documentTitle=""
                     edition={0}
                     issuer={settings.issuer}
-                    statusLabel={tree.length ? "Välj ett blad i trädet" : "Ny pärm"}
+                    statusLabel={tree.length ? "Välj ett dokument till vänster" : "Tom manual"}
                   />
                   <div className="flex flex-1 flex-col items-center justify-center gap-4 px-10 py-16 text-center">
                     <p className="max-w-sm text-sm leading-7 text-paper-muted">
                       {tree.length
-                        ? "Klicka ett blad till vänster. Då öppnas det på papperet."
-                        : "Pärmen är tom. Första bladet får nummer 1.0. Namnet väljer du."}
+                        ? "Klicka ett dokument till vänster. Då öppnas det på papperet."
+                        : "Manualen är tom. Första dokumentet får nummer 1.0. Namnet väljer du."}
                     </p>
                     {!tree.length && canEdit ? (
                       <Button onClick={() => openCreate(null)}>
@@ -945,12 +945,12 @@ export function ManualWorkspace({
             <>
               <span>{saveStatus === "sparar" ? "Sparar…" : saveStatus === "sparad" ? "Sparad" : saveStatus === "fel" ? "Kunde inte spara" : "Osparat"}</span>
               <span>Arbetsmanual – du kan ändra</span>
-              <span>{edition > 0 ? `Utgåva ${edition}` : "Utkast"}</span>
+              <span>{edition > 0 ? `Utgåva ${edition}` : "Inte publicerad"}</span>
             </>
           ) : selectedIsDocument ? (
             <span>{edition > 0 ? `Original · utgåva ${edition} · låst` : "Inget publicerat dokument ännu."}</span>
           ) : (
-            <span>Manualen är tom. Skapa första kapitlet.</span>
+            <span>Manualen är tom. Skapa 1.0.</span>
           )}
           {edition > 0 && selectedIsDocument ? (
             <span className="ml-auto">
@@ -1011,7 +1011,7 @@ export function ManualWorkspace({
                             ? tree.length
                               ? "Nytt dokument"
                               : "Skapa 1.0"
-                            : "Nytt underavsnitt"}
+                            : "Nytt underdokument"}
             </DialogTitle>
           </DialogHeader>
           {dialog === "delete" ? (
