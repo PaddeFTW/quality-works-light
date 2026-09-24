@@ -21,7 +21,7 @@ export function UpgradeCard({ feature, text }: { feature: PlanFeature; text: str
             <Link href="/installningar">Välj paket</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/manual" rel="noopener noreferrer" target="_blank">
+            <Link href="/manual">
               Öppna manualen
             </Link>
           </Button>

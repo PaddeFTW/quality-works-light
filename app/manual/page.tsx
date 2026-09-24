@@ -1,3 +1,5 @@
+import { AppLayout } from "@/components/layout/app-layout";
+import { navigation } from "@/components/layout/navigation";
 import { ManualWorkspace } from "@/components/manual/manual-workspace";
 
 export default async function ManualPage({
@@ -6,5 +8,9 @@ export default async function ManualPage({
   searchParams: Promise<{ blad?: string }>;
 }) {
   const params = await searchParams;
-  return <ManualWorkspace openDocumentId={params.blad ?? null} />;
+  return (
+    <AppLayout contentClassName="flex flex-col overflow-hidden p-0 pb-14 lg:pb-0" navigation={navigation}>
+      <ManualWorkspace embedded openDocumentId={params.blad ?? null} />
+    </AppLayout>
+  );
 }

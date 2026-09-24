@@ -78,16 +78,13 @@ const NAV_TINT: Record<string, string> = {
     );
 
   function NavLink({ item, labeled }: { item: NavItem; labeled: boolean }) {
-    const newTab = item.href === "/manual";
     return (
-      <Tip className={labeled ? "w-full" : undefined} label={newTab ? `${item.title} (ny flik)` : item.title} side="right">
+      <Tip className={labeled ? "w-full" : undefined} label={item.title} side="right">
         <Link
           aria-current={isActive(item) ? "page" : undefined}
           aria-label={item.title}
           className={linkClass(item, labeled)}
           href={item.href}
-          rel={newTab ? "noopener noreferrer" : undefined}
-          target={newTab ? "_blank" : undefined}
         >
           <span className={cn("inline-flex shrink-0", isActive(item) ? "text-primary-foreground!" : NAV_TINT[item.href] || "text-primary")}>
             {item.icon}

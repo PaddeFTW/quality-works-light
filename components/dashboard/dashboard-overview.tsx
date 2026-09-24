@@ -149,7 +149,7 @@ export function DashboardOverview() {
         body: referrals[0].documentTitle || "Ett blad väntar på ditt svar.",
         href: `/manual?blad=${referrals[0].documentId}`,
         cta: "Öppna bladet",
-        newTab: true,
+        newTab: false,
       };
     }
     if (stats.openDeviations > 0) {
@@ -176,7 +176,7 @@ export function DashboardOverview() {
         body: lastOpened.title,
         href: `/manual?blad=${lastOpened.id}`,
         cta: "Öppna bladet",
-        newTab: true,
+        newTab: false,
       };
     }
     if (stats.upcomingActivities.length === 0) {
@@ -193,7 +193,7 @@ export function DashboardOverview() {
       body: "Inget som jagar er i dag. Öppna boken om du vill skriva.",
       href: "/manual",
       cta: "Öppna boken",
-      newTab: true,
+      newTab: false,
     };
   }, [referrals, stats, lastOpened]);
 
@@ -203,7 +203,7 @@ export function DashboardOverview() {
       title: "Svara på remiss",
       meta: readableTitle(item.documentTitle || ""),
       href: `/manual?blad=${item.documentId}`,
-      newTab: true,
+      newTab: false,
       when: "Väntar på dig",
       tone: "warning" as const,
     })),
@@ -366,8 +366,6 @@ export function DashboardOverview() {
               <Link
                 className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
                 href={`/manual?blad=${lastOpened.id}`}
-                rel="noopener noreferrer"
-                target="_blank"
               >
                 <span className="flex items-center gap-2 font-medium">
                   <FileText className="size-4 text-primary" />
@@ -420,7 +418,7 @@ export function DashboardOverview() {
 
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm" variant="outline">
-          <Link href="/manual" rel="noopener noreferrer" target="_blank">
+          <Link href="/manual">
             <FileText data-icon="inline-start" />
             Öppna boken
           </Link>
