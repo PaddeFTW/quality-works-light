@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, LifeBuoy, Maximize, Minimize, MoreHorizontal, PanelLeft, Plus } from "lucide-react";
 
 import { play } from "@/lib/sound";
 
@@ -109,9 +109,11 @@ type DialogMode = "create-doc" | "rename" | "delete" | "publish" | "revise" | "r
 
 export function ManualWorkspace({
   openDocumentId = null,
+  embedded = false,
 }: {
   initialView?: ViewMode;
   openDocumentId?: string | null;
+  embedded?: boolean;
 }) {
   const { session, loading: orgLoading } = useOrgSession();
   const [ready, setReady] = useState(false);
@@ -677,16 +679,18 @@ export function ManualWorkspace({
     selectedId,
   };
 
+  const frame = embedded ? "h-full min-h-0 flex-1" : "h-screen";
+
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
+      <div className={`flex items-center justify-center text-sm text-muted-foreground ${frame}`}>
         Laddar manual…
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden bg-muted/40" ref={binderRef}>
+    <div className={`flex min-h-0 overflow-hidden bg-muted/40 ${frame}`} ref={binderRef}>
       <aside
         className="relative flex shrink-0 flex-col bg-sidebar"
         data-tour="trad"
@@ -794,6 +798,15 @@ export function ManualWorkspace({
               <Button aria-label={isFullscreen ? "Lämna helskärm" : "Helskärm"} onClick={() => void toggleFullscreen()} size="icon" variant="ghost">
                 {isFullscreen ? <Minimize /> : <Maximize />}
               </Button>
+              {embedded ? (
+                <Tip label="Egen flik">
+                  <Button aria-label="Öppna i egen flik" asChild size="icon" variant="ghost">
+                    <Link href="/manual/full" rel="noopener noreferrer" target="_blank">
+                      <ExternalLink />
+                    </Link>
+                  </Button>
+                </Tip>
+              ) : null}
               <Tip label="Hjälp">
                 <Button
                   aria-label="Hjälp"
