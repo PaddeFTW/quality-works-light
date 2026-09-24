@@ -62,6 +62,7 @@ const NAV_TINT: Record<string, string> = {
   "/miljoaspekter": "text-success",
   "/avvikelse": "text-destructive",
   "/forslag": "text-warning",
+  "/kund": "text-info",
   "/installningar": "text-muted-foreground",
 };
 

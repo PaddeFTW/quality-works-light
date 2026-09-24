@@ -1,15 +1,17 @@
-import { ModuleShell } from "@/components/common/module-shell";
+"use client";
+
+import { KundWorkspace } from "@/components/kund/kund-workspace";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { navigation } from "@/components/layout/navigation";
 
 export default function KundPage() {
   return (
-    <ModuleShell
-      title="Kundtillfredsställelse"
-      description="Samla in och följ upp kundsynpunkter som underlag till förbättring."
-      comingSoonPoints={[
-        "Enkäter och återkoppling",
-        "Trend över tid",
-        "Koppling till kvalitetsmål",
-      ]}
-    />
+    <DashboardLayout
+      description="Vilka kunder ni har, och vad de tycker. Ni kan svara åt kunden om svaret dröjer."
+      navigation={navigation}
+      title="Kunder"
+    >
+      <KundWorkspace />
+    </DashboardLayout>
   );
 }

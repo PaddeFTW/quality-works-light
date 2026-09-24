@@ -59,7 +59,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "mal", href: "/mal", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "arshjul", href: "/arshjul", enabled: true, minRole: "viewer", viewerAccess: "read" },
   { key: "kompetens", href: "/kompetens", enabled: true, minRole: "editor", viewerAccess: "read" },
-  { key: "kund", href: "/kund", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "kund", href: "/kund", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "leverantor", href: "/leverantor", enabled: false, minRole: "editor", viewerAccess: "read" },
   { key: "lagar", href: "/lagar", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "miljoaspekter", href: "/miljoaspekter", enabled: true, minRole: "editor", viewerAccess: "read" },
