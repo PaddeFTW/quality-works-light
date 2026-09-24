@@ -18,6 +18,7 @@ export type ModuleKey =
   | "lagar"
   | "miljoaspekter"
   | "kontroller"
+  | "certifiering"
   | "avvikelse"
   | "forslag"
   | "intern-revision"
@@ -64,6 +65,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "lagar", href: "/lagar", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "miljoaspekter", href: "/miljoaspekter", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "kontroller", href: "/kontroller", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "certifiering", href: "/certifiering", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "avvikelse", href: "/avvikelse", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "forslag", href: "/forslag", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "intern-revision", href: "/intern-revision", enabled: false, minRole: "editor", viewerAccess: "read" },
