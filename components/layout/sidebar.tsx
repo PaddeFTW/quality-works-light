@@ -61,6 +61,7 @@ const NAV_TINT: Record<string, string> = {
   "/lagar": "text-info",
   "/miljoaspekter": "text-success",
   "/certifiering": "text-primary",
+  "/intern-revision": "text-warning",
   "/avvikelse": "text-destructive",
   "/forslag": "text-warning",
   "/kund": "text-info",
