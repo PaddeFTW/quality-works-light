@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { FileLock2, Printer } from "lucide-react";
 
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
-import { printIfContent } from "@/lib/export-document";
+import { FlowCanvas } from "@/components/manual/flow-canvas";
+import { pageLabel, printPackedDocument, unpackDocument } from "@/lib/manual/document-pack";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { DocumentVersion } from "@/types/domain";
+import type { DocumentVersion, ManualAttachment } from "@/types/domain";
 
 interface ManualOriginalPanelProps {
   companyName: string;
@@ -22,6 +23,9 @@ interface ManualOriginalPanelProps {
   footerText: string;
   versions?: DocumentVersion[];
   onRestore?: (edition: number) => void;
+  documents?: { id: string; label: string }[];
+  attachments?: ManualAttachment[];
+  onOpenDocument?: (id: string) => void;
 }
 
 export function ManualOriginalPanel({
@@ -35,10 +39,49 @@ export function ManualOriginalPanel({
   footerText,
   versions = [],
   onRestore,
+  documents = [],
+  attachments = [],
+  onOpenDocument,
 }: ManualOriginalPanelProps) {
   const [selectedEdition, setSelectedEdition] = useState<number | null>(null);
   const selectedVersion = versions.find((version) => version.edition === selectedEdition);
-  const visibleContent = selectedVersion?.content ?? content;
+  const packed = selectedVersion?.content ?? content ?? "";
+  const parsed = unpackDocument(packed);
+  const visibleContent = parsed.html;
+  const known = new Set(documents.map((item) => item.id));
+  const html = visibleContent.replace(/<a ([^>]*href="qwl:\/\/doc\/([^"]+)"[^>]*)>([\s\S]*?)<\/a>/g, (full, _attrs, id: string, text: string) =>
+    known.size === 0 || known.has(id) ? full : `${text} <span class="text-muted-foreground">saknas</span>`,
+  );
+
+  function follow(event: MouseEvent<HTMLElement>) {
+    const anchor = (event.target as HTMLElement).closest("a");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href") || "";
+    if (!href || href.startsWith("#")) return;
+    event.preventDefault();
+    if (href.startsWith("http")) {
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (href.startsWith("mailto:")) {
+      window.location.href = href;
+      return;
+    }
+    if (href.startsWith("qwl://doc/")) {
+      const id = href.slice("qwl://doc/".length);
+      if (known.size > 0 && !known.has(id)) return;
+      onOpenDocument?.(id);
+      return;
+    }
+    if (href.startsWith("qwl://modul")) {
+      window.location.assign(href.slice("qwl://modul".length) || "/");
+      return;
+    }
+    if (href.startsWith("qwl://fil/")) {
+      const file = attachments.find((item) => item.id === href.slice("qwl://fil/".length));
+      if (file?.url) window.open(file.url, "_blank", "noopener,noreferrer");
+    }
+  }
   const visibleEdition = selectedVersion?.edition ?? edition;
   const visibleDate = selectedVersion?.publishedAt ?? publishedAt;
 
@@ -65,7 +108,7 @@ export function ManualOriginalPanel({
 
   return (
     <ScrollArea className="min-h-0 flex-1 bg-muted/40">
-      <div className="mx-auto flex w-full max-w-[210mm] flex-col gap-5 px-6 py-8">
+      <div className="mx-auto flex w-full flex-col gap-5 px-6 py-8" style={{ maxWidth: parsed.page === "landscape" ? "297mm" : "210mm" }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-semibold">Original – låst</p>
@@ -73,7 +116,7 @@ export function ManualOriginalPanel({
               {visibleDate ? `Godkänt ${visibleDate}` : "Gällande utgåva"}
             </p>
           </div>
-          <Button onClick={() => printIfContent(visibleContent)} size="sm" variant="outline">
+          <Button onClick={() => printPackedDocument(`${documentCode} ${documentTitle}`, packed, companyName, footerText)} size="sm" variant="outline">
             <Printer data-icon="inline-start" />
             Skriv ut
           </Button>
@@ -127,19 +170,36 @@ export function ManualOriginalPanel({
             ) : null}
           </div>
         ) : null}
-        <article className="document-paper is-current overflow-hidden">
+        <article className={`document-paper is-current overflow-hidden ${parsed.page === "landscape" ? "is-landscape" : ""}`} style={{ width: parsed.page === "landscape" ? "297mm" : "210mm", minHeight: parsed.page === "landscape" ? "210mm" : "297mm" }}>
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
             documentTitle={documentTitle}
             edition={visibleEdition}
             issuer={issuer}
-            statusLabel={visibleEdition > 0 ? `Original · utgåva ${visibleEdition} · låst` : "Original · låst"}
+            statusLabel={visibleEdition > 0 ? `Original · utgåva ${visibleEdition} · låst · ${pageLabel(parsed.page)}` : `Original · låst · ${pageLabel(parsed.page)}`}
           />
           <div
-            className="manual-tiptap-editor px-6 pb-10 pt-2 font-serif text-base leading-8"
-            dangerouslySetInnerHTML={{ __html: visibleContent ?? "" }}
+            className="manual-tiptap-editor px-6 pb-4 pt-2 font-serif text-base leading-8"
+            dangerouslySetInnerHTML={{ __html: html }}
+            onClick={follow}
           />
+          {parsed.flow.shapes.length > 0 ? (
+            <FlowCanvas editable={false} height={parsed.page === "landscape" ? 460 : 360} hideBar onChange={() => undefined} onFollow={(link) => {
+              if (link.href.startsWith("http")) window.open(link.href, "_blank", "noopener,noreferrer");
+              else if (link.href.startsWith("mailto:")) window.location.href = link.href;
+              else if (link.href.startsWith("qwl://doc/")) {
+                const id = link.href.slice("qwl://doc/".length);
+                if (known.size > 0 && !known.has(id)) return;
+                onOpenDocument?.(id);
+              }
+              else if (link.href.startsWith("qwl://modul")) window.location.assign(link.href.slice("qwl://modul".length) || "/");
+              else if (link.href.startsWith("qwl://fil/")) {
+                const file = attachments.find((item) => item.id === link.href.slice("qwl://fil/".length));
+                if (file?.url) window.open(file.url, "_blank", "noopener,noreferrer");
+              }
+            }} value={parsed.flow} />
+          ) : null}
           <footer className="border-t px-6 py-3 text-xs text-muted-foreground">{footerText}</footer>
         </article>
       </div>

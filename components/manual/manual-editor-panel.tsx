@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import type { ManualAttachment } from "@/types/domain";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -40,8 +40,11 @@ import {
   Upload,
 } from "lucide-react";
 
+import { FlowCanvas, FLOW_TOOLS } from "@/components/manual/flow-canvas";
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
-import { downloadHtmlAsFile, printIfContent } from "@/lib/export-document";
+import { LinkPicker } from "@/components/manual/link-picker";
+import { packDocument, pageLabel, printPackedDocument, unpackDocument, type DocLink, type FlowDoc, type FlowShape, type PageFormat } from "@/lib/manual/document-pack";
+import { downloadHtmlAsFile } from "@/lib/export-document";
 import { cn } from "@/lib/utils";
 
 function readLocalImage(file: File) {
@@ -82,6 +85,8 @@ interface ManualEditorPanelProps {
   onUploadImage?: (file: File) => Promise<string | null>;
   onRemoveAttachment: (attachmentId: string) => void;
   onDownloadAttachment: (attachment: ManualAttachment) => void;
+  documents?: { id: string; label: string }[];
+  onFollowLink?: (href: string) => void;
 }
 
 export function ManualEditorPanel({
@@ -102,8 +107,28 @@ export function ManualEditorPanel({
   onUploadImage,
   onRemoveAttachment,
   onDownloadAttachment,
+  documents = [],
+  onFollowLink,
 }: ManualEditorPanelProps) {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const initial = unpackDocument(value);
+  const [page, setPage] = useState<PageFormat>(initial.page);
+  const [flow, setFlow] = useState<FlowDoc>(initial.flow);
+  const [surface, setSurface] = useState<"text" | "flow">(initial.page === "landscape" ? "flow" : "text");
+  const [zoom, setZoom] = useState(1);
+  const [zoomChoice, setZoomChoice] = useState("1");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkShape, setLinkShape] = useState<FlowShape | null>(null);
+  const [flowTool, setFlowTool] = useState<(typeof FLOW_TOOLS)[number]["id"]>("select");
+  const [undoSignal, setUndoSignal] = useState(0);
+  const [redoSignal, setRedoSignal] = useState(0);
+  const [deleteSignal, setDeleteSignal] = useState(0);
+  const [linkSignal, setLinkSignal] = useState(0);
+  const pageRef = useRef(initial.page);
+  const flowRef = useRef(initial.flow);
+  const frameRef = useRef<HTMLDivElement>(null);
+  pageRef.current = page;
+  flowRef.current = flow;
   const lastEmitted = useRef(value);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
@@ -139,7 +164,7 @@ export function ManualEditorPanel({
       TableHeader,
       TableCell,
     ],
-    content: value,
+    content: unpackDocument(value).html,
     editable,
     immediatelyRender: false,
     editorProps: {
@@ -167,8 +192,9 @@ export function ManualEditorPanel({
     },
     onUpdate: ({ editor: nextEditor }) => {
       const html = nextEditor.getHTML();
-      lastEmitted.current = html;
-      onChange(html);
+      const packed = packDocument(html, pageRef.current, flowRef.current);
+      lastEmitted.current = packed;
+      onChange(packed);
     },
   });
   editorRef.current = editor;
@@ -197,17 +223,53 @@ export function ManualEditorPanel({
   }, [editor, editable]);
 
   useEffect(() => {
+    const next = unpackDocument(value);
+    setPage(next.page);
+    pageRef.current = next.page;
+    if (JSON.stringify(next.flow) !== JSON.stringify(flowRef.current)) {
+      flowRef.current = next.flow;
+      setFlow(next.flow);
+    }
     if (!editor) return;
     if (value === lastEmitted.current) return;
     if (editor.isFocused) return;
     lastEmitted.current = value;
-    editor.commands.setContent(value || "<p></p>", { emitUpdate: false });
+    editor.commands.setContent(next.html || "<p></p>", { emitUpdate: false });
   }, [editor, value]);
 
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    function onWheel(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setZoom((current) => Math.min(1.5, Math.max(0.5, current * (event.deltaY < 0 ? 1.1 : 0.9))));
+      setZoomChoice("custom");
+    }
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, []);
+
+  function emitFlow(next: FlowDoc) {
+    flowRef.current = next;
+    setFlow(next);
+    const html = editor?.getHTML() ?? unpackDocument(value).html;
+    const packed = packDocument(html, pageRef.current, next);
+    lastEmitted.current = packed;
+    onChange(packed);
+  }
+
+  function follow(link: DocLink) {
+    if (link.kind === "web" || link.href.startsWith("http")) {
+      window.open(link.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onFollowLink?.(link.href);
+  }
+
   const insertLink = () => {
-    if (!editor) return;
-    const url = window.prompt("Ange URL", "https://");
-    if (url) editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    setLinkShape(null);
+    setLinkOpen(true);
   };
 
   const toolbarButtonClass = "size-8 p-0";
@@ -223,8 +285,9 @@ export function ManualEditorPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(1200px_600px_at_50%_-10%,hsl(190_40%_94%),transparent)] bg-muted/40">
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-card px-3 py-2">
-        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
-        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
+        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={surface === "text" ? !editor?.can().undo() : false} onClick={() => (surface === "flow" ? setUndoSignal((n) => n + 1) : editor?.chain().focus().undo().run())} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
+        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={surface === "text" ? !editor?.can().redo() : false} onClick={() => (surface === "flow" ? setRedoSignal((n) => n + 1) : editor?.chain().focus().redo().run())} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
+        <div className={surface === "flow" ? "hidden" : "contents"}>
         <select
           aria-label="Rubrik"
           className="h-8 rounded-lg border-0 bg-muted/70 px-2 text-xs"
@@ -304,6 +367,54 @@ export function ManualEditorPanel({
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
         <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={() => imageInputRef.current?.click()} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
+        </div>
+        {surface === "flow" ? (
+          <>
+            {FLOW_TOOLS.map((item) => (
+              <Button key={item.id} onClick={() => setFlowTool(item.id)} size="sm" type="button" variant={flowTool === item.id ? "secondary" : "ghost"}>
+                {item.label}
+              </Button>
+            ))}
+            <Button onClick={() => setDeleteSignal((n) => n + 1)} size="sm" type="button" variant="ghost">Ta bort</Button>
+            <Button onClick={() => { setLinkShape(null); setLinkSignal((n) => n + 1); }} size="sm" type="button" variant="ghost">Länk</Button>
+            <Button onClick={() => emitFlow({ ...flowRef.current, snap: !flowRef.current.snap })} size="sm" type="button" variant={flow.snap ? "secondary" : "ghost"}>
+              Rutnät {flow.snap ? "på" : "av"}
+            </Button>
+          </>
+        ) : null}
+        <div className="flex rounded-lg border bg-muted/40 p-0.5">
+          <Button onClick={() => { setSurface("text"); }} size="sm" type="button" variant={surface === "text" ? "default" : "ghost"}>Text</Button>
+          <Button onClick={() => { setSurface("flow"); editor?.commands.blur(); }} size="sm" type="button" variant={surface === "flow" ? "default" : "ghost"}>Flöde</Button>
+        </div>
+        <span className="rounded-md bg-muted px-2 py-1 text-xs">{pageLabel(page)}</span>
+        <select
+          aria-label="Zoom"
+          className="h-8 rounded-lg bg-muted/70 px-2 text-xs"
+          onChange={(event) => {
+            if (event.target.value === "fit") {
+              const frame = frameRef.current;
+              if (!frame) return;
+              const baseW = page === "landscape" ? 1123 : 794;
+              const baseH = page === "landscape" ? 794 : 1123;
+              const scale = Math.min((frame.clientWidth - 48) / baseW, (frame.clientHeight - 48) / baseH);
+              setZoom(Math.min(1.5, Math.max(0.2, scale)));
+              setZoomChoice("fit");
+              return;
+            }
+            setZoomChoice(event.target.value);
+            setZoom(Number(event.target.value));
+          }}
+          value={zoomChoice}
+        >
+          {zoomChoice === "custom" ? <option value="custom">{Math.round(zoom * 100)} %</option> : null}
+          <option value="0.5">50 %</option>
+          <option value="0.75">75 %</option>
+          <option value="1">100 %</option>
+          <option value="1.25">125 %</option>
+          <option value="1.5">150 %</option>
+          <option value="fit">Anpassa</option>
+        </select>
+        <span className="text-xs text-muted-foreground">{Math.round(zoom * 100)} %</span>
         <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="ghost">
@@ -320,7 +431,7 @@ export function ManualEditorPanel({
               <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
                 <div>
                   <p className="font-medium">Dokumentbilagor</p>
-                  <p className="text-sm text-muted-foreground">Filer som hör till bladet, inte till brödtexten.</p>
+                  <p className="text-sm text-muted-foreground">Filer som hör till dokumentet, inte till brödtexten.</p>
                 </div>
                 <Button disabled={!editable} onClick={onAddAttachment} size="sm" variant="outline">
                   <Upload data-icon="inline-start" />
@@ -364,8 +475,8 @@ export function ManualEditorPanel({
                 `${documentCode} ${documentTitle}.doc`,
                 `${documentCode} ${documentTitle}`,
                 companyName,
-                value,
-                "Arbetsmanual – utkast",
+                unpackDocument(value).html,
+                "Arbetsmanual – inte original",
               )
             }
             size="sm"
@@ -376,21 +487,22 @@ export function ManualEditorPanel({
             <FileDown />
           </Button>
         ) : null}
-        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
+        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printPackedDocument(`${documentCode} ${documentTitle}`, value, companyName, "Arbetsmanual")} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
         <span className="ml-auto text-xs font-medium text-muted-foreground" aria-live="polite">
           {statusText}
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8">
-        <div className={cn("document-paper is-draft mx-auto min-h-[42rem] max-w-[210mm]", focused && "is-writing")} data-tour="papper">
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8" ref={frameRef}>
+        <div className="mx-auto" style={{ width: `${(page === "landscape" ? 1123 : 794) * zoom}px` }}>
+        <div className={cn("document-paper is-draft origin-top-left", page === "landscape" && "is-landscape", focused && "is-writing")} data-paper data-tour="papper" style={{ width: page === "landscape" ? "297mm" : "210mm", minHeight: page === "landscape" ? "210mm" : "297mm", zoom } as CSSProperties}>
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
             documentTitle={documentTitle}
             edition={edition}
             issuer={issuer}
-            statusLabel="Arbetsmanual – du kan ändra"
+            statusLabel={`Arbetsmanual – du kan ändra · ${pageLabel(page)}`}
           />
           <div
             onClick={() => editor?.commands.focus()}
@@ -406,13 +518,48 @@ export function ManualEditorPanel({
             onKeyDown={() => undefined}
             role="presentation"
           >
-            <EditorContent className="manual-tiptap-editor" editor={editor} />
+            <EditorContent className={cn("manual-tiptap-editor", surface === "flow" && "pointer-events-none opacity-80")} editor={editor} />
           </div>
+          {surface === "flow" || flow.shapes.length > 0 ? (
+          <FlowCanvas
+            deleteSignal={deleteSignal}
+            editable={editable && surface === "flow"}
+            height={page === "landscape" ? 460 : 360}
+            hideBar
+            linkSignal={linkSignal}
+            onChange={emitFlow}
+            onFollow={follow}
+            onLink={(shape) => {
+              setLinkShape(shape);
+              setLinkOpen(true);
+            }}
+            onToolChange={setFlowTool}
+            redoSignal={redoSignal}
+            tool={flowTool}
+            undoSignal={undoSignal}
+            value={flow}
+          />
+          ) : null}
           <footer className="border-t px-6 py-3 text-xs text-muted-foreground">
             Arbetsmanual – inte original
           </footer>
         </div>
+        </div>
       </div>
+      <LinkPicker
+        attachments={attachments}
+        documents={documents}
+        onApply={(link) => {
+          if (linkShape) {
+            emitFlow({ ...flowRef.current, shapes: flowRef.current.shapes.map((shape) => (shape.id === linkShape.id ? { ...shape, link } : shape)) });
+            setLinkShape(null);
+            return;
+          }
+          editor?.chain().focus().extendMarkRange("link").setLink({ href: link.href }).run();
+        }}
+        onOpenChange={setLinkOpen}
+        open={linkOpen}
+      />
       <input
         accept="image/*"
         className="hidden"

@@ -36,7 +36,6 @@ import {
   routineTemplate,
   findNodeById,
   getNodeNumber,
-  countPlainText,
   type ManualNode,
 } from "@/components/manual/manual-data";
 import { ManualEditorPanel } from "@/components/manual/manual-editor-panel";
@@ -73,7 +72,8 @@ import { canPlan } from "@/lib/billing/plans";
 import { cloudReadMessage } from "@/lib/manual/cloud";
 import { latestReferralFor, openReferralFor } from "@/lib/manual/referral";
 import { loadOrgMembers, type OrgMember } from "@/lib/org/members";
-import { firstDocumentId, insertNode, removeNode, renameNode } from "@/lib/manual/tree-ops";
+import { firstDocumentId, insertNode, listDocuments, removeNode, renameNode } from "@/lib/manual/tree-ops";
+import { documentHasContent, emptyFlow, packDocument, unpackDocument, type PageFormat } from "@/lib/manual/document-pack";
 import {
   loadDrafts,
   loadJson,
@@ -154,6 +154,7 @@ export function ManualWorkspace({
   const [publishAnyway, setPublishAnyway] = useState(false);
   const [changeNote, setChangeNote] = useState("");
   const [useRoutine, setUseRoutine] = useState(false);
+  const [createFormat, setCreateFormat] = useState<PageFormat>("portrait");
   const [auditAt, setAuditAt] = useState("");
   const [auditOwner, setAuditOwner] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -235,6 +236,11 @@ export function ManualWorkspace({
   const versions = selectedId ? (versionsByDoc[selectedId] ?? []) : [];
   const published = versions[0] ?? null;
   const edition = published?.edition ?? 0;
+  const documentChoices = listDocuments(tree).map((node) => ({
+    id: node.id,
+    label: `${getNodeNumber(tree, node.id) ?? ""} ${node.title}`.trim(),
+  }));
+  const pageNow = selectedIsDocument ? unpackDocument(draft).page : "portrait";
   const isDirty = selectedId ? dirtyIds.includes(selectedId) : false;
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [treeWidth, setTreeWidth] = useState(300);
@@ -289,6 +295,8 @@ export function ManualWorkspace({
     setDialog("create-doc");
     setDialogName("");
     setDialogParent(parentId ?? "root");
+    setCreateFormat("portrait");
+    setUseRoutine(false);
   }
 
   async function handleSave(fromUser = false) {
@@ -331,9 +339,9 @@ export function ManualWorkspace({
 
   function openPublish() {
     if (!selectedId || !selectedIsDocument) return;
-    const plain = countPlainText(draft);
+    const plain = documentHasContent(draft);
     if (!plain) {
-      setStatus("Skriv texten först. Sedan kan du publicera.");
+      setStatus("Skriv eller rita först. Sedan kan du publicera.");
       return;
     }
     if (openReferral) {
@@ -555,9 +563,10 @@ export function ManualWorkspace({
       return;
     }
     let id = `${kind}-${Date.now()}`;
+    const packed = packDocument(useRoutine ? routineTemplate : defaultDocumentContent, createFormat, emptyFlow());
     if (cloud && manualId) {
       try {
-        id = await persistCreate({ manualId, parentId, title, kind });
+        id = await persistCreate({ manualId, parentId, title, kind, html: packed });
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Kunde inte skapa");
         return;
@@ -565,13 +574,14 @@ export function ManualWorkspace({
     }
     const node: ManualNode = { id, title, kind, children: [] };
     setTree((current) => insertNode(current, parentId, node));
-    setDrafts((current) => ({ ...current, [id]: useRoutine ? routineTemplate : defaultDocumentContent }));
+    setDrafts((current) => ({ ...current, [id]: packed }));
     setSelectedId(id);
     setLastOpenedId(id);
     rememberLastOpened(id);
     setMode("edit");
     setDialog(null);
     setUseRoutine(false);
+    setCreateFormat("portrait");
   }
 
   async function confirmRename() {
@@ -644,6 +654,44 @@ export function ManualWorkspace({
       } catch {
         /* keep local */
       }
+    }
+  }
+
+  function changePage(next: PageFormat) {
+    if (!selectedId || !selectedIsDocument) return;
+    const current = unpackDocument(drafts[selectedId] ?? defaultDocumentContent);
+    if (current.page === next) return;
+    if (current.flow.shapes.length > 0 && !window.confirm("Ritningen kan klippas om du byter format. Byta ändå?")) return;
+    const packed = packDocument(current.html, next, current.flow);
+    setDrafts((state) => ({ ...state, [selectedId]: packed }));
+    markDirty(selectedId);
+  }
+
+  function followHref(href: string) {
+    if (href.startsWith("http")) {
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (href.startsWith("mailto:")) {
+      window.location.href = href;
+      return;
+    }
+    if (href.startsWith("qwl://doc/")) {
+      const id = href.slice("qwl://doc/".length);
+      if (!listDocuments(tree).some((item) => item.id === id)) return;
+      setSelectedId(id);
+      setLastOpenedId(id);
+      rememberLastOpened(id);
+      return;
+    }
+    if (href.startsWith("qwl://modul")) {
+      window.location.assign(href.slice("qwl://modul".length) || "/");
+      return;
+    }
+    if (href.startsWith("qwl://fil/")) {
+      const fileId = href.slice("qwl://fil/".length);
+      const file = Object.values(attachments).flat().find((item) => item.id === fileId);
+      if (file?.url) window.open(file.url, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -758,7 +806,7 @@ export function ManualWorkspace({
                   <Button data-tour="spara" disabled={!canEdit} onClick={() => void handleSave(true)} size="sm" variant="outline">
                     Spara
                   </Button>
-                  <Button disabled={!canEdit || countPlainText(draft) === 0} onClick={openPublish} size="sm">
+                  <Button disabled={!canEdit || !documentHasContent(draft)} onClick={openPublish} size="sm">
                     Publicera
                   </Button>
                   <DropdownMenu>
@@ -888,6 +936,8 @@ export function ManualWorkspace({
                   setAttachments((current) => ({ ...current, [selectedId ?? ""]: (current[selectedId ?? ""] ?? []).filter((item) => item.id !== id) }));
                 }}
                 onSave={() => void handleSave(true)}
+                documents={documentChoices}
+                onFollowLink={followHref}
                 saveStatus={saveStatus}
                 saved={savedId === selectedId && !isDirty}
                 value={draft}
@@ -935,6 +985,13 @@ export function ManualWorkspace({
               headerText={settings.headerText}
               issuer={settings.issuer}
               onRestore={canEdit ? restoreEdition : undefined}
+              documents={documentChoices}
+              attachments={attachments[selectedId ?? ""] ?? []}
+              onOpenDocument={(id) => {
+                setSelectedId(id);
+                setLastOpenedId(id);
+                rememberLastOpened(id);
+              }}
               publishedAt={published?.publishedAt ?? null}
               versions={versions}
             />
@@ -972,6 +1029,20 @@ export function ManualWorkspace({
       </div>
       {tasksOpen && canEdit ? (
         <aside className="w-full shrink-0 overflow-auto border-t bg-card lg:w-80 lg:border-l lg:border-t-0">
+          {selectedIsDocument ? (
+            <div className="border-b px-6 py-4">
+              <p className="text-sm font-medium">Format</p>
+              <p className="mb-2 text-xs text-muted-foreground">Stående eller liggande på det här dokumentet.</p>
+              <div className="flex gap-2">
+                <Button onClick={() => changePage("portrait")} size="sm" type="button" variant={pageNow === "portrait" ? "default" : "outline"}>
+                  Stående
+                </Button>
+                <Button onClick={() => changePage("landscape")} size="sm" type="button" variant={pageNow === "landscape" ? "default" : "outline"}>
+                  Liggande
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <ManualSettingsPanel onChange={handleSettingsChange} settings={settings} />
         </aside>
       ) : null}
@@ -1131,6 +1202,17 @@ export function ManualWorkspace({
                     }
                   />
                   <p className="text-xs text-muted-foreground">Numret låses vid skapande. Namnet väljer du själv.</p>
+                  <div className="space-y-2">
+                    <Label>Format</Label>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setCreateFormat("portrait")} type="button" variant={createFormat === "portrait" ? "default" : "outline"}>
+                        Stående
+                      </Button>
+                      <Button onClick={() => setCreateFormat("landscape")} type="button" variant={createFormat === "landscape" ? "default" : "outline"}>
+                        Liggande
+                      </Button>
+                    </div>
+                  </div>
                   <label className="flex items-center gap-2 text-sm">
                     <input checked={useRoutine} onChange={(event) => setUseRoutine(event.target.checked)} type="checkbox" />
                     Börja med en rutin: syfte, vem, så gör vi
