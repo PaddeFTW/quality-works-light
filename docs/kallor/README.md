@@ -17,8 +17,8 @@ Texten i mallen är meningen. Formen blir en lista, ett formulär eller ett prot
 
 ## Ska byggas, i den här ordningen
 
-1. Kunder. Lista, grad 1–3, frågor 1–6, resultat i procent, kommentar.
-2. Leverantörer. Samma idé. Plus om leverantören är godkänd.
+1. Kunder. Klart.
+2. Leverantörer. Klart. Vi bedömer själva. Godkänd, måste bli bättre, eller enda valet.
 3. Inför certifiering. Frågor med Ja, Nej och datum. En lista, inte tre likadana.
 4. Intern revision. Program med kravrad, betyg 1, 2 eller 3, och en rapport per fel.
 5. Ledningens genomgång sist. Mötesprotokoll som läser siffror från de andra modulerna.
