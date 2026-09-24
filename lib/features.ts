@@ -68,7 +68,7 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "certifiering", href: "/certifiering", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "avvikelse", href: "/avvikelse", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "forslag", href: "/forslag", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
-  { key: "intern-revision", href: "/intern-revision", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "intern-revision", href: "/intern-revision", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "ledningsgenomgang", href: "/ledningsgenomgang", enabled: false, minRole: "admin", viewerAccess: "none" },
   { key: "installningar", href: "/installningar", enabled: true, minRole: "admin", viewerAccess: "none" },
 ];
