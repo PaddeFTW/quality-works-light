@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { ChevronRight, FileCheck, FileText, MoreHorizontal, PanelLeftClose, Search } from "lucide-react";
+import { ChevronRight, FileCheck, FileText, MoreHorizontal, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ interface ManualTreeProps {
   onRename: (node: ManualNode) => void;
   onDelete: (node: ManualNode) => void;
   onNewDocument: (parentId: string | null) => void;
-  onCollapse?: () => void;
 }
 
 function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
@@ -52,7 +51,6 @@ export function ManualTree({
   onRename,
   onDelete,
   onNewDocument,
-  onCollapse,
 }: ManualTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
@@ -180,16 +178,9 @@ export function ManualTree({
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar" onKeyDown={onKeyDown} tabIndex={0}>
       <div className="flex flex-col gap-3 border-b px-4 py-5">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Pärm</p>
-            <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
-          </div>
-          {onCollapse ? (
-            <Button aria-label="Dölj innehållet" onClick={onCollapse} size="icon" variant="ghost">
-              <PanelLeftClose className="size-4" />
-            </Button>
-          ) : null}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Pärm</p>
+          <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
