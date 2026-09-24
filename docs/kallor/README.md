@@ -19,7 +19,7 @@ Texten i mallen är meningen. Formen blir en lista, ett formulär eller ett prot
 
 1. Kunder. Klart.
 2. Leverantörer. Klart. Vi bedömer själva. Godkänd, måste bli bättre, eller enda valet.
-3. Inför certifiering. Frågor med Ja, Nej och datum. En lista, inte tre likadana.
+3. Inför certifiering. Klart. En lista med ja, nej och datum.
 4. Intern revision. Program med kravrad, betyg 1, 2 eller 3, och en rapport per fel.
 5. Ledningens genomgång sist. Mötesprotokoll som läser siffror från de andra modulerna.
 

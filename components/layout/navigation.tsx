@@ -64,6 +64,11 @@ export const navigationGroups: NavGroup[] = [
         icon: <Leaf className="size-4" />,
       },
       {
+        title: "Inför certifiering",
+        href: "/certifiering",
+        icon: <ClipboardCheck className="size-4" />,
+      },
+      {
         title: "Kontroller",
         href: "/kontroller",
         icon: <ClipboardCheck className="size-4" />,
@@ -107,7 +112,7 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kund", "/leverantor", "/kompetens", "/lagar", "/miljoaspekter"] as const;
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kund", "/leverantor", "/kompetens", "/lagar", "/miljoaspekter", "/certifiering"] as const;
 
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 
