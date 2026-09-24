@@ -409,7 +409,7 @@ export function ManualEditorPanel({
             <EditorContent className="manual-tiptap-editor" editor={editor} />
           </div>
           <footer className="border-t px-6 py-3 text-xs text-muted-foreground">
-            Utkast – inte original
+            Arbetsmanual – inte original
           </footer>
         </div>
       </div>
