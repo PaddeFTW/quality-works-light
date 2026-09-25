@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { HelperDock } from "@/components/common/helper-dock";
-import { PageTour } from "@/components/tour/page-tour";
 import type { NavItem } from "@/types";
 
 interface AppLayoutProps {
@@ -46,7 +45,6 @@ export function AppLayout({
         </main>
       </div>
       <HelperDock />
-      <PageTour />
     </div>
   );
 }
