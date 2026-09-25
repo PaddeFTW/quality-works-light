@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Tip } from "@/components/ui/tooltip";
 import { articlesFor, type GuideArticle } from "@/lib/knowledge/guide";
-import { startTourEvent, tourForPath } from "@/lib/tours";
 
 function placeFromPath(path: string): GuideArticle["place"] {
   if (path.startsWith("/manual")) return "manual";
@@ -29,7 +28,6 @@ export function HelperDock() {
   const [open, setOpen] = useState(false);
   const path = usePathname() || "/";
   const articles = articlesFor(placeFromPath(path));
-  const hasTour = Boolean(tourForPath(path));
 
   return (
     <>
@@ -50,18 +48,6 @@ export function HelperDock() {
           <DialogHeader>
             <DialogTitle>Hjälp</DialogTitle>
           </DialogHeader>
-          {hasTour ? (
-            <Button
-              onClick={() => {
-                setOpen(false);
-                startTourEvent();
-              }}
-              type="button"
-              variant="outline"
-            >
-              Visa rundtur
-            </Button>
-          ) : null}
           <div className="space-y-4 text-sm">
             {articles.map((article) => (
               <section key={article.id}>

@@ -49,7 +49,6 @@ import { ManualTree } from "@/components/manual/manual-tree";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { GuidanceHint } from "@/components/common/guidance-hint";
 import { GuidancePanel } from "@/components/common/guidance-panel";
-import { PageTour } from "@/components/tour/page-tour";
 import { Tip } from "@/components/ui/tooltip";
 import { FIRST_DOCUMENT_HINT, SUBSECTION_HINT } from "@/lib/guidance";
 import { bootManualFromCloud, rememberLastOpened } from "@/components/manual/manual-boot";
@@ -1057,7 +1056,6 @@ export function ManualWorkspace({
           place="manual"
         />
       ) : null}
-      <PageTour />
       </div>
 
       <Dialog onOpenChange={(open) => !open && setDialog(null)} open={Boolean(dialog)}>
