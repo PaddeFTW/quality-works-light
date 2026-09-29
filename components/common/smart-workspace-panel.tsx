@@ -59,7 +59,7 @@ export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContra
 
   return (
     <>
-      <Button className="fixed bottom-5 right-5 z-40 rounded-full px-5 shadow-lg" onClick={() => setOpen(true)}>
+      <Button className="fixed bottom-5 right-5 z-50 rounded-full px-5 shadow-lg" onClick={() => setOpen(true)}>
         <WandSparkles data-icon="inline-start" />
         Smart arbetsyta
       </Button>
