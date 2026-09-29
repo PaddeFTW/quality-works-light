@@ -83,6 +83,9 @@ export function KundWorkspace() {
       workspace_enabled: true,
       locale: context.locale,
       getContext: () => context,
+      records: customers.map((customer) => ({ id: customer.id, label: customer.company || "Namnlös kund" })),
+      selectRecord: (id: string) => setSelectedId(id),
+      createRecord: () => addCustomer(),
       applyFieldUpdates: async ({ changes }) => {
         const next: Partial<CustomerItem> = {};
         for (const change of changes) {
@@ -97,7 +100,7 @@ export function KundWorkspace() {
         return { ok: true, applied_field_ids: changes.map((change) => change.field_id) };
       },
     };
-  }, [canEdit, selected, session?.role]);
+  }, [canEdit, customers, selected, session?.organizationId, session?.role]);
 
   useWorkspaceContract(workspaceContract);
 
