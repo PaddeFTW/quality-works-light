@@ -61,6 +61,8 @@ export function KundWorkspace() {
       ? [
           { id: "company_name", label: "Företag", type: "text", required: true, ai_writable: true, value: selected.company, placeholder: "Företagets namn" },
           { id: "contact_person", label: "Kontaktperson hos kunden", type: "text", required: false, ai_writable: true, value: selected.contactName, placeholder: "Namn" },
+          { id: "customer_rating", label: "Kundbetyg", type: "text", required: false, ai_writable: true, value: null, placeholder: "Till exempel 4/5" },
+          { id: "follow_up_task", label: "Föreslagen uppföljning", type: "text", required: false, ai_writable: true, value: null },
           { id: "note", label: "Anteckning", type: "textarea", required: false, ai_writable: true, value: selected.note, multiline: true },
         ]
       : [];
@@ -87,6 +89,8 @@ export function KundWorkspace() {
           if (change.field_id === "company_name") next.company = String(change.new_value ?? "");
           if (change.field_id === "contact_person") next.contactName = String(change.new_value ?? "");
           if (change.field_id === "note") next.note = String(change.new_value ?? "");
+          if (change.field_id === "customer_rating") next.note = `${next.note ?? selected?.note ?? ""}${next.note || selected?.note ? "\n" : ""}Kundbetyg: ${String(change.new_value ?? "")}`;
+          if (change.field_id === "follow_up_task") next.note = `${next.note ?? selected?.note ?? ""}${next.note || selected?.note ? "\n" : ""}${String(change.new_value ?? "")}`;
         }
         setCustomers((current) => current.map((customer) => customer.id === selected?.id ? { ...customer, ...next } : customer));
         setSaved(false);
