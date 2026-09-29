@@ -20,18 +20,17 @@ function formatValue(value: unknown) {
   return String(value);
 }
 
-export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContract }) {
+export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContract | null }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
-  if (!contract.workspace_enabled) return null;
-  const context = contract.getContext();
-  if (!context.permissions.canOpenWorkspace) return null;
+  const context = contract?.getContext() ?? null;
 
   const createProposal = () => {
+    if (!context) return;
     const next = createDemoProposal(input, context);
     setProposal(next);
     setSelected(next.changes.map((change) => change.field_id));
@@ -39,7 +38,7 @@ export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContra
   };
 
   const apply = async () => {
-    if (!proposal || !context.record_id || !context.permissions.canApplyWorkspace) return;
+    if (!proposal || !contract || !context?.record_id || !context.permissions.canApplyWorkspace) return;
     const changes = proposal.changes.filter((change) => selected.includes(change.field_id) && !change.blocked);
     const result = await contract.applyFieldUpdates({ record_id: context.record_id, proposal_id: proposal.proposal_id, changes: changes.map((change) => ({ field_id: change.field_id, new_value: change.new_value })) });
     if (result.ok) {
@@ -49,7 +48,7 @@ export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContra
   };
 
   const undo = async () => {
-    if (!proposal || !context.record_id) return;
+    if (!proposal || !contract || !context?.record_id) return;
     const changes = proposal.changes.filter((change) => selected.includes(change.field_id));
     const result = await contract.applyFieldUpdates({ record_id: context.record_id, proposal_id: proposal.proposal_id, changes: changes.map((change) => ({ field_id: change.field_id, new_value: change.old_value })) });
     if (result.ok) {
@@ -76,9 +75,11 @@ export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContra
             </div>
           </DialogHeader>
 
-          {!proposal || proposal.status === "undone" ? (
+          {!context ? (
+            <p className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">Ingen modul är öppen. Öppna en modul för att fylla i dess riktiga fält.</p>
+          ) : !proposal || proposal.status === "undone" ? (
             <div className="flex flex-col gap-4">
-              <Textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Till exempel: Kunden är ABC Bygg. Anna är kontaktperson. De gav 4 av 5 på leveransen och vill att vi följer upp i oktober." rows={5} />
+              <Textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Kunden är ABC Bygg. Anna är kontaktperson. De gav 4 av 5 på leveransen." rows={5} />
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-muted-foreground">Demo-mappning · ingen automatisk skrivning</p>
                 <Button onClick={createProposal} disabled={!input.trim()}>Skapa förslag</Button>
@@ -104,7 +105,7 @@ export function SmartWorkspacePanel({ contract }: { contract: WorkspaceAppContra
             </div>
           )}
           <DialogFooter>
-            {proposal && proposal.status === "applied" ? <Button variant="outline" onClick={undo}><RotateCcw data-icon="inline-start" />Ångra</Button> : proposal && proposal.status === "draft" ? <><Button variant="ghost" onClick={() => { setProposal({ ...proposal, status: "rejected" }); setMessage("Förslaget avvisades."); }}><X data-icon="inline-start" />Avvisa</Button><Button onClick={apply} disabled={!selected.length || !context.record_id}><Check data-icon="inline-start" />Godkänn valda</Button></> : null}
+            {proposal && proposal.status === "applied" ? <Button variant="outline" onClick={undo}><RotateCcw data-icon="inline-start" />Ångra</Button> : proposal && proposal.status === "draft" ? <><Button variant="ghost" onClick={() => { setProposal({ ...proposal, status: "rejected" }); setMessage("Förslaget avvisades."); }}><X data-icon="inline-start" />Avvisa</Button><Button onClick={apply} disabled={!selected.length || !context?.record_id}><Check data-icon="inline-start" />Godkänn valda</Button></> : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>

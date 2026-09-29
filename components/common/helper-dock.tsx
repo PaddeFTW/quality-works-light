@@ -34,7 +34,7 @@ export function HelperDock() {
       <Tip label="Hjälp">
         <Button
           aria-label="Hjälp"
-          className="fixed bottom-4 right-4 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-token-lg"
+          className="size-9 rounded-full"
           id="tour-home"
           onClick={() => setOpen(true)}
           size="icon"
