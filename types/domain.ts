@@ -41,6 +41,7 @@ export interface DocumentVersion {
   content: string;
   publishedAt: string;
   publishedByName?: string;
+  changeNote?: string;
 }
 
 export interface ManualAttachment {

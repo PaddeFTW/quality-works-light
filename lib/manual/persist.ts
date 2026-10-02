@@ -37,25 +37,28 @@ export async function persistPublish(
   content: string,
   edition: number,
   userId: string,
+  changeNote = "",
 ) {
   const supabase = createClient();
   await persistDraft(documentId, content);
-  const { data, error } = await supabase
-    .from("document_versions")
-    .insert({
-      document_id: documentId,
-      edition,
-      content_html: content,
-      published_by: userId,
-    })
-    .select("id, edition, content_html, published_at")
-    .single();
-  if (error || !data) throw error ?? new Error("Publicering misslyckades");
+  const row = {
+    document_id: documentId,
+    edition,
+    content_html: content,
+    published_by: userId,
+    change_note: changeNote,
+  };
+  let result = await supabase.from("document_versions").insert(row).select("id, edition, content_html, published_at").single();
+  if (result.error && /change_note|column/i.test(result.error.message)) {
+    const { change_note: _note, ...without } = row;
+    result = await supabase.from("document_versions").insert(without).select("id, edition, content_html, published_at").single();
+  }
+  if (result.error || !result.data) throw result.error ?? new Error("Publicering misslyckades");
   await supabase
     .from("manual_documents")
     .update({ review_status: "approved", updated_at: new Date().toISOString() })
     .eq("id", documentId);
-  return data;
+  return result.data;
 }
 
 export async function persistCreate(params: {

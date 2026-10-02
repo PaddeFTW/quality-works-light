@@ -23,7 +23,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "Styrning",
     items: [
-      { title: "Dashboard", href: "/", icon: <LayoutDashboard className="size-4" /> },
+      { title: "Start", href: "/", icon: <LayoutDashboard className="size-4" /> },
       { title: "Manual", href: "/manual", icon: <BookOpen className="size-4" /> },
       { title: "SWOT", href: "/swot", icon: <Grid2x2 className="size-4" /> },
       { title: "Mål", href: "/mal", icon: <Target className="size-4" /> },
@@ -39,12 +39,12 @@ export const navigationGroups: NavGroup[] = [
         icon: <Users className="size-4" />,
       },
       {
-        title: "Kundtillfredsställelse",
+        title: "Kunder",
         href: "/kund",
         icon: <Smile className="size-4" />,
       },
       {
-        title: "Leverantörsbedömning",
+        title: "Leverantörer",
         href: "/leverantor",
         icon: <Truck className="size-4" />,
       },
@@ -62,6 +62,11 @@ export const navigationGroups: NavGroup[] = [
         title: "Miljöaspekter",
         href: "/miljoaspekter",
         icon: <Leaf className="size-4" />,
+      },
+      {
+        title: "Inför certifiering",
+        href: "/certifiering",
+        icon: <ClipboardCheck className="size-4" />,
       },
       {
         title: "Kontroller",
@@ -107,7 +112,7 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
-export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/avvikelse", "/forslag", "/kompetens"] as const;
+export const primaryNavHrefs = ["/", "/manual", "/arshjul", "/mal", "/avvikelse", "/forslag", "/kund", "/leverantor", "/kompetens", "/lagar", "/miljoaspekter", "/certifiering", "/intern-revision", "/ledningsgenomgang"] as const;
 
 export const navigation: NavItem[] = navigationGroups.flatMap((group) => group.items);
 

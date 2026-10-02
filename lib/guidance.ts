@@ -20,14 +20,14 @@ export interface GuidanceHintData {
 export const FIRST_DOCUMENT_HINT: GuidanceHintData = {
   id: "manual.first-document",
   title: "Ett vanligt första namn",
-  body: "Många börjar boken med Ledningssystemet. Klicka på knappen om du vill använda det. Annars skriv ett eget namn.",
+  body: "Många börjar manualen med Ledningssystemet. Klicka på knappen om du vill använda det. Annars skriv ett eget namn.",
   applyValue: "Ledningssystemet",
   applyLabel: "Använd Ledningssystemet",
 };
 
 export const SUBSECTION_HINT: GuidanceHintData = {
   id: "manual.subsection",
-  title: "Namn på underavsnitt",
+  title: "Namn på underdokument",
   body: "Skriv vad avsnittet handlar om. Till exempel Ansvar eller Hur vi gör. Numret sätts automatiskt.",
 };
 

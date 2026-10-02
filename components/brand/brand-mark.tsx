@@ -15,19 +15,11 @@ export function BrandMark({
 }: BrandMarkProps) {
   return (
     <span className={cn("inline-flex items-center gap-3", className)}>
-      <svg
-        aria-hidden={wordmark ? true : undefined}
-        aria-label={wordmark ? undefined : alt}
-        className={cn("size-10 shrink-0", markClassName)}
-        fill="none"
-        role={wordmark ? "presentation" : "img"}
-        viewBox="0 0 48 48"
-      >
-        <circle cx="13" cy="13" fill="#00C6F2" r="7.5" />
-        <g transform="rotate(-40 28 26)">
-          <rect fill="#00C6F2" height="36" rx="6" width="12" x="22" y="8" />
-        </g>
-      </svg>
+      <img
+        alt={wordmark ? "" : alt}
+        className={cn("size-10 shrink-0 object-contain", markClassName)}
+        src="/logo-mark.png"
+      />
       {wordmark ? (
         <span className="text-[1.65rem] font-medium leading-none tracking-tight text-foreground">
           quality works

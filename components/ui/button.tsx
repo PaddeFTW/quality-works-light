@@ -13,14 +13,14 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-token-md hover:-translate-y-px hover:bg-primary/90",
+          "bg-primary text-primary-foreground! shadow-token-md hover:bg-primary/90 active:translate-y-px",
         secondary:
           "border border-primary/15 bg-secondary text-secondary-foreground shadow-token-xs hover:-translate-y-px hover:bg-accent",
         outline:
           "border bg-card text-foreground shadow-token-xs hover:-translate-y-px hover:bg-accent hover:text-accent-foreground",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        destructive: "bg-destructive text-destructive-foreground shadow-token-sm hover:bg-destructive/90",
+        destructive: "bg-destructive text-destructive-foreground! shadow-token-sm hover:bg-destructive/90",
       },
       size: {
         sm: "h-8 rounded-lg px-3 text-xs",
@@ -43,13 +43,18 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, title, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, title, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const tip =
       title ||
       (typeof props["aria-label"] === "string" ? props["aria-label"] : undefined);
     const button = (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        onClick={onClick}
+        ref={ref}
+        {...props}
+      />
     );
     if (size === "icon" && tip) {
       return <Tip label={tip}>{button}</Tip>;

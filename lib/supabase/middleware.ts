@@ -40,7 +40,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/glomt-losenord") ||
     path.startsWith("/nytt-losenord") ||
     path.startsWith("/ga-med") ||
-    path.startsWith("/auth/callback");
+    path.startsWith("/auth/callback") ||
+    path.startsWith("/priser");
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();

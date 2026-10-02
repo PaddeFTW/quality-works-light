@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import type { ManualAttachment } from "@/types/domain";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -23,7 +23,6 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Check,
   FileDown,
   Highlighter,
   ImagePlus,
@@ -34,7 +33,6 @@ import {
   Paperclip,
   Printer,
   Redo2,
-  Save,
   Strikethrough,
   Table2,
   Underline,
@@ -42,8 +40,12 @@ import {
   Upload,
 } from "lucide-react";
 
+import { FlowCanvas, FLOW_TOOLS } from "@/components/manual/flow-canvas";
 import { DocumentPaperHeader } from "@/components/manual/document-paper-header";
-import { downloadHtmlAsFile, printIfContent } from "@/lib/export-document";
+import { LinkPicker } from "@/components/manual/link-picker";
+import { packDocument, pageLabel, printPackedDocument, unpackDocument, type DocLink, type FlowDoc, type FlowShape, type PageFormat } from "@/lib/manual/document-pack";
+import { downloadHtmlAsFile } from "@/lib/export-document";
+import { cn } from "@/lib/utils";
 
 function readLocalImage(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -77,11 +79,14 @@ interface ManualEditorPanelProps {
   saved: boolean;
   saveStatus: "sparar" | "sparad" | "osparad" | "fel";
   editable?: boolean;
+  canExport?: boolean;
   attachments: ManualAttachment[];
   onAddAttachment: () => void;
   onUploadImage?: (file: File) => Promise<string | null>;
   onRemoveAttachment: (attachmentId: string) => void;
   onDownloadAttachment: (attachment: ManualAttachment) => void;
+  documents?: { id: string; label: string }[];
+  onFollowLink?: (href: string) => void;
 }
 
 export function ManualEditorPanel({
@@ -94,16 +99,36 @@ export function ManualEditorPanel({
   onChange,
   onSave,
   onPublish,
-  saved,
   saveStatus,
   editable = true,
+  canExport = false,
   attachments,
   onAddAttachment,
   onUploadImage,
   onRemoveAttachment,
   onDownloadAttachment,
+  documents = [],
+  onFollowLink,
 }: ManualEditorPanelProps) {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const initial = unpackDocument(value);
+  const [page, setPage] = useState<PageFormat>(initial.page);
+  const [flow, setFlow] = useState<FlowDoc>(initial.flow);
+  const [surface, setSurface] = useState<"text" | "flow">(initial.page === "landscape" ? "flow" : "text");
+  const [zoom, setZoom] = useState(1);
+  const [zoomChoice, setZoomChoice] = useState("1");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkShape, setLinkShape] = useState<FlowShape | null>(null);
+  const [flowTool, setFlowTool] = useState<(typeof FLOW_TOOLS)[number]["id"]>("select");
+  const [undoSignal, setUndoSignal] = useState(0);
+  const [redoSignal, setRedoSignal] = useState(0);
+  const [deleteSignal, setDeleteSignal] = useState(0);
+  const [linkSignal, setLinkSignal] = useState(0);
+  const pageRef = useRef(initial.page);
+  const flowRef = useRef(initial.flow);
+  const frameRef = useRef<HTMLDivElement>(null);
+  pageRef.current = page;
+  flowRef.current = flow;
   const lastEmitted = useRef(value);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
@@ -127,7 +152,7 @@ export function ManualEditorPanel({
       UnderlineExtension,
       ImageExtension.configure({ inline: false, allowBase64: true }),
       Placeholder.configure({
-        placeholder: "Skriv hur ni faktiskt gör…",
+        placeholder: "Skriv hur ni gör.",
         emptyEditorClass: "is-editor-empty",
       }),
       LinkExtension.configure({ openOnClick: false, autolink: true }),
@@ -139,7 +164,7 @@ export function ManualEditorPanel({
       TableHeader,
       TableCell,
     ],
-    content: value,
+    content: unpackDocument(value).html,
     editable,
     immediatelyRender: false,
     editorProps: {
@@ -167,39 +192,84 @@ export function ManualEditorPanel({
     },
     onUpdate: ({ editor: nextEditor }) => {
       const html = nextEditor.getHTML();
-      lastEmitted.current = html;
-      onChange(html);
+      const packed = packDocument(html, pageRef.current, flowRef.current);
+      lastEmitted.current = packed;
+      onChange(packed);
     },
   });
   editorRef.current = editor;
 
   const [, setTick] = useState(0);
+  const [focused, setFocused] = useState(false);
   useEffect(() => {
     if (!editor) return;
     const ping = () => setTick((n) => n + 1);
+    const onFocus = () => setFocused(true);
+    const onBlur = () => setFocused(false);
     editor.on("selectionUpdate", ping);
     editor.on("transaction", ping);
+    editor.on("focus", onFocus);
+    editor.on("blur", onBlur);
     return () => {
       editor.off("selectionUpdate", ping);
       editor.off("transaction", ping);
+      editor.off("focus", onFocus);
+      editor.off("blur", onBlur);
     };
   }, [editor]);
-
-  useEffect(() => {
-    if (!editor) return;
-    if (value === lastEmitted.current) return;
-    lastEmitted.current = value;
-    editor.commands.setContent(value || "<p></p>", { emitUpdate: false });
-  }, [editor, value]);
 
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editor, editable]);
 
-  const insertLink = () => {
+  useEffect(() => {
+    const next = unpackDocument(value);
+    setPage(next.page);
+    pageRef.current = next.page;
+    if (JSON.stringify(next.flow) !== JSON.stringify(flowRef.current)) {
+      flowRef.current = next.flow;
+      setFlow(next.flow);
+    }
     if (!editor) return;
-    const url = window.prompt("Ange URL", "https://");
-    if (url) editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    if (value === lastEmitted.current) return;
+    if (editor.isFocused) return;
+    lastEmitted.current = value;
+    editor.commands.setContent(next.html || "<p></p>", { emitUpdate: false });
+  }, [editor, value]);
+
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    function onWheel(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setZoom((current) => Math.min(1.5, Math.max(0.5, current * (event.deltaY < 0 ? 1.1 : 0.9))));
+      setZoomChoice("custom");
+    }
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, []);
+
+  function emitFlow(next: FlowDoc) {
+    flowRef.current = next;
+    setFlow(next);
+    const html = editor?.getHTML() ?? unpackDocument(value).html;
+    const packed = packDocument(html, pageRef.current, next);
+    lastEmitted.current = packed;
+    onChange(packed);
+  }
+
+  function follow(link: DocLink) {
+    if (link.kind === "web" || link.href.startsWith("http")) {
+      window.open(link.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onFollowLink?.(link.href);
+  }
+
+  const insertLink = () => {
+    setLinkShape(null);
+    setLinkOpen(true);
   };
 
   const toolbarButtonClass = "size-8 p-0";
@@ -213,78 +283,14 @@ export function ManualEditorPanel({
           : "Osparat";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-muted/70 to-muted/30">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2.5">
-        <Button disabled={!editable} onClick={onSave} size="sm" variant="outline">
-          {saved ? <Check data-icon="inline-start" /> : <Save data-icon="inline-start" />}
-          {saved ? "Sparat" : "Spara"}
-        </Button>
-        <Button disabled={!editable} onClick={onPublish} size="sm">
-          <Upload data-icon="inline-start" />
-          Publicera
-        </Button>
-        <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="ghost">
-              <Paperclip data-icon="inline-start" />
-              Bilagor
-              {attachments.length > 0 ? <Badge variant="secondary">{attachments.length}</Badge> : null}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Bilagor för {documentTitle}</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div>
-                  <p className="font-medium">Dokumentbilagor</p>
-                  <p className="text-sm text-muted-foreground">Filer som hör till bladet, inte till brödtexten.</p>
-                </div>
-                <Button disabled={!editable} onClick={onAddAttachment} size="sm" variant="outline">
-                  <Upload data-icon="inline-start" />
-                  Ladda upp
-                </Button>
-              </div>
-              {attachments.length === 0 ? (
-                <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
-                  <Paperclip className="size-5 text-muted-foreground" />
-                  <p className="font-medium">Inga bilagor ännu</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {attachments.map((attachment) => (
-                    <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3" key={attachment.id}>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{attachment.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {attachment.size} · {attachment.type}
-                        </p>
-                      </div>
-                      <Button onClick={() => onDownloadAttachment(attachment)} size="sm" variant="outline">
-                        Ladda ner
-                      </Button>
-                      <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">
-                        Ta bort
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-        <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
-          {statusText}
-        </span>
-      </div>
-
-      <div className="flex shrink-0 flex-wrap items-center gap-1 overflow-x-auto border-b bg-background px-3 py-2">
-        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
-        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
+    <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(1200px_600px_at_50%_-10%,hsl(190_40%_94%),transparent)] bg-muted/40">
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-card px-3 py-2">
+        <Button aria-label="Ångra" className={toolbarButtonClass} disabled={surface === "text" ? !editor?.can().undo() : false} onClick={() => (surface === "flow" ? setUndoSignal((n) => n + 1) : editor?.chain().focus().undo().run())} size="sm" title="Ångra" type="button" variant="ghost"><Undo2 /></Button>
+        <Button aria-label="Gör om" className={toolbarButtonClass} disabled={surface === "text" ? !editor?.can().redo() : false} onClick={() => (surface === "flow" ? setRedoSignal((n) => n + 1) : editor?.chain().focus().redo().run())} size="sm" title="Gör om" type="button" variant="ghost"><Redo2 /></Button>
+        <div className={surface === "flow" ? "hidden" : "contents"}>
         <select
           aria-label="Rubrik"
-          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const value = event.target.value;
@@ -301,7 +307,7 @@ export function ManualEditorPanel({
         </select>
         <select
           aria-label="Typsnitt"
-          className="h-8 max-w-32 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 max-w-32 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const family = event.target.value;
@@ -319,7 +325,7 @@ export function ManualEditorPanel({
         </select>
         <select
           aria-label="Textstorlek"
-          className="h-8 rounded-md border bg-background px-2 text-xs shadow-xs"
+          className="h-8 rounded-lg border-0 bg-muted/70 px-2 text-xs"
           disabled={!editable}
           onChange={(event) => {
             const size = event.target.value;
@@ -344,7 +350,7 @@ export function ManualEditorPanel({
           <span className="sr-only">Textfärg</span>
           <input
             aria-label="Textfärg"
-            className="size-6 cursor-pointer rounded border bg-background"
+            className="size-6 cursor-pointer rounded-full border-0 bg-transparent"
             disabled={!editable}
             onChange={(event) => editor?.chain().focus().setColor(event.target.value).run()}
             type="color"
@@ -361,38 +367,142 @@ export function ManualEditorPanel({
         <Button aria-label="Infoga tabell" className={toolbarButtonClass} onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()} size="sm" title="Infoga tabell" type="button" variant="ghost"><Table2 /></Button>
         <Button aria-label="Infoga bild" className={toolbarButtonClass} onClick={() => imageInputRef.current?.click()} size="sm" title="Infoga bild" type="button" variant="ghost"><ImagePlus /></Button>
         <Button aria-label="Infoga länk" className={toolbarButtonClass} onClick={insertLink} size="sm" title="Infoga länk" type="button" variant="ghost"><Link /></Button>
-        <Button aria-label="Spara" className={toolbarButtonClass} onClick={onSave} size="sm" title="Spara" type="button" variant="ghost"><Save /></Button>
-        <Button
-          aria-label="Öppna i Word"
-          className={toolbarButtonClass}
-          onClick={() =>
-            downloadHtmlAsFile(
-              `${documentCode} ${documentTitle}.doc`,
-              `${documentCode} ${documentTitle}`,
-              companyName,
-              value,
-              "Arbetsmanual – utkast",
-            )
-          }
-          size="sm"
-          title="Öppna i Word"
-          type="button"
-          variant="ghost"
+        </div>
+        {surface === "flow" ? (
+          <>
+            {FLOW_TOOLS.map((item) => (
+              <Button key={item.id} onClick={() => setFlowTool(item.id)} size="sm" type="button" variant={flowTool === item.id ? "secondary" : "ghost"}>
+                {item.label}
+              </Button>
+            ))}
+            <Button onClick={() => setDeleteSignal((n) => n + 1)} size="sm" type="button" variant="ghost">Ta bort</Button>
+            <Button onClick={() => { setLinkShape(null); setLinkSignal((n) => n + 1); }} size="sm" type="button" variant="ghost">Länk</Button>
+            <Button onClick={() => emitFlow({ ...flowRef.current, snap: !flowRef.current.snap })} size="sm" type="button" variant={flow.snap ? "secondary" : "ghost"}>
+              Rutnät {flow.snap ? "på" : "av"}
+            </Button>
+          </>
+        ) : null}
+        <div className="flex rounded-lg border bg-muted/40 p-0.5">
+          <Button onClick={() => { setSurface("text"); }} size="sm" type="button" variant={surface === "text" ? "default" : "ghost"}>Text</Button>
+          <Button onClick={() => { setSurface("flow"); editor?.commands.blur(); }} size="sm" type="button" variant={surface === "flow" ? "default" : "ghost"}>Flöde</Button>
+        </div>
+        <span className="rounded-md bg-muted px-2 py-1 text-xs">{pageLabel(page)}</span>
+        <select
+          aria-label="Zoom"
+          className="h-8 rounded-lg bg-muted/70 px-2 text-xs"
+          onChange={(event) => {
+            if (event.target.value === "fit") {
+              const frame = frameRef.current;
+              if (!frame) return;
+              const baseW = page === "landscape" ? 1123 : 794;
+              const baseH = page === "landscape" ? 794 : 1123;
+              const scale = Math.min((frame.clientWidth - 48) / baseW, (frame.clientHeight - 48) / baseH);
+              setZoom(Math.min(1.5, Math.max(0.2, scale)));
+              setZoomChoice("fit");
+              return;
+            }
+            setZoomChoice(event.target.value);
+            setZoom(Number(event.target.value));
+          }}
+          value={zoomChoice}
         >
-          <FileDown />
-        </Button>
-        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printIfContent(value)} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
+          {zoomChoice === "custom" ? <option value="custom">{Math.round(zoom * 100)} %</option> : null}
+          <option value="0.5">50 %</option>
+          <option value="0.75">75 %</option>
+          <option value="1">100 %</option>
+          <option value="1.25">125 %</option>
+          <option value="1.5">150 %</option>
+          <option value="fit">Anpassa</option>
+        </select>
+        <span className="text-xs text-muted-foreground">{Math.round(zoom * 100)} %</span>
+        <Dialog onOpenChange={setAttachmentsOpen} open={attachmentsOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost">
+              <Paperclip data-icon="inline-start" />
+              Bilagor
+              {attachments.length > 0 ? <Badge variant="secondary">{attachments.length}</Badge> : null}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Bilagor för {documentTitle}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <div>
+                  <p className="font-medium">Dokumentbilagor</p>
+                  <p className="text-sm text-muted-foreground">Filer som hör till dokumentet, inte till brödtexten.</p>
+                </div>
+                <Button disabled={!editable} onClick={onAddAttachment} size="sm" variant="outline">
+                  <Upload data-icon="inline-start" />
+                  Ladda upp
+                </Button>
+              </div>
+              {attachments.length === 0 ? (
+                <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center">
+                  <Paperclip className="size-5 text-muted-foreground" />
+                  <p className="font-medium">Inga bilagor ännu</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {attachments.map((attachment) => (
+                    <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3" key={attachment.id}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{attachment.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {attachment.size} · {attachment.type}
+                        </p>
+                      </div>
+                      <Button onClick={() => onDownloadAttachment(attachment)} size="sm" variant="outline">
+                        Ladda ner
+                      </Button>
+                      <Button onClick={() => onRemoveAttachment(attachment.id)} size="sm" variant="ghost">
+                        Ta bort
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+        {canExport ? (
+          <Button
+            aria-label="Öppna i Word"
+            className={toolbarButtonClass}
+            onClick={() =>
+              downloadHtmlAsFile(
+                `${documentCode} ${documentTitle}.doc`,
+                `${documentCode} ${documentTitle}`,
+                companyName,
+                unpackDocument(value).html,
+                "Arbetsmanual – inte original",
+              )
+            }
+            size="sm"
+            title="Öppna i Word"
+            type="button"
+            variant="ghost"
+          >
+            <FileDown />
+          </Button>
+        ) : null}
+        <Button aria-label="Skriv ut" className={toolbarButtonClass} onClick={() => printPackedDocument(`${documentCode} ${documentTitle}`, value, companyName, "Arbetsmanual")} size="sm" title="Skriv ut" type="button" variant="ghost"><Printer /></Button>
+        <span className="ml-auto text-xs font-medium text-muted-foreground" aria-live="polite">
+          {statusText}
+        </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-6 md:p-10">
-        <div className="document-paper mx-auto min-h-[42rem] max-w-[210mm]">
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4 lg:p-8" ref={frameRef}>
+        <div className="mx-auto" style={{ width: `${(page === "landscape" ? 1123 : 794) * zoom}px` }}>
+        <div className={cn("document-paper is-draft origin-top-left", page === "landscape" && "is-landscape", focused && "is-writing")} data-paper data-tour="papper" style={{ width: page === "landscape" ? "297mm" : "210mm", minHeight: page === "landscape" ? "210mm" : "297mm", zoom } as CSSProperties}>
           <DocumentPaperHeader
             companyName={companyName}
             documentCode={documentCode}
             documentTitle={documentTitle}
             edition={edition}
             issuer={issuer}
-            statusLabel="Arbetsmanual – du kan ändra"
+            statusLabel={`Arbetsmanual – du kan ändra · ${pageLabel(page)}`}
           />
           <div
             onClick={() => editor?.commands.focus()}
@@ -408,13 +518,48 @@ export function ManualEditorPanel({
             onKeyDown={() => undefined}
             role="presentation"
           >
-            <EditorContent className="manual-tiptap-editor" editor={editor} />
+            <EditorContent className={cn("manual-tiptap-editor", surface === "flow" && "pointer-events-none opacity-80")} editor={editor} />
           </div>
+          {surface === "flow" || flow.shapes.length > 0 ? (
+          <FlowCanvas
+            deleteSignal={deleteSignal}
+            editable={editable && surface === "flow"}
+            height={page === "landscape" ? 460 : 360}
+            hideBar
+            linkSignal={linkSignal}
+            onChange={emitFlow}
+            onFollow={follow}
+            onLink={(shape) => {
+              setLinkShape(shape);
+              setLinkOpen(true);
+            }}
+            onToolChange={setFlowTool}
+            redoSignal={redoSignal}
+            tool={flowTool}
+            undoSignal={undoSignal}
+            value={flow}
+          />
+          ) : null}
           <footer className="border-t px-6 py-3 text-xs text-muted-foreground">
-            Utkast – inte original
+            Arbetsmanual – inte original
           </footer>
         </div>
+        </div>
       </div>
+      <LinkPicker
+        attachments={attachments}
+        documents={documents}
+        onApply={(link) => {
+          if (linkShape) {
+            emitFlow({ ...flowRef.current, shapes: flowRef.current.shapes.map((shape) => (shape.id === linkShape.id ? { ...shape, link } : shape)) });
+            setLinkShape(null);
+            return;
+          }
+          editor?.chain().focus().extendMarkRange("link").setLink({ href: link.href }).run();
+        }}
+        onOpenChange={setLinkOpen}
+        open={linkOpen}
+      />
       <input
         accept="image/*"
         className="hidden"

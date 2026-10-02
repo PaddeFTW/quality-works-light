@@ -54,7 +54,7 @@ export function ManualSettingsPanel({
     >
       <div className="flex flex-col gap-1">
         <h3 className="text-lg font-semibold tracking-tight">
-          Grundinställningar
+          Uppgifter
         </h3>
         <p className="text-sm leading-6 text-muted-foreground">
           Uppgifterna används på försättsblad, sidhuvud och sidfot när manualen
@@ -138,7 +138,7 @@ export function ManualSettingsPanel({
         </Button>
         {saved ? (
           <p className="text-sm text-muted-foreground">
-            Grundinställningarna är sparade.
+            Uppgifterna är sparade.
           </p>
         ) : null}
       </div>

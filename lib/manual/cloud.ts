@@ -99,11 +99,23 @@ export async function loadManualBundle(supabase: SupabaseClient, manualId: strin
       supabase.from("manual_documents").select("*").eq("manual_id", manualId),
       supabase
         .from("document_versions")
-        .select("id, document_id, edition, content_html, published_at, published_by")
+        .select("id, document_id, edition, content_html, published_at, published_by, change_note")
         .order("edition", { ascending: false }),
     ]);
   if (manualError) throw manualError;
   if (docsError) throw docsError;
+
+  let versionRows = (versionsResult.data ?? []) as Record<string, unknown>[];
+  if (versionsResult.error && /change_note|column/i.test(versionsResult.error.message)) {
+    const fallback = await supabase
+      .from("document_versions")
+      .select("id, document_id, edition, content_html, published_at, published_by")
+      .order("edition", { ascending: false });
+    if (fallback.error) throw fallback.error;
+    versionRows = (fallback.data ?? []) as Record<string, unknown>[];
+  } else if (versionsResult.error) {
+    throw versionsResult.error;
+  }
 
   const docsRows = ((docs ?? []) as Record<string, unknown>[]).map((row) => ({
     id: String(row.id),
@@ -120,7 +132,7 @@ export async function loadManualBundle(supabase: SupabaseClient, manualId: strin
   return {
     manual,
     docs: docsRows,
-    versions: versionsResult.error ? [] : versionsResult.data ?? [],
+    versions: versionRows,
   };
 }
 
@@ -243,19 +255,19 @@ export function draftsFromRows(rows: DocRow[]): Record<string, string> {
   return drafts;
 }
 
-export function versionsFromRows(
-  rows: { id: string; document_id: string; edition: number; content_html: string; published_at: string }[],
-): Record<string, DocumentVersion[]> {
+export function versionsFromRows(rows: Record<string, unknown>[]): Record<string, DocumentVersion[]> {
   const map: Record<string, DocumentVersion[]> = {};
   for (const row of rows) {
-    const list = map[row.document_id] ?? [];
+    const documentId = String(row.document_id);
+    const list = map[documentId] ?? [];
     list.push({
-      id: row.id,
-      edition: row.edition,
-      content: row.content_html,
-      publishedAt: new Date(row.published_at).toLocaleString("sv-SE"),
+      id: String(row.id),
+      edition: Number(row.edition),
+      content: String(row.content_html ?? ""),
+      publishedAt: new Date(String(row.published_at)).toLocaleString("sv-SE"),
+      changeNote: row.change_note ? String(row.change_note) : "",
     });
-    map[row.document_id] = list;
+    map[documentId] = list;
   }
   return map;
 }

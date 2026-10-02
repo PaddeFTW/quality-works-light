@@ -18,6 +18,7 @@ export type ModuleKey =
   | "lagar"
   | "miljoaspekter"
   | "kontroller"
+  | "certifiering"
   | "avvikelse"
   | "forslag"
   | "intern-revision"
@@ -56,18 +57,19 @@ export const moduleFeatures: ModuleFeature[] = [
   { key: "dashboard", href: "/", enabled: true, minRole: "viewer", viewerAccess: "read" },
   { key: "manual", href: "/manual", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "swot", href: "/swot", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "mal", href: "/mal", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "mal", href: "/mal", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "arshjul", href: "/arshjul", enabled: true, minRole: "viewer", viewerAccess: "read" },
   { key: "kompetens", href: "/kompetens", enabled: true, minRole: "editor", viewerAccess: "read" },
-  { key: "kund", href: "/kund", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "leverantor", href: "/leverantor", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "lagar", href: "/lagar", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "miljoaspekter", href: "/miljoaspekter", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "kund", href: "/kund", enabled: true, minRole: "editor", viewerAccess: "read" },
+  { key: "leverantor", href: "/leverantor", enabled: true, minRole: "editor", viewerAccess: "read" },
+  { key: "lagar", href: "/lagar", enabled: true, minRole: "editor", viewerAccess: "read" },
+  { key: "miljoaspekter", href: "/miljoaspekter", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "kontroller", href: "/kontroller", enabled: false, minRole: "editor", viewerAccess: "read" },
+  { key: "certifiering", href: "/certifiering", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "avvikelse", href: "/avvikelse", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
   { key: "forslag", href: "/forslag", enabled: true, minRole: "viewer", viewerAccess: "acknowledge" },
-  { key: "intern-revision", href: "/intern-revision", enabled: false, minRole: "editor", viewerAccess: "read" },
-  { key: "ledningsgenomgang", href: "/ledningsgenomgang", enabled: false, minRole: "admin", viewerAccess: "none" },
+  { key: "intern-revision", href: "/intern-revision", enabled: true, minRole: "editor", viewerAccess: "read" },
+  { key: "ledningsgenomgang", href: "/ledningsgenomgang", enabled: true, minRole: "editor", viewerAccess: "read" },
   { key: "installningar", href: "/installningar", enabled: true, minRole: "admin", viewerAccess: "none" },
 ];
 

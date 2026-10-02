@@ -1,29 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  FileText,
-  Lightbulb,
-  Plus,
-  TriangleAlert,
-  UserPlus,
-} from "lucide-react";
+import { CalendarRange, FileText, Lightbulb, Plus, ShieldCheck, TriangleAlert } from "lucide-react";
+
+import { MiniBars } from "@/components/common/mini-bars";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOrgSession } from "@/components/providers/org-provider";
+import { readLastOpenedId } from "@/components/manual/manual-boot";
+import { createClient } from "@/lib/supabase/client";
 import { caseNumber, createYearActivity, formatSvDate, loadOpsStats, missingTableMessage } from "@/lib/ops/persist";
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import { loadMyOpenReferrals } from "@/lib/manual/cloud";
+import { loadCompetence } from "@/lib/kompetens/persist";
 import type { OpsStats } from "@/lib/ops/types";
 import type { ReviewRequest } from "@/types/domain";
 
@@ -31,19 +23,50 @@ function firstName(fullName: string) {
   return fullName.trim().split(/\s+/)[0] || fullName;
 }
 
+function readableTitle(title: string) {
+  const text = title.trim();
+  if (!text || /^\d+$/.test(text) || /^[0-9a-f-]{16,}$/i.test(text)) return "Namnlöst dokument";
+  return text;
+}
+
+function whenLabel(date: string, todayKey: string) {
+  if (!todayKey) return formatSvDate(date);
+  const days = Math.round((new Date(date).getTime() - new Date(todayKey).getTime()) / 86400000);
+  if (Number.isNaN(days)) return formatSvDate(date);
+  if (days < -1) return `Försenad ${Math.abs(days)} dagar`;
+  if (days === -1) return "Försenad sedan i går";
+  if (days === 0) return "I dag";
+  if (days === 1) return "I morgon";
+  return formatSvDate(date);
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+
 const emptyStats: OpsStats = {
   openDeviations: 0,
   openSuggestions: 0,
   upcomingActivities: [],
+  overdueActivities: [],
   recentDeviations: [],
+  yearTotal: 0,
+  yearDone: 0,
+  monthCounts: Array.from({ length: 12 }, () => 0),
 };
+
+interface LastOpened {
+  id: string;
+  title: string;
+}
 
 export function DashboardOverview() {
   const { session, loading } = useOrgSession();
   const [todayLabel, setTodayLabel] = useState("");
   const [stats, setStats] = useState<OpsStats>(emptyStats);
   const [referrals, setReferrals] = useState<(ReviewRequest & { documentTitle?: string })[]>([]);
+  const [lastOpened, setLastOpened] = useState<LastOpened | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [todayKey, setTodayKey] = useState("");
+  const [training, setTraining] = useState<{ waiting: number; known: number } | null>(null);
 
   useEffect(() => {
     setTodayLabel(
@@ -51,9 +74,9 @@ export function DashboardOverview() {
         weekday: "long",
         day: "numeric",
         month: "long",
-        year: "numeric",
       }),
     );
+    setTodayKey(new Date().toISOString().slice(0, 10));
   }, []);
 
   useEffect(() => {
@@ -70,6 +93,35 @@ export function DashboardOverview() {
     if (loading || !session?.userId) return;
     void loadMyOpenReferrals(session.userId).then(setReferrals).catch(() => setReferrals([]));
   }, [loading, session?.userId]);
+
+  useEffect(() => {
+    const id = readLastOpenedId();
+    if (!id) {
+      setLastOpened(null);
+      return;
+    }
+    const supabase = createClient();
+    void supabase
+      .from("manual_documents")
+      .select("id, title")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setLastOpened({ id: String(data.id), title: readableTitle(String(data.title || "")) });
+        else setLastOpened(null);
+      });
+  }, [session?.organizationId]);
+
+  useEffect(() => {
+    if (loading || !session?.organizationId) return;
+    void loadCompetence(session.organizationId)
+      .then((data) => {
+        const waiting = data.levels.filter((cell) => cell.level === "missing" || cell.level === "training").length;
+        const known = data.levels.filter((cell) => cell.level === "ok").length;
+        setTraining(waiting + known > 0 ? { waiting, known } : null);
+      })
+      .catch(() => setTraining(null));
+  }, [loading, session?.organizationId]);
 
   const greetingName = session?.fullName ? firstName(session.fullName) : "";
 
@@ -90,129 +142,259 @@ export function DashboardOverview() {
     }
   }
 
+  const next = useMemo(() => {
+    if (referrals[0]) {
+      return {
+        title: "Svara på remiss",
+        body: referrals[0].documentTitle || "Ett dokument väntar på ditt svar.",
+        href: `/manual?blad=${referrals[0].documentId}`,
+        cta: "Öppna dokumentet",
+        newTab: false,
+      };
+    }
+    if (stats.openDeviations > 0) {
+      return {
+        title: `${stats.openDeviations} avvikelse${stats.openDeviations === 1 ? "" : "r"} att ta om hand`,
+        body: "Något stämmer inte. Skriv vad som hänt och vad ni gör.",
+        href: "/avvikelse",
+        cta: "Öppna avvikelser",
+        newTab: false,
+      };
+    }
+    if (stats.overdueActivities[0]) {
+      return {
+        title: "Försenat i årshjulet",
+        body: stats.overdueActivities[0].title,
+        href: "/arshjul",
+        cta: "Öppna årshjulet",
+        newTab: false,
+      };
+    }
+    if (lastOpened) {
+      return {
+        title: "Fortsätt där du slutade",
+        body: lastOpened.title,
+        href: `/manual?blad=${lastOpened.id}`,
+        cta: "Öppna dokumentet",
+        newTab: false,
+      };
+    }
+    if (stats.upcomingActivities.length === 0) {
+      return {
+        title: "Lägg intern revision",
+        body: "Ett klick. Då syns datumet här när det närmar sig.",
+        href: "/arshjul",
+        cta: "Öppna årshjulet",
+        newTab: false,
+      };
+    }
+    return {
+      title: "Allt lugnt just nu",
+      body: "Inget som jagar er i dag. Öppna manualen om du vill skriva.",
+      href: "/manual",
+      cta: "Öppna manualen",
+      newTab: false,
+    };
+  }, [referrals, stats, lastOpened]);
+
+  const tasks = [
+    ...referrals
+      .filter((item) => next.href !== `/manual?blad=${item.documentId}`)
+      .map((item) => ({
+      id: `remiss-${item.documentId}`,
+      title: "Svara på remiss",
+      meta: readableTitle(item.documentTitle || ""),
+      href: `/manual?blad=${item.documentId}`,
+      newTab: false,
+      when: "Väntar på dig",
+      tone: "warning" as const,
+    })),
+    ...stats.overdueActivities
+      .filter((item) => !(next.href === "/arshjul" && item.id === stats.overdueActivities[0]?.id && next.body === item.title))
+      .map((item) => ({
+      id: item.id,
+      title: item.title,
+      meta: "Årshjulet",
+      href: "/arshjul",
+      newTab: false,
+      when: whenLabel(item.plannedOn, todayKey),
+      tone: "destructive" as const,
+    })),
+    ...stats.upcomingActivities
+      .filter((item) => !stats.overdueActivities.some((late) => late.id === item.id))
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        meta: "Årshjulet",
+        href: "/arshjul",
+        newTab: false,
+        when: whenLabel(item.plannedOn, todayKey),
+        tone: "secondary" as const,
+      })),
+  ].slice(0, 5);
+
+  const late = stats.overdueActivities.length;
+  const soon = stats.upcomingActivities.length;
+  const pulse = [
+    late === 1 ? "1 jobb är försenat" : late > 1 ? `${late} jobb är försenade` : "Inget jobb är försenat",
+    soon === 1 ? "1 jobb inom 30 dagar" : soon > 1 ? `${soon} jobb inom 30 dagar` : "Inget jobb inom 30 dagar",
+    stats.openDeviations === 0
+      ? "Inga öppna avvikelser"
+      : stats.openDeviations === 1
+        ? "1 öppen avvikelse"
+        : `${stats.openDeviations} öppna avvikelser`,
+  ].join(". ") + ".";
+  const monthIndex = todayKey ? Number(todayKey.slice(5, 7)) - 1 : -1;
+  const yearLeft = Math.max(0, stats.yearTotal - stats.yearDone);
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium capitalize text-primary">{todayLabel}</p>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        <div>
+          <p className="text-sm font-medium capitalize text-primary">
             {greetingName ? `Hej ${greetingName}` : "Hej"}
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Det som behöver göras i ledningssystemet, idag.
+            {todayLabel ? ` · ${todayLabel}` : ""}
           </p>
+          <h1 className="text-2xl font-bold tracking-tight" data-tour="idag">
+            Att göra idag
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{pulse}</p>
         </div>
-        <Button asChild className="bg-primary text-primary-foreground shadow-token-md">
-          <Link href="/manual" rel="noopener noreferrer" target="_blank">
-            <Plus data-icon="inline-start" />
-            Öppna manual
+        <Button asChild>
+          <Link data-tour="oppen-manual" href={next.href} rel={next.newTab ? "noopener noreferrer" : undefined} target={next.newTab ? "_blank" : undefined}>
+            {next.cta}
           </Link>
         </Button>
       </section>
 
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
 
-      {referrals.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Remiss att svara på</CardTitle>
-            <CardDescription>Läs utkastet och säg om det stämmer.</CardDescription>
-          </CardHeader>
-          <CardContent>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
+          <ShieldCheck className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Läget</p>
+          <p className="mt-2 text-2xl font-bold">{late > 0 ? late : "Ok"}</p>
+          <Badge className="mt-2" variant={late > 0 ? "destructive" : soon > 0 ? "warning" : "success"}>
+            {late > 0 ? "Försenat" : soon > 0 ? "På gång" : "Enligt plan"}
+          </Badge>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/arshjul">
+          <CalendarRange className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Årshjul i år</p>
+          <p className="mt-2 text-2xl font-bold">
+            {stats.yearDone}/{stats.yearTotal || 0}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{stats.yearTotal ? `${yearLeft} kvar` : "Inget inlagt"}</p>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/avvikelse">
+          <TriangleAlert className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Avvikelser</p>
+          <p className="mt-2 text-2xl font-bold">{stats.openDeviations}</p>
+          <Badge className="mt-2" variant={stats.openDeviations > 0 ? "warning" : "success"}>
+            {stats.openDeviations > 0 ? "Öppna" : "Inga öppna"}
+          </Badge>
+        </Link>
+        <Link className="rounded-2xl border bg-card p-4 shadow-token-sm" href="/forslag">
+          <Lightbulb className="size-4 text-primary" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Förslag</p>
+          <p className="mt-2 text-2xl font-bold">{stats.openSuggestions}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{stats.openSuggestions ? "Väntar på svar" : "Inget nytt"}</p>
+        </Link>
+      </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Att göra</CardTitle>
+          <CardDescription>Bara det som är försenat eller nära. Samma jobb visas en gång.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Inget att göra just nu. När ett jobb blir dags syns det här.</p>
+          ) : (
             <ul className="flex flex-col gap-2">
-              {referrals.map((item) => (
-                <li key={item.id}>
+              {tasks.map((task) => (
+                <li key={task.id}>
                   <Link
-                    className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-accent"
-                    href={`/manual?blad=${item.documentId}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
+                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
+                    href={task.href}
+                    rel={task.newTab ? "noopener noreferrer" : undefined}
+                    target={task.newTab ? "_blank" : undefined}
                   >
                     <span className="min-w-0">
-                      <span className="font-medium">{item.documentTitle}</span>
-                      {item.dueAt ? (
-                        <span className="ml-2 text-xs text-muted-foreground">senast {item.dueAt}</span>
-                      ) : null}
+                      <span className="block font-semibold">{task.title}</span>
+                      <span className="block text-xs text-muted-foreground">{task.meta}</span>
                     </span>
-                    <Badge>Öppen</Badge>
+                    <span className="text-sm font-semibold">Öppna</span>
+                    <Badge variant={task.tone}>{task.when}</Badge>
                   </Link>
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-      ) : null}
+          )}
+        </CardContent>
+      </Card>
 
-      <section aria-label="Börja här" className="grid gap-4 md:grid-cols-3">
-        <StartStep
-          href="/manual"
-          newTab
-          step="1"
-          text="Öppna boken. Skapa 1.0. Skriv hur ni faktiskt gör."
-          title="Manualen"
-        />
-        <StartStep
-          href="/installningar"
-          step="2"
-          text="Skicka mejl till en kollega. Hen klickar och går med."
-          title="Bjud in"
-        />
-        <StartStep
-          href="/arshjul"
-          step="3"
-          text="Lägg intern revision i kalendern. Den syns här på Start."
-          title="Årshjulet"
-        />
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Året</CardTitle>
+          <CardDescription>Stapeln visar hur många jobb som ligger varje månad.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <MiniBars
+            empty="Årshjulet är tomt. Lägg in årets jobb."
+            items={MONTHS.map((name, index) => ({ label: name, value: stats.monthCounts[index] ?? 0, current: index === monthIndex }))}
+          />
+          {stats.yearTotal === 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {YEAR_PRESETS.map((preset) => (
+                <Button key={preset.kind} onClick={() => void addPreset(preset)} size="sm" type="button" variant="outline">
+                  {preset.title}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          <Button asChild className="w-full sm:w-auto" variant="outline">
+            <Link href="/arshjul">Öppna årshjul</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-      <section aria-label="Nyckeltal" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric href="/avvikelse" icon={TriangleAlert} label="Öppna avvikelser" tone="danger" value={String(stats.openDeviations)} />
-        <Metric href="/forslag" icon={Lightbulb} label="Förslag att ta ställning till" tone="warn" value={String(stats.openSuggestions)} />
-        <Metric href="/arshjul" icon={CalendarDays} label="Aktiviteter 30 dagar" tone="info" value={String(stats.upcomingActivities.length)} />
-        <Metric href="/manual" icon={FileText} label="Manualen" newTab tone="ok" value="Öppna" />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-base font-semibold">Snabbåtgärder</h3>
-        <div className="flex flex-wrap gap-3">
-          <Button asChild variant="outline">
-            <Link href="/manual" rel="noopener noreferrer" target="_blank">
-              <FileText data-icon="inline-start" />
-              Manual
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/avvikelse">
-              <TriangleAlert data-icon="inline-start" />
-              Lämna avvikelse
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/forslag">
-              <Plus data-icon="inline-start" />
-              Nytt förslag
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/installningar">
-              <UserPlus data-icon="inline-start" />
-              Bjud in kollega
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+      <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Senaste avvikelser</CardTitle>
-            <CardDescription>Det som nyligen lämnats in.</CardDescription>
+            <CardTitle>Fortsätt där du slutade</CardTitle>
+            <CardDescription>Senaste dokumentet i manualen.</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats.recentDeviations.length === 0 ? (
-              <p className="px-2 py-6 text-sm text-muted-foreground">
-                Inga avvikelser ännu. När någon lämnar en syns den här.
+            {lastOpened && next.href !== `/manual?blad=${lastOpened.id}` ? (
+              <Link
+                className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-accent"
+                href={`/manual?blad=${lastOpened.id}`}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <FileText className="size-4 text-primary" />
+                  {lastOpened.title}
+                </span>
+                <span className="text-sm font-semibold text-primary">Öppna</span>
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {lastOpened ? "Det dokumentet ligger redan under Att göra idag." : "Inget dokument öppnat än. Skapa 1.0 i Manualen."}
               </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Avvikelser</CardTitle>
+            <CardDescription>{stats.openDeviations === 0 ? "Inga öppna. Det är bra." : "Det som nyligen lämnats in."}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {stats.recentDeviations.length === 0 ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href="/avvikelse">Lämna avvikelse</Link>
+              </Button>
             ) : (
               <ul className="flex flex-col gap-2">
                 {stats.recentDeviations.map((item) => (
@@ -232,122 +414,34 @@ export function DashboardOverview() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Kommande 30 dagar</CardTitle>
-            <CardDescription>Från årshjulet.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {stats.upcomingActivities.length === 0 ? (
-              <div className="flex flex-col gap-3 px-1 py-2">
-                <p className="text-sm text-muted-foreground">Inget inlagt än. Ett klick räcker:</p>
-                <div className="flex flex-col gap-2">
-                  {YEAR_PRESETS.map((preset) => (
-                    <Button
-                      key={preset.kind}
-                      onClick={() => void addPreset(preset)}
-                      type="button"
-                      variant="secondary"
-                    >
-                      {preset.title}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {stats.upcomingActivities.map((item) => (
-                  <li className="flex items-center justify-between gap-3 text-sm" key={item.id}>
-                    <span className="font-medium">{item.title}</span>
-                    <span className="text-muted-foreground">{formatSvDate(item.plannedOn)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Button asChild className="mt-2 w-full" variant="outline">
-              <Link href="/arshjul">Öppna årshjul</Link>
-            </Button>
-          </CardContent>
-        </Card>
       </section>
+
+      {training ? (
+        <Link className="rounded-2xl border bg-card px-4 py-3 text-sm shadow-token-sm" href="/kompetens">
+          Kompetens: {training.known} kan · {training.waiting} ska lära sig
+        </Link>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href="/manual">
+            <FileText data-icon="inline-start" />
+            Öppna manualen
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/avvikelse">
+            <TriangleAlert data-icon="inline-start" />
+            Lämna avvikelse
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/forslag">
+            <Plus data-icon="inline-start" />
+            Nytt förslag
+          </Link>
+        </Button>
+      </div>
     </div>
-  );
-}
-
-function Metric({
-  href,
-  icon: Icon,
-  label,
-  value,
-  tone = "ok",
-  newTab,
-}: {
-  href: string;
-  icon: typeof TriangleAlert;
-  label: string;
-  value: string;
-  tone?: "ok" | "warn" | "danger" | "info";
-  newTab?: boolean;
-}) {
-  const tints = {
-    ok: "border-primary/30 bg-gradient-to-br from-secondary to-card",
-    warn: "border-warning/35 bg-gradient-to-br from-warning/10 to-card",
-    danger: "border-destructive/30 bg-gradient-to-br from-destructive/10 to-card",
-    info: "border-info/30 bg-gradient-to-br from-info/10 to-card",
-  };
-  const iconTints = {
-    ok: "bg-primary/15 text-primary",
-    warn: "bg-warning/15 text-warning",
-    danger: "bg-destructive/15 text-destructive",
-    info: "bg-info/15 text-info",
-  };
-  return (
-    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className={`h-full ${tints[tone]} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
-        <CardContent className="flex flex-col gap-5 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-foreground">{label}</span>
-            <span className={`rounded-lg p-2 ${iconTints[tone]}`}>
-              <Icon className="size-4" />
-            </span>
-          </div>
-          <p className="text-4xl font-bold tracking-tight">{value}</p>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-function StartStep({
-  href,
-  title,
-  text,
-  step,
-  newTab,
-}: {
-  href: string;
-  title: string;
-  text: string;
-  step: string;
-  newTab?: boolean;
-}) {
-  const tint =
-    step === "1"
-      ? "border-primary/30 bg-gradient-to-br from-secondary to-card"
-      : step === "2"
-        ? "border-info/25 bg-gradient-to-br from-accent to-card"
-        : "border-warning/25 bg-gradient-to-br from-secondary/50 to-card";
-  return (
-    <Link href={href} rel={newTab ? "noopener noreferrer" : undefined} target={newTab ? "_blank" : undefined}>
-      <Card className={`h-full border ${tint} shadow-token-md transition-token hover:-translate-y-1 hover:shadow-token-lg`}>
-        <CardContent className="flex h-full flex-col gap-3 p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Steg {step}</p>
-          <p className="text-xl font-bold">{title}</p>
-          <p className="text-sm leading-6 text-muted-foreground">{text}</p>
-          <p className="mt-auto pt-2 text-sm font-semibold text-primary">Öppna →</p>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }

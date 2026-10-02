@@ -22,7 +22,7 @@ export function Tooltip({ label, children, side = "top", className }: TooltipPro
   if (!label) return children;
 
   return (
-    <span className={cn("relative inline-flex", className)}>
+    <span className={cn("relative inline-flex min-w-0", className)}>
       {children}
       <span
         role="tooltip"
@@ -40,7 +40,7 @@ export function Tooltip({ label, children, side = "top", className }: TooltipPro
 export function Tip({ label, side = "top", className, children }: TooltipProps) {
   return (
     <span className={cn("group/tip inline-flex", className)}>
-      <Tooltip label={label} side={side}>
+      <Tooltip className={className} label={label} side={side}>
         {children}
       </Tooltip>
     </span>

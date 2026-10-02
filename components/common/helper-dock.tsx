@@ -17,6 +17,10 @@ import { articlesFor, type GuideArticle } from "@/lib/knowledge/guide";
 function placeFromPath(path: string): GuideArticle["place"] {
   if (path.startsWith("/manual")) return "manual";
   if (path.startsWith("/arshjul")) return "arshjul";
+  if (path.startsWith("/kompetens")) return "kompetens";
+  if (path.startsWith("/lagar")) return "lagar";
+  if (path.startsWith("/miljoaspekter")) return "miljo";
+  if (path.startsWith("/mal")) return "mal";
   return "start";
 }
 
@@ -31,6 +35,7 @@ export function HelperDock() {
         <Button
           aria-label="Hjälp"
           className="fixed bottom-4 right-4 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-token-lg"
+          id="tour-home"
           onClick={() => setOpen(true)}
           size="icon"
           type="button"

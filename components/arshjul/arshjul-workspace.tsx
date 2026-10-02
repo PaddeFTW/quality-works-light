@@ -5,6 +5,8 @@ import { CalendarDays, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
+import { UpgradeCard } from "@/components/billing/upgrade-card";
+import { play } from "@/lib/sound";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ import {
 } from "@/lib/ops/persist";
 import { laterThisYear, YEAR_PRESETS } from "@/lib/ops/year-presets";
 import type { ActivityStatus, YearActivity } from "@/lib/ops/types";
+import { canPlan } from "@/lib/billing/plans";
 
 const MONTHS = [
   "Januari", "Februari", "Mars", "April", "Maj", "Juni",
@@ -55,11 +58,25 @@ const STATUS: Record<ActivityStatus, string> = {
   skipped: "Inställd",
 };
 
+function explain(kind: string) {
+  if (kind === "revision") {
+    return "Intern revision är inlagd i årshjulet. Det är dagen då ni själva kollar att ni jobbar som manualen säger. Frågor och svar kommer senare, som en egen del. Nu räcker det att datumet finns.";
+  }
+  if (kind === "skyddsrond") {
+    return "Skyddsrond är inlagd. Det är dagen då ni går runt och tittar på arbetsmiljön.";
+  }
+  if (kind === "ledning") {
+    return "Ledningens genomgång är inlagd. Det är dagen då ni tittar på hur året har gått.";
+  }
+  return null;
+}
+
 export function ArshjulWorkspace() {
   const { session, loading } = useOrgSession();
   const year = new Date().getFullYear();
   const [items, setItems] = useState<YearActivity[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<YearActivity | null>(null);
   const [title, setTitle] = useState("");
@@ -108,8 +125,11 @@ export function ArshjulWorkspace() {
       });
       setItems((current) => [...current, row].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
       setStatus(null);
+      setHint(explain(preset.kind));
+      play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -127,8 +147,10 @@ export function ArshjulWorkspace() {
       setCreateOpen(false);
       setTitle("");
       setOwnerName("");
+      play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -144,9 +166,19 @@ export function ArshjulWorkspace() {
       });
       setItems((current) => current.map((item) => (item.id === selected.id ? selected : item)).sort((a, b) => a.plannedOn.localeCompare(b.plannedOn)));
       setSelected(null);
+      if (selected.status === "done") play("save");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
+  }
+
+  if (!canPlan(session?.plan, "yearWheel")) {
+    return (
+      <DashboardLayout description="Årets återkommande jobb." navigation={navigation} title="Årshjul">
+        <UpgradeCard feature="yearWheel" text="Årshjulet ingår i Small." />
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -164,6 +196,7 @@ export function ArshjulWorkspace() {
       }
     >
       {status ? <p className="text-sm text-destructive">{status}</p> : null}
+      {hint ? <p className="max-w-2xl rounded-2xl border bg-card px-4 py-3 text-sm leading-6 shadow-token-sm">{hint}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -195,8 +228,9 @@ export function ArshjulWorkspace() {
         <div className="flex flex-wrap gap-2">
           {YEAR_PRESETS.map((preset) => (
             <Button
-              key={preset.kind}
+              data-tour={preset.kind === "revision" ? "preset" : undefined}
               disabled={items.some((item) => item.kind === preset.kind)}
+              key={preset.kind}
               onClick={() => void addPreset(preset)}
               type="button"
               variant="secondary"

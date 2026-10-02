@@ -1,17 +1,27 @@
 "use client";
 
-import * as React from "react";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { useEffect, type ReactNode } from "react";
+import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+function KeepTwoThemes() {
+  const { theme, setTheme } = useTheme();
+  useEffect(() => {
+    if (!theme || theme === "light" || theme === "dark") return;
+    setTheme(theme === "contrast-dark" ? "dark" : "light");
+  }, [theme, setTheme]);
+  return null;
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
       defaultTheme="light"
       disableTransitionOnChange
-      enableSystem
-      themes={["light", "dark", "contrast", "contrast-dark"]}
+      enableSystem={false}
+      themes={["light", "dark"]}
     >
+      <KeepTwoThemes />
       {children}
     </NextThemesProvider>
   );

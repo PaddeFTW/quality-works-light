@@ -231,16 +231,27 @@ export async function loadOpsStats(organizationId: string): Promise<OpsStats> {
     listSuggestions(organizationId),
     listYearActivities(organizationId, today.getFullYear()),
   ]);
+  const todayKey = today.toISOString().slice(0, 10);
   const upcoming = activities.filter((item) => {
     if (item.status !== "planned") return false;
     const date = new Date(item.plannedOn);
-    return date >= new Date(today.toISOString().slice(0, 10)) && date <= until;
+    return date >= new Date(todayKey) && date <= until;
   });
+  const overdue = activities.filter((item) => item.status === "planned" && item.plannedOn < todayKey);
+  const monthCounts = Array.from({ length: 12 }, () => 0);
+  for (const item of activities) {
+    const month = Number(item.plannedOn.slice(5, 7)) - 1;
+    if (month >= 0 && month < 12 && item.status !== "skipped") monthCounts[month] += 1;
+  }
   return {
     openDeviations: deviations.filter((item) => item.status !== "closed").length,
     openSuggestions: suggestions.filter((item) => item.status === "new" || item.status === "reviewing").length,
     upcomingActivities: upcoming.slice(0, 5),
+    overdueActivities: overdue.slice(0, 5),
     recentDeviations: deviations.slice(0, 5),
+    yearTotal: activities.filter((item) => item.status !== "skipped").length,
+    yearDone: activities.filter((item) => item.status === "done").length,
+    monthCounts,
   };
 }
 

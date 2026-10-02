@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { ChevronRight, FileCheck, FileText, MoreHorizontal, PanelLeftClose, Search } from "lucide-react";
+import { ChevronRight, FileCheck, FileText, MoreHorizontal, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,8 @@ interface ManualTreeProps {
   publishedIds?: string[];
   onSelect: (node: ManualNode) => void;
   onRename: (node: ManualNode) => void;
-  onHide: (node: ManualNode) => void;
+  onDelete: (node: ManualNode) => void;
   onNewDocument: (parentId: string | null) => void;
-  onCollapse?: () => void;
 }
 
 function filterNodes(nodes: ManualNode[], query: string): ManualNode[] {
@@ -50,19 +49,17 @@ export function ManualTree({
   publishedIds = [],
   onSelect,
   onRename,
-  onHide,
+  onDelete,
   onNewDocument,
-  onCollapse,
 }: ManualTreeProps) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [hidden, setHidden] = useState<string[]>([]);
   const [menuId, setMenuId] = useState<string | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleNodes = useMemo(() => filterNodes(nodes, normalizedQuery), [nodes, normalizedQuery]);
   const flat = useMemo(
-    () => flatten(visibleNodes, collapsed, Boolean(normalizedQuery)).filter((node) => !hidden.includes(node.id)),
-    [visibleNodes, collapsed, normalizedQuery, hidden],
+    () => flatten(visibleNodes, collapsed, Boolean(normalizedQuery)),
+    [visibleNodes, collapsed, normalizedQuery],
   );
 
   function toggle(id: string) {
@@ -98,7 +95,6 @@ export function ManualTree({
   }
 
   function renderNode(node: ManualNode, depth: number, path: number[]) {
-    if (hidden.includes(node.id)) return null;
     const isOpen = normalizedQuery ? true : !collapsed.includes(node.id);
     const isSelected = node.id === selectedId;
     const hasChildren = (node.children?.length ?? 0) > 0;
@@ -107,12 +103,12 @@ export function ManualTree({
       <li key={node.id}>
         <div
           className={cn(
-            "group flex w-full items-center border-l-2 pr-1 text-sm",
+            "group mx-1 flex w-[calc(100%-0.5rem)] items-center rounded-lg pr-1 text-sm transition-token",
             isSelected
-              ? "border-l-primary bg-primary/10 font-medium text-primary"
+              ? "bg-primary text-primary-foreground shadow-token-sm"
               : lastOpenedId === node.id
-                ? "border-l-transparent bg-accent/60 text-foreground"
-                : "border-l-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                ? "bg-accent text-foreground"
+                : "text-foreground hover:bg-accent hover:text-accent-foreground",
           )}
           onContextMenu={(event: MouseEvent) => {
             event.preventDefault();
@@ -135,7 +131,7 @@ export function ManualTree({
           )}
           <button
             aria-current={isSelected ? "page" : undefined}
-            className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+            className="flex min-w-0 flex-1 items-center gap-1.5 py-2 text-left"
             onClick={() => onSelect(node)}
             onDoubleClick={() => {
               if (hasChildren) toggle(node.id);
@@ -144,32 +140,32 @@ export function ManualTree({
             type="button"
           >
             {publishedIds.includes(node.id) ? (
-              <FileCheck className="size-4 shrink-0 text-emerald-600" />
+              <FileCheck className={cn("size-4 shrink-0", isSelected ? "text-primary-foreground" : "text-emerald-600")} />
             ) : (
-              <FileText className="size-4 shrink-0" />
+              <FileText className="size-4 shrink-0 opacity-80" />
             )}
             <span className="truncate">
-              <span className="mr-2 font-mono text-xs text-muted-foreground">{number}</span>
+              <span className={cn("mr-2 font-mono text-xs", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{number}</span>
               {node.title}
+              <span className={cn("ml-2 text-[10px] uppercase tracking-wide", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                {publishedIds.includes(node.id) ? "Original" : "Arbetsmanual"}
+              </span>
             </span>
           </button>
           <DropdownMenu onOpenChange={(open) => setMenuId(open ? node.id : null)} open={menuId === node.id}>
             <DropdownMenuTrigger asChild>
-              <Button className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" size="icon" variant="ghost">
+              <Button className={cn("size-7", isSelected ? "text-primary-foreground hover:bg-primary/80" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100")} size="icon" variant="ghost">
                 <MoreHorizontal className="size-4" />
                 <span className="sr-only">Åtgärder för {node.title}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onNewDocument(node.id)}>Nytt underavsnitt</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNewDocument(node.id)}>Nytt underdokument</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(node)}>Byt namn</DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => {
-                  setHidden((current) => [...current, node.id]);
-                  onHide(node);
-                }}
+                onClick={() => onDelete(node)}
               >
-                Dölj
+                Ta bort
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -182,16 +178,9 @@ export function ManualTree({
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar" onKeyDown={onKeyDown} tabIndex={0}>
       <div className="flex flex-col gap-3 border-b px-4 py-5">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Pärm</p>
-            <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
-          </div>
-          {onCollapse ? (
-            <Button aria-label="Dölj innehållet" onClick={onCollapse} size="icon" variant="ghost">
-              <PanelLeftClose className="size-4" />
-            </Button>
-          ) : null}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Manual</p>
+          <h2 className="text-base font-bold tracking-tight">Innehåll</h2>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -203,47 +192,37 @@ export function ManualTree({
             value={query}
           />
         </div>
-        {nodes.length ? (
-          <div className="flex gap-2">
-            <Button onClick={() => onNewDocument(null)} size="sm" variant="outline">
-              Nytt dokument
-            </Button>
-            <Button onClick={() => setCollapsed([])} size="sm" type="button" variant="ghost">
-              Visa alla
-            </Button>
-            <Button
-              onClick={() => {
-                const ids: string[] = [];
-                const walk = (list: ManualNode[]) => {
-                  for (const node of list) {
-                    if (node.children?.length) {
-                      ids.push(node.id);
-                      walk(node.children);
-                    }
-                  }
-                };
-                walk(nodes);
-                setCollapsed(ids);
-              }}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              Fäll ihop
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-2">
+          <Button data-tour="nytt-kapitel" onClick={() => onNewDocument(null)} size="sm">
+            {nodes.length ? "Nytt dokument" : "Skapa 1.0"}
+          </Button>
+          <Button
+            data-tour="underavsnitt"
+            disabled={!selectedId}
+            onClick={() => {
+              if (selectedId) onNewDocument(selectedId);
+            }}
+            size="sm"
+            title={selectedId ? "Lägger ett dokument under det du har valt" : "Markera ett dokument först."}
+            type="button"
+            variant="outline"
+          >
+            Nytt underdokument
+          </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
+            Dokument blir 1.0 och 2.0. Ett underdokument läggs under det dokument du har klickat på.
+          </p>
+        </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <nav aria-label="Manualens dokumentträd" className="px-2 py-4">
           {visibleNodes.length ? (
             <ul>{visibleNodes.map((node, index) => renderNode(node, 0, [index + 1]))}</ul>
           ) : (
-            <div className="flex flex-col gap-4 px-2 py-8 text-sm">
+            <div className="flex flex-col gap-3 px-2 py-6 text-sm">
               <p className="leading-6 text-muted-foreground">
-                Tom pärm. Första bladet blir 1.0. Namnet väljer du.
+                Manualen är tom. Skapa 1.0. Numret låses vid skapande.
               </p>
-              <Button onClick={() => onNewDocument(null)}>Skapa 1.0</Button>
             </div>
           )}
         </nav>

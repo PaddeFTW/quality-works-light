@@ -5,6 +5,8 @@ import { Lightbulb, Plus } from "lucide-react";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { navigation } from "@/components/layout/navigation";
+import { UpgradeCard } from "@/components/billing/upgrade-card";
+import { play } from "@/lib/sound";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ import {
   updateSuggestion,
 } from "@/lib/ops/persist";
 import type { Suggestion, SuggestionStatus } from "@/lib/ops/types";
+import { canPlan } from "@/lib/billing/plans";
 
 const STATUS: Record<SuggestionStatus, string> = {
   new: "Ny",
@@ -92,8 +95,10 @@ export function SuggestionWorkspace() {
       setCreateOpen(false);
       setTitle("");
       setDescription("");
+      play("send");
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
   }
 
@@ -105,7 +110,16 @@ export function SuggestionWorkspace() {
       setSelected(null);
     } catch (error) {
       setStatus(missingTableMessage(error));
+      play("error");
     }
+  }
+
+  if (!canPlan(session?.plan, "suggestions")) {
+    return (
+      <DashboardLayout description="En idé som gör arbetet bättre." navigation={navigation} title="Förbättringsförslag">
+        <UpgradeCard feature="suggestions" text="Förslag ingår i Small." />
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -153,10 +167,8 @@ export function SuggestionWorkspace() {
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <p className="font-medium">Inga förslag ännu</p>
-              <p className="max-w-md text-sm text-muted-foreground">
-                Skriv en mening om vad som kan bli bättre. Ni tar vidare det som är värt att göra.
-              </p>
-              <Button onClick={() => setCreateOpen(true)}>Lämna förslag</Button>
+              <p className="max-w-md text-sm text-muted-foreground">Skriv en mening om vad som kan bli bättre.</p>
+              <Button onClick={() => setCreateOpen(true)}>Nytt förslag</Button>
             </div>
           ) : (
             <Table>

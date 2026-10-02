@@ -1,15 +1,17 @@
-import { ModuleShell } from "@/components/common/module-shell";
+"use client";
+
+import { LeverantorWorkspace } from "@/components/leverantor/leverantor-workspace";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { navigation } from "@/components/layout/navigation";
 
 export default function LeverantorPage() {
   return (
-    <ModuleShell
-      title="Leverantörsbedömning"
-      description="Bedöm och följ upp leverantörer utifrån kvalitet, miljö och leveranssäkerhet."
-      comingSoonPoints={[
-        "Leverantörsregister",
-        "Bedömningsmall",
-        "Återkommande utvärdering",
-      ]}
-    />
+    <DashboardLayout
+      description="Vilka ni köper av, och hur bra de är. Det är ni som bedömer."
+      navigation={navigation}
+      title="Leverantörer"
+    >
+      <LeverantorWorkspace />
+    </DashboardLayout>
   );
 }

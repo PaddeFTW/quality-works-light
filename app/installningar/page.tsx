@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { ModuleShell } from "@/components/common/module-shell";
+import { SoundToggle } from "@/components/common/sound-toggle";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InviteForm } from "@/components/org/invite-form";
+import { PlanGrid } from "@/components/billing/plan-grid";
 import { ROLE_LABEL, type AppRole } from "@/lib/features";
+import { planOf, type PlanId } from "@/lib/billing/plans";
 import { createClient } from "@/lib/supabase/client";
 
 interface MemberRow {
@@ -123,6 +126,18 @@ export default function InstallningarPage() {
     notice("Personen är borttagen.");
   }
 
+  async function choosePlan(id: PlanId) {
+    if (!session?.organizationId) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("organizations").update({ plan: id }).eq("id", session.organizationId);
+    if (error) {
+      notice("Kunde inte spara paketet. Kör schema_plan.sql i Supabase.", "fel");
+      return;
+    }
+    await refresh();
+    notice(`${planOf(id).name} är valt.`);
+  }
+
   if (session && session.role !== "admin") {
     return (
       <ModuleShell
@@ -164,9 +179,10 @@ export default function InstallningarPage() {
 
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
           <h3 className="text-base font-bold">Utseende</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Ljust, mörkt eller hög kontrast.</p>
-          <div className="mt-4">
+          <p className="mt-1 text-sm text-muted-foreground">Ljust eller mörkt. Korta ljud när något sparas, skickas eller publiceras.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <ThemeToggle />
+            <SoundToggle />
           </div>
         </section>
 
@@ -208,12 +224,26 @@ export default function InstallningarPage() {
         </section>
 
         <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
-          <h3 className="text-base font-bold">Bjud in användare</h3>
+          <h3 className="text-base font-bold">Paket</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Vi skickar ett mejl med en länk. Hen klickar, sen är hen med i företaget.
+            Ett pris per företag och år. Gratis räcker för Manualen. Betalning i programmet kommer snart – du kan välja paket här redan nu.
           </p>
           <div className="mt-4">
-            {session?.organizationId && session.userId ? (
+            <PlanGrid current={session?.plan} onChoose={(id) => void choosePlan(id)} />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border bg-card p-5 shadow-token-sm">
+          <h3 className="text-base font-bold">Bjud in användare</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {planOf(session?.plan).seats} platser i {planOf(session?.plan).name}. Nu är {members.length} med.
+          </p>
+          <div className="mt-4">
+            {members.length >= planOf(session?.plan).seats ? (
+              <p className="text-sm">
+                Inga platser kvar. Välj Small, Standard eller Pro ovan.
+              </p>
+            ) : session?.organizationId && session.userId ? (
               <InviteForm
                 organizationId={session.organizationId}
                 organizationName={session.organizationName}
