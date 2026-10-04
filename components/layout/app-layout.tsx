@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { HelperDock } from "@/components/common/helper-dock";
-import { QwlSmartWorkspace, QwlSmartWorkspaceProvider } from "@/components/common/qwl-smart-workspace";
 import type { NavItem } from "@/types";
 
 interface AppLayoutProps {
@@ -33,10 +32,9 @@ export function AppLayout({
         Hoppa till innehållet
       </a>
       {hideSidebar ? null : <Sidebar footer={sidebarFooter} items={navigation} />}
-      <QwlSmartWorkspaceProvider>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-          <Topbar actions={<><HelperDock />{topbarActions}</>} />
-          <main
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+        <Topbar actions={topbarActions} />
+        <main
           className={cn(
             "min-h-0 flex-1 overflow-y-auto rounded-2xl bg-card/50 px-4 py-5 pb-20 sm:px-6 lg:px-8 lg:pb-8",
             contentClassName,
@@ -44,10 +42,9 @@ export function AppLayout({
           id="innehall"
         >
           {children}
-          </main>
-        </div>
-        <QwlSmartWorkspace />
-      </QwlSmartWorkspaceProvider>
+        </main>
+      </div>
+      <HelperDock />
     </div>
   );
 }
