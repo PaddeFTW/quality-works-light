@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useWorkspaceContract } from "@/components/common/qwl-smart-workspace";
 import { MiniBars } from "@/components/common/mini-bars";
+import type { WorkspaceAppContract, WorkspaceContext } from "@/lib/workspace/context";
+import type { FieldInstance } from "@/lib/workspace/field-contract";
 import { useOrgSession } from "@/components/providers/org-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +55,58 @@ export function KundWorkspace() {
   const selected = customers.find((customer) => customer.id === selectedId) ?? null;
   const customerReviews = reviews.filter((review) => review.customerId === selectedId);
   const review = customerReviews.find((item) => item.id === reviewId) ?? customerReviews[0] ?? null;
+
+  const workspaceContract = useMemo<WorkspaceAppContract>(() => {
+    const fields: FieldInstance[] = selected
+      ? [
+          { id: "company_name", label: "Företag", type: "text", required: true, ai_writable: true, value: selected.company, placeholder: "Företagets namn" },
+          { id: "customer_number", label: "Kundnummer", type: "text", required: false, ai_writable: true, value: selected.customerNumber },
+          { id: "contact_person", label: "Kontaktperson hos kunden", type: "text", required: false, ai_writable: true, value: selected.contactName, placeholder: "Namn" },
+          { id: "our_contact", label: "Vår kontakt", type: "text", required: false, ai_writable: true, value: selected.ourContact },
+          { id: "email", label: "E-post", type: "text", required: false, ai_writable: true, value: selected.email },
+          { id: "phone", label: "Telefon", type: "text", required: false, ai_writable: true, value: selected.phone },
+          { id: "note", label: "Anteckning", type: "textarea", required: false, ai_writable: true, value: selected.note, multiline: true },
+        ]
+      : [];
+    const context: WorkspaceContext = {
+      app_id: "quality-works-light",
+      app_name: "Quality WorX Light",
+      locale: "sv",
+      module_id: "kund",
+      page_id: "kund",
+      record_id: selected?.id ?? null,
+      user_role: session?.role,
+      permissions: { canOpenWorkspace: Boolean(selected), canApplyWorkspace: canEdit && Boolean(selected) },
+      fields,
+    };
+    return {
+      app_id: context.app_id,
+      app_name: context.app_name,
+      workspace_enabled: true,
+      locale: context.locale,
+      getContext: () => context,
+      records: customers.map((customer) => ({ id: customer.id, label: customer.company || "Namnlös kund" })),
+      selectRecord: (id: string) => setSelectedId(id),
+      createRecord: () => addCustomer(),
+      applyFieldUpdates: async ({ changes }) => {
+        const next: Partial<CustomerItem> = {};
+        for (const change of changes) {
+          if (change.field_id === "company_name") next.company = String(change.new_value ?? "");
+          if (change.field_id === "customer_number") next.customerNumber = String(change.new_value ?? "");
+          if (change.field_id === "contact_person") next.contactName = String(change.new_value ?? "");
+          if (change.field_id === "our_contact") next.ourContact = String(change.new_value ?? "");
+          if (change.field_id === "email") next.email = String(change.new_value ?? "");
+          if (change.field_id === "phone") next.phone = String(change.new_value ?? "");
+          if (change.field_id === "note") next.note = String(change.new_value ?? "");
+        }
+        setCustomers((current) => current.map((customer) => customer.id === selected?.id ? { ...customer, ...next } : customer));
+        setSaved(false);
+        return { ok: true, applied_field_ids: changes.map((change) => change.field_id) };
+      },
+    };
+  }, [canEdit, customers, selected, session?.organizationId, session?.role]);
+
+  useWorkspaceContract(workspaceContract);
 
   useEffect(() => {
     if (!session?.organizationId) return;

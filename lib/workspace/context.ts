@@ -35,6 +35,11 @@ export type ApplyFieldUpdatesResult = {
   error?: string;
 };
 
+export type WorkspaceRecordChoice = {
+  id: string;
+  label: string;
+};
+
 export type WorkspaceAppContract = {
   app_id: string;
   app_name: string;
@@ -44,6 +49,9 @@ export type WorkspaceAppContract = {
   applyFieldUpdates: (
     input: ApplyFieldUpdatesInput,
   ) => Promise<ApplyFieldUpdatesResult>;
+  records?: WorkspaceRecordChoice[];
+  selectRecord?: (id: string) => void;
+  createRecord?: () => void | Promise<void>;
   knowledge?: import("./adapter").KnowledgeAdapter;
   usage?: import("./usage").UsagePort;
   actions?: import("./adapter").ActionContract[];
