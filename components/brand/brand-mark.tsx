@@ -10,7 +10,7 @@ interface BrandMarkProps {
 export function BrandMark({
   className,
   markClassName,
-  alt = "Quality Works",
+  alt = "Quality Works App",
   wordmark = false,
 }: BrandMarkProps) {
   return (
@@ -22,7 +22,7 @@ export function BrandMark({
       />
       {wordmark ? (
         <span className="text-[1.65rem] font-medium leading-none tracking-tight text-foreground">
-          quality works
+          quality works app
         </span>
       ) : null}
       <span className="sr-only">{alt}</span>

@@ -99,7 +99,7 @@ const initialSettings: ManualSettings = {
   reviewer: "",
   approver: "",
   logo: "",
-  headerText: "Kvalitetsmanual – Quality Works Light",
+  headerText: "Kvalitetsmanual – Quality Works App",
   footerText: "Internt dokument. Utskrift gäller endast utskriftsdagen.",
 };
 

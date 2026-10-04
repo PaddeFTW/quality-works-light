@@ -112,10 +112,10 @@ const NAV_TINT: Record<string, string> = {
       >
         <BrandMark markClassName="size-8" />
         {collapsed ? (
-          <span className="sr-only">Quality Works Light</span>
+          <span className="sr-only">Quality Works App</span>
         ) : (
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-bold">Quality Works Light</p>
+            <p className="truncate text-[15px] font-medium tracking-tight text-foreground">quality works app</p>
             <p className="truncate text-xs text-muted-foreground">{ROLE_LABEL[role]}</p>
           </div>
         )}

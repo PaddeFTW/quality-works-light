@@ -57,7 +57,7 @@ export default function SwotPage() {
         <CardHeader>
           <CardTitle>Så använder ni SWOT</CardTitle>
           <CardDescription>
-            Gör analysen i grupp. Resultatet blir underlag till mål i Quality Works Light och
+            Gör analysen i grupp. Resultatet blir underlag till mål i Quality Works App och
             kan länkas från relevanta avsnitt i Manualen vid intern revision.
           </CardDescription>
         </CardHeader>

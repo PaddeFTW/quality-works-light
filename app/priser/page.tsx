@@ -9,7 +9,7 @@ export default function PriserPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
         <Link className="flex items-center gap-2 font-bold" href="/login">
           <BrandMark markClassName="size-8" />
-          Quality Works Light
+          Quality Works App
         </Link>
         <Link className="text-sm font-semibold text-primary hover:underline" href="/login">
           Logga in

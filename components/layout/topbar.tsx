@@ -39,7 +39,7 @@ export function Topbar({
   const page = Object.entries(PAGE_TITLE).find(([href]) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href),
   )?.[1];
-  const heading = title ?? session?.organizationName ?? "Quality Works Light";
+  const heading = title ?? session?.organizationName ?? "Quality Works App";
   const sub = description ?? page ?? "Ledningssystem";
 
   return (

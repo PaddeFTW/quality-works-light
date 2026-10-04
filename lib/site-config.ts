@@ -1,6 +1,6 @@
 export const siteConfig = {
-  name: "Quality Works Light",
-  shortName: "Quality Works Light",
+  name: "Quality Works App",
+  shortName: "Quality Works App",
   description:
     "Praktiskt ledningssystem för småföretag – kvalitet, miljö, arbetsmiljö och andra ISO-standarder.",
   links: {
