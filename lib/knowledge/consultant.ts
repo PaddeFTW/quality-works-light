@@ -69,9 +69,9 @@ const ENTRIES: Entry[] = [
   },
   {
     keys: ["iso", "9001", "14001", "45001", "standard", "krav", "klausul", "certifiering"],
-    title: "Om ISO-kraven",
-    body: "Jag återger inte standardtexten. ISO 9001 handlar om kvalitet, ISO 14001 om miljö och ISO 45001 om arbetsmiljö. I programmet visar ni det genom Manualen, Årshjulet, avvikelser och mål. Säg vilket arbete ni vill göra, så visar jag steget.",
-    source: "Vägledning i programmet. Standardtexten ligger inte här.",
+    title: "Om reglerna",
+    body: "Jag skriver inte av reglerna ur standarden. 9001 handlar om att hålla jämn kvalitet. 14001 handlar om miljön. 45001 handlar om att ingen ska skadas på jobbet. I programmet visar ni det i Manualen, Årshjulet, avvikelser och mål. Säg vad ni vill göra, så visar jag nästa steg.",
+    source: "Vägledning i programmet",
   },
   {
     keys: ["kund", "kunder", "omdöme"],

@@ -5,14 +5,8 @@ import { usePathname } from "next/navigation";
 import { LifeBuoy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tip } from "@/components/ui/tooltip";
 import { consult, type ConsultAnswer } from "@/lib/knowledge/consultant";
 import { articlesFor, type GuideArticle } from "@/lib/knowledge/guide";
@@ -57,12 +51,12 @@ export function HelperDock() {
           <LifeBuoy className="size-5" />
         </Button>
       </Tip>
-      <Dialog onOpenChange={setOpen} open={open}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Konsult</DialogTitle>
-            <DialogDescription>Svar från vägledningen. Inget skrivs i manualen eller i andra formulär.</DialogDescription>
-          </DialogHeader>
+      <Sheet onOpenChange={setOpen} open={open}>
+        <SheetContent>
+          <div className="pr-8">
+            <h2 className="text-lg font-semibold">Konsult</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Svar från vägledningen. Inget skrivs i manualen eller i andra formulär.</p>
+          </div>
           <form
             className="flex gap-2"
             onSubmit={(event) => {
@@ -77,26 +71,26 @@ export function HelperDock() {
             />
             <Button type="submit">Fråga</Button>
           </form>
-          <div className="flex flex-col gap-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
             {turns.map((turn) => (
-              <article className="rounded-xl border bg-card p-3 text-sm" key={turn.id}>
+              <article className="rounded-xl border bg-background p-3 text-sm" key={turn.id}>
                 <p className="font-medium">{turn.question}</p>
                 <p className="mt-2 leading-6">{turn.answer.body}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{turn.answer.source}</p>
               </article>
             ))}
+            <div className="space-y-4 border-t pt-4 text-sm">
+              <p className="font-medium">På den här sidan</p>
+              {articles.map((article) => (
+                <section key={article.id}>
+                  <h3 className="font-medium">{article.title}</h3>
+                  <p className="mt-1 leading-6 text-muted-foreground">{article.body}</p>
+                </section>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4 border-t pt-4 text-sm">
-            <p className="font-medium">På den här sidan</p>
-            {articles.map((article) => (
-              <section key={article.id}>
-                <h3 className="font-medium">{article.title}</h3>
-                <p className="mt-1 leading-6 text-muted-foreground">{article.body}</p>
-              </section>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
